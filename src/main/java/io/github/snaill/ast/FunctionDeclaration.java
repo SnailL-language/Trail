@@ -1,7 +1,7 @@
 package io.github.snaill.ast;
 import java.util.List;
 
-public class FunctionDeclaration extends AbstractNode {
+public class FunctionDeclaration extends GlobalDeclaration {
     private final String name;
 
     public FunctionDeclaration(String name, ParameterList parameters, Type returnType, Scope scope, Program parent) {

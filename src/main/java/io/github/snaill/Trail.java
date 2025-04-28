@@ -50,9 +50,9 @@ public class Trail {
         );
         SnailParser.ProgramContext tree = parser.program();
         new ParseTreeWalker().walk(new MainFuncListener(), tree);
-//        SnailFlattenListener listener =  new SnailFlattenListener();
-//        new ParseTreeWalker().walk(listener, tree);
-//        ASTBuilder builder = new ASTBuilder(listener.getNodes());
-//        builder.build();
+        SnailFlattenListener listener =  new SnailFlattenListener();
+        new ParseTreeWalker().walk(listener, tree);
+        ASTBuilder builder = new ASTBuilder(listener.getNodes());
+        builder.build();
     }   
 }

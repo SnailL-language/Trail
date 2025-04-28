@@ -76,17 +76,17 @@ public class TrailTest {
     
     @Test
     public void test01_onlyMain() {
-        run("only_main.sn", "fnmain(){lethello:i32=32;}", "");
+        run("only_main.sn", "fnmain()->void{lethello:i32=32;}", "");
     }
 
     @Test
     public void test02_extraFunction() {
-        run("extra_function.sn", "fnmain(){lethello:i32=32;}", "");
+        run("extra_function.sn", "fnmain()->void{lethello:i32=32;}", "");
     }
 
     @Test
     public void test03_stringInMain() {
-        run("string.sn", "fnmain(){lethello:string=\"Hello World!\";}", "");
+        run("string.sn", "fnmain()->void{lethello:string=\"Hello World!\";}", "");
     }
 
 

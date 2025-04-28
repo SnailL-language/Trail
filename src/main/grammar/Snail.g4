@@ -128,6 +128,7 @@ arrayLiteral
 // === Типы ===
 type
     : PRIMITIVE_TYPE
+    | 'void'
     | 'string'
     | '[' type ';' NUMBER ']'
     ;
