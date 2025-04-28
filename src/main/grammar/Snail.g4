@@ -1,5 +1,9 @@
 grammar Snail;
 
+@header {
+package io.github.snaill.parser;
+}
+
 // === Корневая точка программы ===
 program
     : statement+ EOF
@@ -123,6 +127,7 @@ arrayLiteral
 // === Типы ===
 type
     : PRIMITIVE_TYPE
+    | 'string'
     | '[' type ';' NUMBER ']'
     ;
 

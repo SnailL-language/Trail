@@ -1,0 +1,5 @@
+fn extra() { }
+
+fn main() {
+    let hello: i32 = 32;
+}

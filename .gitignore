@@ -1,5 +1,7 @@
 .gradle
 build/
+target/
+.antlr/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -39,7 +41,7 @@ bin/
 .vscode/
 
 ### Mac OS ###
-.DS_Store### Gradle template
+.DS_Store
 .gradle
 **/build/
 !src/**/build/

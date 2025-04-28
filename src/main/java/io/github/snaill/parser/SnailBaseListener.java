@@ -1,4 +1,7 @@
-package gen;// Generated from /Users/l3xu5/Documents/compiler/src/Snail.g4 by ANTLR 4.13.2
+// Generated from Snail.g4 by ANTLR 4.13.2
+
+package io.github.snaill.parser;
+
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
