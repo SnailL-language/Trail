@@ -19,13 +19,6 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitProgram(SnailParser.ProgramContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code FuncDeclStatement}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitFuncDeclStatement(SnailParser.FuncDeclStatementContext ctx);
-	/**
 	 * Visit a parse tree produced by the {@code VarDeclStatement}
 	 * labeled alternative in {@link SnailParser#statement}.
 	 * @param ctx the parse tree
@@ -80,6 +73,12 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitExpressionStatement(SnailParser.ExpressionStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#globalVariableDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SnailParser#funcDeclaration}.
 	 * @param ctx the parse tree

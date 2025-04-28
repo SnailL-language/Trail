@@ -75,7 +75,7 @@ public class ASTBuilder {
                 yield new Literal(number, null);
             }
             case SnailParser.TypeContext _ -> {
-                String typeText = ((SnailParser.TypeContext) ctx).type().getText();
+                String typeText = ctx.getText();
                 yield new Type(typeText, null);
             }
             case SnailParser.ExprStmtContext _,

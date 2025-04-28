@@ -20,18 +20,6 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitProgram(SnailParser.ProgramContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code FuncDeclStatement}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterFuncDeclStatement(SnailParser.FuncDeclStatementContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code FuncDeclStatement}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitFuncDeclStatement(SnailParser.FuncDeclStatementContext ctx);
-	/**
 	 * Enter a parse tree produced by the {@code VarDeclStatement}
 	 * labeled alternative in {@link SnailParser#statement}.
 	 * @param ctx the parse tree
@@ -125,6 +113,16 @@ public interface SnailListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitExpressionStatement(SnailParser.ExpressionStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#globalVariableDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#globalVariableDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SnailParser#funcDeclaration}.
 	 * @param ctx the parse tree

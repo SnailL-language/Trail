@@ -31,18 +31,6 @@ public class SnailBaseListener implements SnailListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterFuncDeclStatement(SnailParser.FuncDeclStatementContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitFuncDeclStatement(SnailParser.FuncDeclStatementContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
 	@Override public void enterVarDeclStatement(SnailParser.VarDeclStatementContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -134,6 +122,18 @@ public class SnailBaseListener implements SnailListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitExpressionStatement(SnailParser.ExpressionStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

@@ -6,13 +6,12 @@ package io.github.snaill.parser;
 
 // === Корневая точка программы ===
 program
-    : statement+ EOF
+    : globalVariableDeclaration* funcDeclaration+ EOF
     ;
 
 // === Операторы ===
 statement
-    : funcDeclaration               # FuncDeclStatement
-    | variableDeclaration           # VarDeclStatement
+    : variableDeclaration           # VarDeclStatement
     | expressionStatement           # ExprStmt
     | forLoop                       # ForLoopStmt
     | whileLoop                     # WhileLoopStmt
@@ -24,6 +23,8 @@ statement
 expressionStatement
     : expression ';'
     ;
+
+globalVariableDeclaration : variableDeclaration;
 
 // === Функции ===
 funcDeclaration

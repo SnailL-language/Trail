@@ -2,12 +2,15 @@ package io.github.snaill;
 
 import java.io.IOException;
 
+import io.github.snaill.ast.ASTBuilder;
 import io.github.snaill.parser.SnailBaseListener;
+import io.github.snaill.parser.SnailFlattenListener;
 import io.github.snaill.parser.SnailLexer;
 import io.github.snaill.parser.SnailParser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 public class Trail {
@@ -47,6 +50,9 @@ public class Trail {
         );
         SnailParser.ProgramContext tree = parser.program();
         new ParseTreeWalker().walk(new MainFuncListener(), tree);
-        
+//        SnailFlattenListener listener =  new SnailFlattenListener();
+//        new ParseTreeWalker().walk(listener, tree);
+//        ASTBuilder builder = new ASTBuilder(listener.getNodes());
+//        builder.build();
     }   
 }

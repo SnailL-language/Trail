@@ -2,7 +2,7 @@ package io.github.snaill.ast;
 
 import java.util.List;
 
-public class Literal extends AbstractNode {
+public class Literal extends PrimaryExpression {
     private final Object value;
 
     public Literal(Object value, LiteralPrimaryExpression parent) {

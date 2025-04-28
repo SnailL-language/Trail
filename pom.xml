@@ -10,10 +10,10 @@
     
 	<description>Trail - compiler for SnailL</description>
 	<properties>
-		<java.version>21</java.version>
+		<java.version>23</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>21</maven.compiler.release>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>23</maven.compiler.release>
+        <maven.compiler.target>23</maven.compiler.target>
         <antlr.version>4.13.2</antlr.version>
         <junit.jupiter.version>5.8.1</junit.jupiter.version>
 	</properties>
@@ -92,7 +92,15 @@
                     </execution>
                 </executions>
             </plugin>
-		</plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>22</source>
+                    <target>22</target>
+                </configuration>
+            </plugin>
+        </plugins>
 	</build>
 
 </project>
