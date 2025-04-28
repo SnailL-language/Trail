@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ParameterList extends AbstractNode {
-    public ParameterList(FunctionDeclaration parent, List<Parameter> children) {
+    public ParameterList(List<Parameter> children, FunctionDeclaration parent) {
         super(List.copyOf(children), parent);
     }
 

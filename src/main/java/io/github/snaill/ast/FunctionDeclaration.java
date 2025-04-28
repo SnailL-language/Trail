@@ -4,7 +4,7 @@ import java.util.List;
 public class FunctionDeclaration extends AbstractNode {
     private final String name;
 
-    public FunctionDeclaration(FunctionDeclarationStatement parent, String name, ParameterList parameters, Type returnType, Scope scope) {
+    public FunctionDeclaration(String name, ParameterList parameters, Type returnType, Scope scope, FunctionDeclarationStatement parent) {
         super(List.of(parameters, returnType, scope), parent);
         this.name = name;
     }

@@ -5,7 +5,7 @@ import java.util.List;
 public class VariableDeclaration extends AbstractNode {
     private final String name;
 
-    public VariableDeclaration(VariableDeclarationStatement parent, String name, Type type, Expression value) {
+    public VariableDeclaration(String name, Type type, Expression value, VariableDeclarationStatement parent) {
         super(List.of(type, value), parent);
         this.name = name;
     }
