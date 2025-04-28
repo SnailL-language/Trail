@@ -5,10 +5,11 @@ import java.util.Collection;
 import java.util.List;
 
 public abstract class AbstractNode implements Node {
-    List<Node> children;
-    Node parent;
 
-    public AbstractNode(List<Node> children, Node parent) {
+    protected List<Node> children;
+    protected Node parent;
+
+    protected AbstractNode(List<Node> children, Node parent) {
         this.children = children;
         this.parent = parent;
     }
