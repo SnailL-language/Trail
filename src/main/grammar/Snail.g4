@@ -27,11 +27,11 @@ expressionStatement
 
 // === Функции ===
 funcDeclaration
-    : 'fn' IDENTIFIER '(' paramList? ')' ('->' type)? scope
+    : 'fn' IDENTIFIER '(' paramList ')' ('->' type)? scope
     ;
 
 paramList
-    : param (',' param)*
+    : (param (',' param)*)?
     ;
 
 param
@@ -40,7 +40,7 @@ param
 
 // === Аргументы вызова функции ===
 argumentList
-    : expression (',' expression)*
+    : (expression (',' expression)*)?
     ;
 
 // === Блок кода ===
@@ -116,7 +116,7 @@ literal
 
 // Вызов функции
 functionCall
-    : IDENTIFIER '(' argumentList? ')'
+    : IDENTIFIER '(' argumentList ')'
     ;
 
 // Массив

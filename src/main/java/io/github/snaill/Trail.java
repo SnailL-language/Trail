@@ -2,14 +2,13 @@ package io.github.snaill;
 
 import java.io.IOException;
 
+import io.github.snaill.parser.SnailBaseListener;
+import io.github.snaill.parser.SnailLexer;
+import io.github.snaill.parser.SnailParser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-
-import io.github.snaill.parser.SnailBaseListener;
-import io.github.snaill.parser.SnailLexer;
-import io.github.snaill.parser.SnailParser;
 
 public class Trail {
 

@@ -1,4 +1,4 @@
-// Generated from Snail.g4 by ANTLR 4.13.2
+// Generated from /Users/l3xu5/Documents/Trail/src/main/grammar/Snail.g4 by ANTLR 4.13.2
 
 package io.github.snaill.parser;
 

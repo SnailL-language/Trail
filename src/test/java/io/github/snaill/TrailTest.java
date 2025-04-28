@@ -61,9 +61,7 @@ public class TrailTest {
 
     private String collectOut(Path file) {
         try {
-            return Files.readAllLines(file)
-            .stream()
-            .collect(Collectors.joining());
+            return String.join("", Files.readAllLines(file));
         } catch (IOException e) {
             throw new RuntimeException(String.format("Cannot open %s for checking answer", file));
         }
