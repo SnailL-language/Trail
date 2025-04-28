@@ -82,6 +82,7 @@
                     <outputDirectory>
                         ${basedir}/src/main/java/io/github/snaill/parser
                     </outputDirectory>
+                    <visitor>true</visitor>
                 </configuration>
                 <executions>
                     <execution>
