@@ -3,6 +3,7 @@ package io.github.snaill;
 import java.io.IOException;
 
 import io.github.snaill.ast.ASTBuilder;
+import io.github.snaill.ast.Node;
 import io.github.snaill.parser.SnailBaseListener;
 import io.github.snaill.parser.SnailFlattenListener;
 import io.github.snaill.parser.SnailLexer;
@@ -53,6 +54,6 @@ public class Trail {
         SnailFlattenListener listener =  new SnailFlattenListener();
         new ParseTreeWalker().walk(listener, tree);
         ASTBuilder builder = new ASTBuilder(listener.getNodes());
-        builder.build();
+        Node root =  builder.build();
     }   
 }

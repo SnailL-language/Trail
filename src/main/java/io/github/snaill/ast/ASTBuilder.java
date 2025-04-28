@@ -28,7 +28,7 @@ public class ASTBuilder {
             throw new IllegalStateException("Context cannot be null");
         }
 
-        return switch (ctx) {
+        Node current = switch (ctx) {
             case SnailParser.ProgramContext _ -> {
                 List<GlobalDeclaration> children = collectChildren(SnailParser.FuncDeclarationContext.class, GlobalDeclaration.class);
                 yield new Program(children);
@@ -109,6 +109,10 @@ public class ASTBuilder {
                  SnailParser.ArrayLiteralContext _ -> throw new UnsupportedOperationException("Not implemented: " + ctx.getClass().getSimpleName());
             default -> throw new IllegalStateException("Unknown context: " + ctx.getClass().getSimpleName());
         };
+        for (Node child : current.getChildren()) {
+            child.setParent(current);
+        }
+        return current;
     }
 
     private <T extends ParserRuleContext, R extends Node> List<R> collectChildren(Class<T> contextType, Class<R> nodeType) {
