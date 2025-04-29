@@ -1,7 +1,6 @@
 package io.github.snaill.ast;
 
 import java.util.List;
-import java.util.function.BinaryOperator;
 
 public class BinaryExpression extends Expression {
     private final String operator;

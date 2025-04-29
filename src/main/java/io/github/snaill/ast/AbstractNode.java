@@ -23,6 +23,11 @@ public abstract class AbstractNode implements Node {
     }
 
     @Override
+    public void setChildren(Collection<Node> children) {
+        this.children = new ArrayList<>(children);
+    }
+
+    @Override
     public int getChildCount() {
         return children.size();
     }
@@ -30,10 +35,5 @@ public abstract class AbstractNode implements Node {
     @Override
     public void setChild(int index, Node child) {
         this.children.set(index, child);
-    }
-
-    @Override
-    public void setChildren(Collection<Node> children) {
-        this.children = new ArrayList<>(children);
     }
 }

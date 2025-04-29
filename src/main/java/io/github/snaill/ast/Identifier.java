@@ -1,6 +1,6 @@
 package io.github.snaill.ast;
 
-public class Identifier extends PrimaryExpression{
+public class Identifier extends PrimaryExpression {
     final private String name;
 
     public Identifier(String name) {

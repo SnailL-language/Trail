@@ -1,5 +1,4 @@
-fn extra() i32 {
-    return 0;
+fn extra() -> i32 {
 }
 
 fn main() {

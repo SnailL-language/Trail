@@ -1,4 +1,5 @@
 package io.github.snaill.ast;
+
 import java.util.List;
 
 public class FunctionDeclaration extends AbstractNode implements GlobalDeclaration {

@@ -1,7 +1,5 @@
 package io.github.snaill.ast;
 
-import java.util.List;
-
 public class Literal extends PrimaryExpression {
     private final Object value;
 

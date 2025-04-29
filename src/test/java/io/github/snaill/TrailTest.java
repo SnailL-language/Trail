@@ -124,7 +124,8 @@ public class TrailTest {
     @CsvSource({
             "only_main.sn",
             "extra_function.sn",
-            "string.sn"
+            "string.sn",
+            "func_call.sn"
     })
     public void testProcessing(String filename) {
         Path sourceFile = SAMPLES_DIR.resolve(filename);
