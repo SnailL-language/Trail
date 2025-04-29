@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class TrailTest {
 
-    private static final Path SAMPLES_DIR = Path.of("resources", "test_samples");
+    private static final Path SAMPLES_DIR = Path.of("src", "test", "resources", "test_samples");
     private static Path tempDir;
     private static Path outputFile;
     private static Path errFile;
