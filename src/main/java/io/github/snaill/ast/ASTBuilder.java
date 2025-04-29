@@ -42,7 +42,12 @@ public class ASTBuilder {
             case SnailParser.FuncDeclarationContext _ -> {
                 String name = ((SnailParser.FuncDeclarationContext) ctx).IDENTIFIER().getText();
                 ParameterList params = (ParameterList) buildNode(nextContext());
-                Type type = (Type) buildNode(nextContext());
+                Type type;
+                if (ctx.getChild(SnailParser.TypeContext.class, 0) != null) {
+                    type = (Type) buildNode(nextContext());
+                } else {
+                    type = new Type("void");
+                }
                 Scope scope = (Scope) buildNode(nextContext());
                 yield new FunctionDeclaration(name, params, type, scope);
             }
@@ -122,58 +127,59 @@ public class ASTBuilder {
         return ctx;
     }
 
-    public static void printAST(Node node, String indent) {
+    public static String toSourceCode(Node node, boolean isRoot) {
         if (node == null) {
-            System.out.println(indent + "└── [Пустой узел]");
-            return;
+            return "";
         }
 
-        switch (node) {
+        return switch (node) {
             case Scope scope -> {
-                System.out.println(indent + "Область видимости");
+                StringBuilder sb = new StringBuilder();
                 for (Statement stmt : scope.getStatements()) {
-                    printAST(stmt, indent + "    ");
+                    sb.append(toSourceCode(stmt, false));
                 }
+                if (!isRoot) {
+                    sb.insert(0, "{").append("}");
+                }
+                yield sb.toString();
             }
             case FunctionDeclaration func -> {
-                System.out.printf("%sФункция: %s (тип: %s)%n", indent, func.getName(), func.getReturnType().getTypeName());
-                printAST(func.getParameterList(), indent + "    ");
-                printAST(func.getScope(), indent + "    ");
+                StringBuilder sb = new StringBuilder();
+                sb.append("fn").append(func.getName()).append("(");
+                sb.append(toSourceCode(func.getParameterList(), false));
+                sb.append(")");
+                Type returnType = func.getReturnType();
+                if (!returnType.getTypeName().equals("void")) {
+                    sb.append("->").append(returnType.getTypeName());
+                }
+                sb.append(toSourceCode(func.getScope(), false));
+                yield sb.toString();
             }
             case ParameterList params -> {
-                System.out.println(indent + "Параметры:");
-                for (Parameter param : params.getParameters()) {
-                    printAST(param, indent + "    ");
+                StringBuilder sb = new StringBuilder();
+                List<Parameter> paramList = params.getParameters();
+                for (int i = 0; i < paramList.size(); i++) {
+                    sb.append(toSourceCode(paramList.get(i), false));
+                    if (i < paramList.size() - 1) {
+                        sb.append(",");
+                    }
                 }
+                yield sb.toString();
             }
-            case Parameter param -> {
-                System.out.printf("%sПараметр (тип: %s)%n", indent, param.getType().getTypeName());
-            }
-            case VariableDeclaration var -> {
-                System.out.printf("%sПеременная: %s (тип: %s)%n", indent, var.getName(), var.getType().getTypeName());
-                if (var.getValue() != null) {
-                    printAST(var.getValue(), indent + "    ");
-                }
-            }
-            case Literal literal -> {
-                System.out.printf("%sЛитерал: %s%n", indent, literal.getValue());
-            }
-            case Identifier identifier -> {
-                System.out.printf("%sИдентификатор: %s%n", indent, identifier.getName());
-            }
-            case Type type -> {
-                System.out.printf("%sТип: %s%n", indent, type.getTypeName());
-            }
-            case BinaryExpression binExpr -> {
-                System.out.printf("%sБинарное выражение: %s%n", indent, binExpr.getOperator());
-                printAST(binExpr.getLeft(), indent + "    ");
-                printAST(binExpr.getRight(), indent + "    ");
-            }
-            case UnaryExpression unExpr -> {
-                System.out.printf("%sУнарное выражение: %s%n", indent, unExpr.getOperator());
-                printAST(unExpr.getArgument(), indent + "    ");
-            }
-            default -> System.out.println(indent + "Неизвестный узел: " + node.getClass().getSimpleName());
-        }
+            case Parameter param -> "param:" + param.getType().getTypeName();
+            case VariableDeclaration var -> "let" + var.getName() +
+                    ":" + var.getType().getTypeName() +
+                    "=" + toSourceCode(var.getValue(), false) +
+                    ";";
+            case Literal literal -> literal.getValue().toString();
+            case Identifier identifier -> identifier.getName();
+            case Type type -> type.getTypeName();
+            case BinaryExpression binExpr -> toSourceCode(binExpr.getLeft(), false) +
+                    binExpr.getOperator() +
+                    toSourceCode(binExpr.getRight(), false);
+            case UnaryExpression unExpr -> unExpr.getOperator() +
+                    toSourceCode(unExpr.getArgument(), false);
+            default -> "//Неизвестный узел:" + node.getClass().getSimpleName();
+        };
     }
 }

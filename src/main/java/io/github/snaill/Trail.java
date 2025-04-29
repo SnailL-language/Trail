@@ -17,13 +17,6 @@ public class Trail {
 
     private static final String USAGE = "trail [options] <file_to_compile>";
 
-    private static class MainFuncListener extends SnailBaseListener {
-
-        @Override
-        public void enterProgram(SnailParser.ProgramContext ctx) {
-            System.out.println(ctx.getText());
-        }
-    }
     public static void main(String[] args) {
         if (args.length == 0) {
             System.err.println(USAGE);
@@ -42,11 +35,10 @@ public class Trail {
             )
         );
         SnailParser.ProgramContext tree = parser.program();
-        new ParseTreeWalker().walk(new MainFuncListener(), tree);
         SnailFlattenListener listener =  new SnailFlattenListener();
         new ParseTreeWalker().walk(listener, tree);
         ASTBuilder builder = new ASTBuilder(listener.getNodes());
         Node root =  builder.build();
-        ASTBuilder.printAST(root, "");
+        System.out.println(ASTBuilder.toSourceCode(root, true));
     }   
 }

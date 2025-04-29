@@ -1,5 +1,0 @@
-fn extra() -> void { }
-
-fn main() ->void {
-    let hello: i32 = 32;
-}
