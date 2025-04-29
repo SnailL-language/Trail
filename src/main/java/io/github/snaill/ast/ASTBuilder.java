@@ -1,5 +1,6 @@
 package io.github.snaill.ast;
 
+import io.github.snaill.parser.Separator;
 import io.github.snaill.parser.SnailParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -49,7 +50,7 @@ public class ASTBuilder {
                 StringBuilder Sb = new StringBuilder();
                 for (Statement stmt : scope.getStatements()) {
                     Sb.append(toSourceCode(stmt, false));
-                    if (stmt instanceof AssigmentExpression) {
+                    if (stmt instanceof Expression) {
                         Sb.append(';');
                     }
                 }
@@ -263,6 +264,9 @@ public class ASTBuilder {
         while (nodes.peek() != null && contextTypes.stream().anyMatch(t -> t.isInstance(nodes.peek()))) {
             R child = nodeType.cast(buildNode(nodes.poll()));
             children.add(child);
+        }
+        if (nodes.peek() != null && nodes.peek() instanceof Separator) {
+            nodes.poll();
         }
         return children;
     }

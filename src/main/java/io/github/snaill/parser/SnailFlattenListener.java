@@ -17,6 +17,11 @@ public class SnailFlattenListener extends SnailBaseListener {
         return nodes;
     }
 
+    @Override
+    public void exitScope(SnailParser.ScopeContext ctx) {
+        nodes.add(new Separator());
+        super.exitScope(ctx);
+    }
 
     @Override
     public void enterEveryRule(ParserRuleContext ctx) {
