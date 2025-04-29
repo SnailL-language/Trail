@@ -6,25 +6,20 @@ package io.github.snaill.parser;
 
 // === Корневая точка программы ===
 program
-    : globalVariableDeclaration* funcDeclaration+ EOF
+    : variableDeclaration* funcDeclaration+ EOF
     ;
 
 // === Операторы ===
 statement
-    : variableDeclaration           # VarDeclStatement
-    | expressionStatement           # ExprStmt
-    | forLoop                       # ForLoopStmt
-    | whileLoop                     # WhileLoopStmt
-    | ifCondition                   # IfConditionStmt
-    | breakStatement                # BreakStmt
-    | returnStatement               # ReturnStmt
+    : variableDeclaration
+    | forLoop
+    | funcDeclaration
+    | whileLoop
+    | ifCondition
+    | breakStatement
+    | returnStatement
+    | expression ';'
     ;
-
-expressionStatement
-    : expression ';'
-    ;
-
-globalVariableDeclaration : variableDeclaration;
 
 // === Функции ===
 funcDeclaration
@@ -79,17 +74,16 @@ returnStatement
 
 // === Выражения ===
 expression
-    : IDENTIFIER assignmentOperator expression          # AssignmentExpr
-    | expression '||' expression                        # LogicalOrExpr
-    | expression '&&' expression                        # LogicalAndExpr
-    | expression ('==' | '!=') expression               # EqualityExpr
-    | expression ('>' | '<' | '>=' | '<=') expression   # RelationalExpr
-    | expression ('+' | '-') expression                 # AdditiveExpr
-    | expression ('*' | '/') expression                 # MultiplicativeExpr
-    | '!' expression                                    # NotExpr
-    | '-' expression                                    # NegateExpr
-    | primaryExpression                                 # PrimaryExpr
+    : IDENTIFIER assignmentOperator expression
+    | binaryExpression
+    | unaryExpression
+    | primaryExpression
+    | '(' expression ')'
     ;
+
+binaryExpression : (primaryExpression | '(' expression ')') binaryOperator=('||' | '&&' | '==' | '!=' | '>' | '<' | '>=' | '<=' | '+' | '-' | '*' | '/') expression;
+
+unaryExpression : unaryOperator=('-' | '!') expression;
 
 // Присваивание
 assignmentOperator
@@ -102,11 +96,11 @@ assignmentOperator
 
 // Основные выражения
 primaryExpression
-    : literal                            # LiteralPrimaryExpr
-    | IDENTIFIER                         # IdentifierPrimaryExpr
-    | functionCall                       # FunctionCallPrimaryExpr
-    | arrayLiteral                       # ArrayLiteralPrimaryExpr
-    | '(' expression ')'                 # ParenthesizedPrimaryExpr
+    : literal
+    | unaryExpression
+    | identifier
+    | functionCall
+    | arrayLiteral
     ;
 
 // Литералы
@@ -114,6 +108,8 @@ literal
     : NUMBER
     | STRING
     ;
+
+identifier : IDENTIFIER;
 
 // Вызов функции
 functionCall

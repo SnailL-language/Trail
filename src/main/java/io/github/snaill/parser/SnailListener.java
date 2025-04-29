@@ -20,109 +20,15 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitProgram(SnailParser.ProgramContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code VarDeclStatement}
-	 * labeled alternative in {@link SnailParser#statement}.
+	 * Enter a parse tree produced by {@link SnailParser#statement}.
 	 * @param ctx the parse tree
 	 */
-	void enterVarDeclStatement(SnailParser.VarDeclStatementContext ctx);
+	void enterStatement(SnailParser.StatementContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code VarDeclStatement}
-	 * labeled alternative in {@link SnailParser#statement}.
+	 * Exit a parse tree produced by {@link SnailParser#statement}.
 	 * @param ctx the parse tree
 	 */
-	void exitVarDeclStatement(SnailParser.VarDeclStatementContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code ExprStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterExprStmt(SnailParser.ExprStmtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code ExprStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitExprStmt(SnailParser.ExprStmtContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code ForLoopStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterForLoopStmt(SnailParser.ForLoopStmtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code ForLoopStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitForLoopStmt(SnailParser.ForLoopStmtContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code WhileLoopStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterWhileLoopStmt(SnailParser.WhileLoopStmtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code WhileLoopStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitWhileLoopStmt(SnailParser.WhileLoopStmtContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code IfConditionStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterIfConditionStmt(SnailParser.IfConditionStmtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code IfConditionStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitIfConditionStmt(SnailParser.IfConditionStmtContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code BreakStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterBreakStmt(SnailParser.BreakStmtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code BreakStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitBreakStmt(SnailParser.BreakStmtContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code ReturnStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void enterReturnStmt(SnailParser.ReturnStmtContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code ReturnStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 */
-	void exitReturnStmt(SnailParser.ReturnStmtContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link SnailParser#expressionStatement}.
-	 * @param ctx the parse tree
-	 */
-	void enterExpressionStatement(SnailParser.ExpressionStatementContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SnailParser#expressionStatement}.
-	 * @param ctx the parse tree
-	 */
-	void exitExpressionStatement(SnailParser.ExpressionStatementContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link SnailParser#globalVariableDeclaration}.
-	 * @param ctx the parse tree
-	 */
-	void enterGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SnailParser#globalVariableDeclaration}.
-	 * @param ctx the parse tree
-	 */
-	void exitGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx);
+	void exitStatement(SnailParser.StatementContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SnailParser#funcDeclaration}.
 	 * @param ctx the parse tree
@@ -234,125 +140,35 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitReturnStatement(SnailParser.ReturnStatementContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code LogicalOrExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Enter a parse tree produced by {@link SnailParser#expression}.
 	 * @param ctx the parse tree
 	 */
-	void enterLogicalOrExpr(SnailParser.LogicalOrExprContext ctx);
+	void enterExpression(SnailParser.ExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code LogicalOrExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Exit a parse tree produced by {@link SnailParser#expression}.
 	 * @param ctx the parse tree
 	 */
-	void exitLogicalOrExpr(SnailParser.LogicalOrExprContext ctx);
+	void exitExpression(SnailParser.ExpressionContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code MultiplicativeExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Enter a parse tree produced by {@link SnailParser#binaryExpression}.
 	 * @param ctx the parse tree
 	 */
-	void enterMultiplicativeExpr(SnailParser.MultiplicativeExprContext ctx);
+	void enterBinaryExpression(SnailParser.BinaryExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code MultiplicativeExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Exit a parse tree produced by {@link SnailParser#binaryExpression}.
 	 * @param ctx the parse tree
 	 */
-	void exitMultiplicativeExpr(SnailParser.MultiplicativeExprContext ctx);
+	void exitBinaryExpression(SnailParser.BinaryExpressionContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code EqualityExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Enter a parse tree produced by {@link SnailParser#unaryExpression}.
 	 * @param ctx the parse tree
 	 */
-	void enterEqualityExpr(SnailParser.EqualityExprContext ctx);
+	void enterUnaryExpression(SnailParser.UnaryExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code EqualityExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Exit a parse tree produced by {@link SnailParser#unaryExpression}.
 	 * @param ctx the parse tree
 	 */
-	void exitEqualityExpr(SnailParser.EqualityExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code AdditiveExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterAdditiveExpr(SnailParser.AdditiveExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code AdditiveExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitAdditiveExpr(SnailParser.AdditiveExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code PrimaryExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterPrimaryExpr(SnailParser.PrimaryExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code PrimaryExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitPrimaryExpr(SnailParser.PrimaryExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code AssignmentExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterAssignmentExpr(SnailParser.AssignmentExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code AssignmentExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitAssignmentExpr(SnailParser.AssignmentExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code NotExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterNotExpr(SnailParser.NotExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code NotExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitNotExpr(SnailParser.NotExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code RelationalExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterRelationalExpr(SnailParser.RelationalExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code RelationalExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitRelationalExpr(SnailParser.RelationalExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code LogicalAndExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterLogicalAndExpr(SnailParser.LogicalAndExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code LogicalAndExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitLogicalAndExpr(SnailParser.LogicalAndExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code NegateExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void enterNegateExpr(SnailParser.NegateExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code NegateExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 */
-	void exitNegateExpr(SnailParser.NegateExprContext ctx);
+	void exitUnaryExpression(SnailParser.UnaryExpressionContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SnailParser#assignmentOperator}.
 	 * @param ctx the parse tree
@@ -364,65 +180,15 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitAssignmentOperator(SnailParser.AssignmentOperatorContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code LiteralPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
+	 * Enter a parse tree produced by {@link SnailParser#primaryExpression}.
 	 * @param ctx the parse tree
 	 */
-	void enterLiteralPrimaryExpr(SnailParser.LiteralPrimaryExprContext ctx);
+	void enterPrimaryExpression(SnailParser.PrimaryExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by the {@code LiteralPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
+	 * Exit a parse tree produced by {@link SnailParser#primaryExpression}.
 	 * @param ctx the parse tree
 	 */
-	void exitLiteralPrimaryExpr(SnailParser.LiteralPrimaryExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code IdentifierPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterIdentifierPrimaryExpr(SnailParser.IdentifierPrimaryExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code IdentifierPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitIdentifierPrimaryExpr(SnailParser.IdentifierPrimaryExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code FunctionCallPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterFunctionCallPrimaryExpr(SnailParser.FunctionCallPrimaryExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code FunctionCallPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitFunctionCallPrimaryExpr(SnailParser.FunctionCallPrimaryExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code ArrayLiteralPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterArrayLiteralPrimaryExpr(SnailParser.ArrayLiteralPrimaryExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code ArrayLiteralPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitArrayLiteralPrimaryExpr(SnailParser.ArrayLiteralPrimaryExprContext ctx);
-	/**
-	 * Enter a parse tree produced by the {@code ParenthesizedPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void enterParenthesizedPrimaryExpr(SnailParser.ParenthesizedPrimaryExprContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code ParenthesizedPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 */
-	void exitParenthesizedPrimaryExpr(SnailParser.ParenthesizedPrimaryExprContext ctx);
+	void exitPrimaryExpression(SnailParser.PrimaryExpressionContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SnailParser#literal}.
 	 * @param ctx the parse tree
@@ -433,6 +199,16 @@ public interface SnailListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral(SnailParser.LiteralContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#identifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterIdentifier(SnailParser.IdentifierContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#identifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitIdentifier(SnailParser.IdentifierContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SnailParser#functionCall}.
 	 * @param ctx the parse tree

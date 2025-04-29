@@ -19,66 +19,11 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitProgram(SnailParser.ProgramContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code VarDeclStatement}
-	 * labeled alternative in {@link SnailParser#statement}.
+	 * Visit a parse tree produced by {@link SnailParser#statement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitVarDeclStatement(SnailParser.VarDeclStatementContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ExprStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitExprStmt(SnailParser.ExprStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ForLoopStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitForLoopStmt(SnailParser.ForLoopStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code WhileLoopStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitWhileLoopStmt(SnailParser.WhileLoopStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code IfConditionStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitIfConditionStmt(SnailParser.IfConditionStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code BreakStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitBreakStmt(SnailParser.BreakStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ReturnStmt}
-	 * labeled alternative in {@link SnailParser#statement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitReturnStmt(SnailParser.ReturnStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SnailParser#expressionStatement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitExpressionStatement(SnailParser.ExpressionStatementContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SnailParser#globalVariableDeclaration}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitGlobalVariableDeclaration(SnailParser.GlobalVariableDeclarationContext ctx);
+	T visitStatement(SnailParser.StatementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SnailParser#funcDeclaration}.
 	 * @param ctx the parse tree
@@ -146,75 +91,23 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitReturnStatement(SnailParser.ReturnStatementContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code LogicalOrExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Visit a parse tree produced by {@link SnailParser#expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitLogicalOrExpr(SnailParser.LogicalOrExprContext ctx);
+	T visitExpression(SnailParser.ExpressionContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code MultiplicativeExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Visit a parse tree produced by {@link SnailParser#binaryExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitMultiplicativeExpr(SnailParser.MultiplicativeExprContext ctx);
+	T visitBinaryExpression(SnailParser.BinaryExpressionContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EqualityExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
+	 * Visit a parse tree produced by {@link SnailParser#unaryExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEqualityExpr(SnailParser.EqualityExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code AdditiveExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitAdditiveExpr(SnailParser.AdditiveExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code PrimaryExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitPrimaryExpr(SnailParser.PrimaryExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code AssignmentExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitAssignmentExpr(SnailParser.AssignmentExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code NotExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitNotExpr(SnailParser.NotExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code RelationalExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitRelationalExpr(SnailParser.RelationalExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code LogicalAndExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitLogicalAndExpr(SnailParser.LogicalAndExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code NegateExpr}
-	 * labeled alternative in {@link SnailParser#expression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitNegateExpr(SnailParser.NegateExprContext ctx);
+	T visitUnaryExpression(SnailParser.UnaryExpressionContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SnailParser#assignmentOperator}.
 	 * @param ctx the parse tree
@@ -222,46 +115,23 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitAssignmentOperator(SnailParser.AssignmentOperatorContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code LiteralPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
+	 * Visit a parse tree produced by {@link SnailParser#primaryExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitLiteralPrimaryExpr(SnailParser.LiteralPrimaryExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code IdentifierPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitIdentifierPrimaryExpr(SnailParser.IdentifierPrimaryExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code FunctionCallPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitFunctionCallPrimaryExpr(SnailParser.FunctionCallPrimaryExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ArrayLiteralPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitArrayLiteralPrimaryExpr(SnailParser.ArrayLiteralPrimaryExprContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ParenthesizedPrimaryExpr}
-	 * labeled alternative in {@link SnailParser#primaryExpression}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitParenthesizedPrimaryExpr(SnailParser.ParenthesizedPrimaryExprContext ctx);
+	T visitPrimaryExpression(SnailParser.PrimaryExpressionContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SnailParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral(SnailParser.LiteralContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#identifier}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitIdentifier(SnailParser.IdentifierContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SnailParser#functionCall}.
 	 * @param ctx the parse tree

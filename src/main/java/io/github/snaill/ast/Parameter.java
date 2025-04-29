@@ -3,8 +3,8 @@ package io.github.snaill.ast;
 import java.util.List;
 
 public class Parameter extends AbstractNode {
-    public Parameter(Type type, ParameterList parent) {
-        super(List.of(type), parent);
+    public Parameter(Type type) {
+        super(List.of(type));
     }
 
     public Type getType() {

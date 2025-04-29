@@ -7,16 +7,9 @@ import java.util.List;
 public abstract class AbstractNode implements Node {
 
     protected List<Node> children;
-    protected Node parent;
 
-    protected AbstractNode(List<Node> children, Node parent) {
+    protected AbstractNode(List<Node> children) {
         this.children = children;
-        this.parent = parent;
-    }
-
-    @Override
-    public Node getParent() {
-        return parent;
     }
 
     @Override
@@ -32,11 +25,6 @@ public abstract class AbstractNode implements Node {
     @Override
     public int getChildCount() {
         return children.size();
-    }
-
-    @Override
-    public void setParent(Node parent) {
-        this.parent = parent;
     }
 
     @Override

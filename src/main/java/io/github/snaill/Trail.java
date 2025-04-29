@@ -11,7 +11,6 @@ import io.github.snaill.parser.SnailParser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 public class Trail {
@@ -20,16 +19,9 @@ public class Trail {
 
     private static class MainFuncListener extends SnailBaseListener {
 
-        // @Override
-        // public void enterProgram(ProgramContext ctx) {
-        //     System.out.println(ctx.statement());
-        // }
-
         @Override
-        public void enterFuncDeclaration(SnailParser.FuncDeclarationContext ctx) {
-            if (ctx.IDENTIFIER().getText().equals("main")) {
-                System.out.println(ctx.getText());
-            }
+        public void enterProgram(SnailParser.ProgramContext ctx) {
+            System.out.println(ctx.getText());
         }
     }
     public static void main(String[] args) {
@@ -55,5 +47,6 @@ public class Trail {
         new ParseTreeWalker().walk(listener, tree);
         ASTBuilder builder = new ASTBuilder(listener.getNodes());
         Node root =  builder.build();
+        ASTBuilder.printAST(root, "");
     }   
 }

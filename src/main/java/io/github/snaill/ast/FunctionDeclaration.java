@@ -1,11 +1,11 @@
 package io.github.snaill.ast;
 import java.util.List;
 
-public class FunctionDeclaration extends GlobalDeclaration {
+public class FunctionDeclaration extends AbstractNode implements GlobalDeclaration {
     private final String name;
 
-    public FunctionDeclaration(String name, ParameterList parameters, Type returnType, Scope scope, Program parent) {
-        super(List.of(parameters, returnType, scope), parent);
+    public FunctionDeclaration(String name, ParameterList parameters, Type returnType, Scope scope) {
+        super(List.of(parameters, returnType, scope));
         this.name = name;
     }
 

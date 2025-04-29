@@ -2,11 +2,11 @@ package io.github.snaill.ast;
 
 import java.util.List;
 
-public class VariableDeclaration extends AbstractNode {
+public class VariableDeclaration extends AbstractNode implements Statement {
     private final String name;
 
-    public VariableDeclaration(String name, Type type, Expression value, VariableDeclarationStatement parent) {
-        super(List.of(type, value), parent);
+    public VariableDeclaration(String name, Type type, Expression value) {
+        super(List.of(type, value));
         this.name = name;
     }
 
