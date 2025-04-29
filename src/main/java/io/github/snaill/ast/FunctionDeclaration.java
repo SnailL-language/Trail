@@ -1,12 +1,16 @@
 package io.github.snaill.ast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionDeclaration extends AbstractNode implements GlobalDeclaration {
     private final String name;
 
-    public FunctionDeclaration(String name, ParameterList parameters, Type returnType, Scope scope) {
-        super(List.of(parameters, returnType, scope));
+    public FunctionDeclaration(String name, List<Parameter> parameters, Type returnType, Scope scope) {
+        List<Node> children = new ArrayList<>(parameters);
+        children.add(returnType);
+        children.add(scope);
+        super(children);
         this.name = name;
     }
 
@@ -14,15 +18,15 @@ public class FunctionDeclaration extends AbstractNode implements GlobalDeclarati
         return name;
     }
 
-    public ParameterList getParameterList() {
-        return (ParameterList) this.getChild(0);
+    public List<Parameter> getParameterList() {
+        return this.getChildren().stream().filter(Parameter.class::isInstance).map(Parameter.class::cast).toList();
     }
 
     public Type getReturnType() {
-        return (Type) this.getChild(1);
+        return (Type) this.getChild(this.getChildren().size() - 2);
     }
 
     public Scope getScope() {
-        return (Scope) this.getChild(2);
+        return (Scope) this.getChild(this.getChildren().size() - 1);
     }
 }

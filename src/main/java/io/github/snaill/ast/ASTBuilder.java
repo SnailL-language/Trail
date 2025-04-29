@@ -7,17 +7,31 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ASTBuilder {
     private static final List<Class<? extends ParserRuleContext>> globalStatements =
             List.of(SnailParser.VariableDeclarationContext.class,
                     SnailParser.FuncDeclarationContext.class);
+    private static final List<Class<? extends ParserRuleContext>> expressions =
+            List.of(SnailParser.BinaryExpressionContext.class,
+                    SnailParser.UnaryExpressionContext.class,
+                    SnailParser.NumberLiteralContext.class, SnailParser.StringLiteralContext.class,
+                    SnailParser.IdentifierContext.class, SnailParser.AssigmentExpressionContext.class);
     private static final List<Class<? extends ParserRuleContext>> statements =
-            List.of(SnailParser.VariableDeclarationContext.class,
-                    SnailParser.ForLoopContext.class,
-                    SnailParser.WhileLoopContext.class, SnailParser.IfConditionContext.class,
-                    SnailParser.BreakStatementContext.class, SnailParser.ReturnStatementContext.class,
-                    SnailParser.ExpressionContext.class);
+            Stream.concat(
+                    Stream.of(
+                            SnailParser.VariableDeclarationContext.class,
+                            SnailParser.ForLoopContext.class,
+                            SnailParser.WhileLoopContext.class,
+                            SnailParser.IfConditionContext.class,
+                            SnailParser.BreakStatementContext.class,
+                            SnailParser.ReturnStatementContext.class
+                    ),
+                    expressions.stream()
+            ).collect(Collectors.toList());
+
     private final Queue<ParserRuleContext> nodes;
     private Node root;
 
@@ -32,53 +46,83 @@ public class ASTBuilder {
 
         return switch (node) {
             case Scope scope -> {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder Sb = new StringBuilder();
                 for (Statement stmt : scope.getStatements()) {
-                    sb.append(toSourceCode(stmt, false));
-                }
-                if (!isRoot) {
-                    sb.insert(0, "{").append("}");
-                }
-                yield sb.toString();
-            }
-            case FunctionDeclaration func -> {
-                StringBuilder sb = new StringBuilder();
-                sb.append("fn").append(func.getName()).append("(");
-                sb.append(toSourceCode(func.getParameterList(), false));
-                sb.append(")");
-                Type returnType = func.getReturnType();
-                if (!returnType.getTypeName().equals("void")) {
-                    sb.append("->").append(returnType.getTypeName());
-                }
-                sb.append(toSourceCode(func.getScope(), false));
-                yield sb.toString();
-            }
-            case ParameterList params -> {
-                StringBuilder sb = new StringBuilder();
-                List<Parameter> paramList = params.getParameters();
-                for (int i = 0; i < paramList.size(); i++) {
-                    sb.append(toSourceCode(paramList.get(i), false));
-                    if (i < paramList.size() - 1) {
-                        sb.append(",");
+                    Sb.append(toSourceCode(stmt, false));
+                    if (stmt instanceof AssigmentExpression) {
+                        Sb.append(';');
                     }
                 }
-                yield sb.toString();
+                if (!isRoot) {
+                    Sb.insert(0, "{").append("}");
+                }
+                yield Sb.toString();
             }
-            case Parameter param -> "param:" + param.getType().getTypeName();
-            case VariableDeclaration var -> "let" + var.getName() +
-                    ":" + var.getType().getTypeName() +
-                    "=" + toSourceCode(var.getValue(), false) +
+            case FunctionDeclaration func -> {
+                StringBuilder Sb = new StringBuilder();
+                Sb.append("fn ").append(func.getName()).append("(");
+                String params = func.getParameterList().stream()
+                        .map(param -> toSourceCode(param, false))
+                        .collect(Collectors.joining(", "));
+                Sb.append(params).append(")");
+                String returnType = toSourceCode(func.getReturnType(), false);
+                if (!returnType.equals("void")) {
+                    Sb.append(" -> ").append(returnType);
+                }
+                Sb.append(toSourceCode(func.getScope(), false));
+                yield Sb.toString();
+            }
+            case Parameter param -> param.getName() + ": " + toSourceCode(param.getType(), false);
+            case VariableDeclaration var -> "let " + var.getName() +
+                    ": " + toSourceCode(var.getType(), false) +
+                    " = " + toSourceCode(var.getValue(), false) +
                     ";";
-            case Literal literal -> literal.getValue().toString();
+            case StringLiteral stringLiteral -> stringLiteral.getValue();
+            case NumberLiteral numberLiteral -> String.valueOf(numberLiteral.getValue());
             case Identifier identifier -> identifier.getName();
-            case Type type -> type.getTypeName();
+            case PrimitiveType primitiveType -> primitiveType.getName();
+            case ArrayType arrayType -> "[" + toSourceCode(arrayType.getElementType(), false) +
+                    "; " + toSourceCode(arrayType.getSize(), false) + "]";
             case BinaryExpression binExpr -> toSourceCode(binExpr.getLeft(), false) +
-                    binExpr.getOperator() +
+                    " " + binExpr.getOperator() + " " +
                     toSourceCode(binExpr.getRight(), false);
             case UnaryExpression unExpr -> unExpr.getOperator() +
                     toSourceCode(unExpr.getArgument(), false);
-            case ReturnStatement ret -> "return" + toSourceCode(ret.getReturnable(), false) + ";";
-            default -> "//Неизвестный узел:" + node.getClass().getSimpleName();
+            case ReturnStatement ret -> {
+                String returnable = toSourceCode(ret.getReturnable(), false);
+                yield "return" + (returnable.isEmpty() ? "" : " " + returnable) + ";";
+            }
+            case FunctionCall funcCall -> {
+                StringBuilder Sb = new StringBuilder();
+                Sb.append(funcCall.getName()).append("(");
+                String args = funcCall.getArguments().stream()
+                        .map(arg -> toSourceCode(arg, false))
+                        .collect(Collectors.joining(", "));
+                Sb.append(args).append(")");
+                yield Sb.toString();
+            }
+            case ArrayLiteral arrayLiteral -> {
+                StringBuilder Sb = new StringBuilder();
+                Sb.append("[");
+                String elements = arrayLiteral.getElements().stream()
+                        .map(elem -> toSourceCode(elem, false))
+                        .collect(Collectors.joining(", "));
+                Sb.append(elements).append("]");
+                yield Sb.toString();
+            }
+            case WhileLoop whileLoop -> "while (" + toSourceCode(whileLoop.getCondition(), false) + ") " +
+                    toSourceCode(whileLoop.getBody(), false);
+            case ForLoop forLoop -> "for (" + toSourceCode(forLoop.getDeclaration(), false) +
+                    toSourceCode(forLoop.getCondition(), false) + "; " + toSourceCode(forLoop.getStep(), false) +
+                    ")" +
+                    toSourceCode(forLoop.getBody(), false);
+            case IfStatement ifStmt -> "if (" + toSourceCode(ifStmt.getCondition(), false) + ") " +
+                    toSourceCode(ifStmt.getBody(), false);
+            case BreakStatement _ -> "break;";
+            case AssigmentExpression assignExpr -> assignExpr.getVariableName() +
+                    " " + assignExpr.getOperator() + " " +
+                    toSourceCode(assignExpr.getExpression(), false);
+            default -> "// Неизвестный узел: " + node.getClass().getSimpleName();
         };
     }
 
@@ -106,23 +150,20 @@ public class ASTBuilder {
             }
             case SnailParser.FuncDeclarationContext _ -> {
                 String name = ((SnailParser.FuncDeclarationContext) ctx).IDENTIFIER().getText();
-                ParameterList params = (ParameterList) buildNode(nextContext());
+                List<Parameter> params = collectChildren(SnailParser.ParamContext.class, Parameter.class);
                 Type type;
                 if (ctx.getChild(SnailParser.TypeContext.class, 0) != null) {
                     type = (Type) buildNode(nextContext());
                 } else {
-                    type = new Type("void");
+                    type = new PrimitiveType("void");
                 }
                 Scope scope = (Scope) buildNode(nextContext());
                 yield new FunctionDeclaration(name, params, type, scope);
             }
-            case SnailParser.ParamListContext _ -> {
-                List<Parameter> children = collectChildren(SnailParser.ParamContext.class, Parameter.class);
-                yield new ParameterList(children);
-            }
             case SnailParser.ParamContext _ -> {
+                String name = ((SnailParser.ParamContext) ctx).IDENTIFIER().getText();
                 Type type = (Type) buildNode(nextContext());
-                yield new Parameter(type);
+                yield new Parameter(name, type);
             }
 
             case SnailParser.VariableDeclarationContext _ -> {
@@ -131,9 +172,14 @@ public class ASTBuilder {
                 Expression expr = (Expression) buildNode(nextContext());
                 yield new VariableDeclaration(name, type, expr);
             }
-            case SnailParser.LiteralContext _ -> {
-                String value = ctx.getChild(TerminalNode.class, 0).getText();
-                yield new Literal(value);
+            case SnailParser.StringLiteralContext _ -> {
+                String value = ((SnailParser.StringLiteralContext) ctx).STRING().getText();
+                yield new StringLiteral(value);
+            }
+
+            case SnailParser.NumberLiteralContext _ -> {
+                long value = Long.parseLong(((SnailParser.NumberLiteralContext) ctx).NUMBER().getText());
+                yield new NumberLiteral(value);
             }
 
             case SnailParser.IdentifierContext _ -> {
@@ -141,7 +187,13 @@ public class ASTBuilder {
                 yield new Identifier(value);
             }
 
-            case SnailParser.TypeContext _ -> new Type(ctx.getChild(TerminalNode.class, 0).getText());
+            case SnailParser.PrimitiveTypeContext _ -> new PrimitiveType(ctx.getText());
+
+            case SnailParser.ArrayTypeContext _ -> {
+                Type type = (Type) buildNode(nextContext());
+                NumberLiteral value = (NumberLiteral) buildNode(nextContext());
+                yield new ArrayType(type, value);
+            }
 
             case SnailParser.BinaryExpressionContext _ -> {
                 String operator = ((SnailParser.BinaryExpressionContext) ctx).binaryOperator.getText();
@@ -161,15 +213,46 @@ public class ASTBuilder {
                 yield new ReturnStatement(returnable);
             }
 
-            case SnailParser.ArgumentListContext _,
-                 SnailParser.ForLoopContext _,
-                 SnailParser.WhileLoopContext _,
-                 SnailParser.IfConditionContext _,
-                 SnailParser.BreakStatementContext _,
-                 SnailParser.AssignmentOperatorContext _,
-                 SnailParser.FunctionCallContext _,
-                 SnailParser.ArrayLiteralContext _ ->
-                    throw new UnsupportedOperationException("Not implemented: " + ctx.getClass().getSimpleName());
+            case SnailParser.FunctionCallContext _ -> {
+                String name = ((SnailParser.FunctionCallContext) ctx).IDENTIFIER().getText();
+                List<Expression> arguments = collectChildren(expressions, Expression.class);
+                yield new FunctionCall(name, arguments);
+            }
+
+            case SnailParser.ArrayLiteralContext _ -> {
+                List<Expression> elements = collectChildren(expressions, Expression.class);
+                yield new ArrayLiteral(elements);
+            }
+
+            case SnailParser.WhileLoopContext _ -> {
+                Expression condition = (Expression) buildNode(nextContext());
+                Scope body = (Scope) buildNode(nextContext());
+                yield new WhileLoop(condition, body);
+            }
+
+            case SnailParser.ForLoopContext _ -> {
+                VariableDeclaration declaration = (VariableDeclaration) buildNode(nextContext());
+                Expression condition = (Expression) buildNode(nextContext());
+                Expression step = (Expression) buildNode(nextContext());
+                Scope body = (Scope) buildNode(nextContext());
+                yield new ForLoop(declaration, condition, step, body);
+            }
+
+            case SnailParser.IfConditionContext _ -> {
+                Expression condition = (Expression) buildNode(nextContext());
+                Scope body = (Scope) buildNode(nextContext());
+                yield new IfStatement(condition, body);
+            }
+
+            case SnailParser.BreakStatementContext _ -> new BreakStatement();
+
+            case SnailParser.AssigmentExpressionContext _ -> {
+                String variableName = ((SnailParser.AssigmentExpressionContext) ctx).IDENTIFIER().getText();
+                String operator = ((SnailParser.AssigmentExpressionContext) ctx).assigmentOperator.getText();
+                Expression expression = (Expression) buildNode(nextContext());
+                yield new AssigmentExpression(variableName, operator, expression);
+            }
+
             default -> throw new IllegalStateException("Unknown context: " + ctx.getClass().getSimpleName());
         };
     }

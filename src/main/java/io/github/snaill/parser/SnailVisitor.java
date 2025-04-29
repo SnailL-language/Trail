@@ -125,6 +125,14 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
     T visitExpression(SnailParser.ExpressionContext ctx);
 
     /**
+     * Visit a parse tree produced by {@link SnailParser#assigmentExpression}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitAssigmentExpression(SnailParser.AssigmentExpressionContext ctx);
+
+    /**
      * Visit a parse tree produced by {@link SnailParser#binaryExpression}.
      *
      * @param ctx the parse tree
@@ -141,14 +149,6 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
     T visitUnaryExpression(SnailParser.UnaryExpressionContext ctx);
 
     /**
-     * Visit a parse tree produced by {@link SnailParser#assignmentOperator}.
-     *
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    T visitAssignmentOperator(SnailParser.AssignmentOperatorContext ctx);
-
-    /**
      * Visit a parse tree produced by {@link SnailParser#primaryExpression}.
      *
      * @param ctx the parse tree
@@ -163,6 +163,22 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
      * @return the visitor result
      */
     T visitLiteral(SnailParser.LiteralContext ctx);
+
+    /**
+     * Visit a parse tree produced by {@link SnailParser#stringLiteral}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitStringLiteral(SnailParser.StringLiteralContext ctx);
+
+    /**
+     * Visit a parse tree produced by {@link SnailParser#numberLiteral}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitNumberLiteral(SnailParser.NumberLiteralContext ctx);
 
     /**
      * Visit a parse tree produced by {@link SnailParser#identifier}.
@@ -195,4 +211,20 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
      * @return the visitor result
      */
     T visitType(SnailParser.TypeContext ctx);
+
+    /**
+     * Visit a parse tree produced by {@link SnailParser#arrayType}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitArrayType(SnailParser.ArrayTypeContext ctx);
+
+    /**
+     * Visit a parse tree produced by {@link SnailParser#primitiveType}.
+     *
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    T visitPrimitiveType(SnailParser.PrimitiveTypeContext ctx);
 }

@@ -74,25 +74,18 @@ returnStatement
 
 // === Выражения ===
 expression
-    : IDENTIFIER assignmentOperator expression
+    : assigmentExpression
     | binaryExpression
     | unaryExpression
     | primaryExpression
     | '(' expression ')'
     ;
 
+assigmentExpression : IDENTIFIER assigmentOperator=('='| '+=' | '-=' | '*=' | '/=') expression;
+
 binaryExpression : (primaryExpression | '(' expression ')') binaryOperator=('||' | '&&' | '==' | '!=' | '>' | '<' | '>=' | '<=' | '+' | '-' | '*' | '/') expression;
 
 unaryExpression : unaryOperator=('-' | '!') expression;
-
-// Присваивание
-assignmentOperator
-    : '='
-    | '+='
-    | '-='
-    | '*='
-    | '/='
-    ;
 
 // Основные выражения
 primaryExpression
@@ -105,9 +98,13 @@ primaryExpression
 
 // Литералы
 literal
-    : NUMBER
-    | STRING
+    : numberLiteral
+    | stringLiteral
     ;
+
+stringLiteral : STRING;
+
+numberLiteral : NUMBER;
 
 identifier : IDENTIFIER;
 
@@ -123,16 +120,17 @@ arrayLiteral
 
 // === Типы ===
 type
-    : PRIMITIVE_TYPE
-    | 'void'
-    | 'string'
-    | '[' type ';' NUMBER ']'
+    : primitiveType
+    | arrayType
     ;
+
+arrayType : '[' type ';' numberLiteral ']';
+
+primitiveType : 'i32' | 'usize' | 'void' | 'string';
 
 // === Лексерные правила ===
 NUMBER : [0-9]+;
 STRING : '"' ~["]* '"';
-PRIMITIVE_TYPE : 'i32' | 'usize';
 IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]*;
 WS : [ \t\r\n]+ -> skip;
 LINE_COMMENT : '//' ~[\r\n]* -> skip;

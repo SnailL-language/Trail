@@ -125,7 +125,12 @@ public class TrailTest {
             "only_main.sn",
             "extra_function.sn",
             "string.sn",
-            "func_call.sn"
+            "func_call.sn",
+            "array.sn",
+            "while.sn",
+            "for.sn",
+            "assignment.sn",
+            "if.sn"
     })
     public void testProcessing(String filename) {
         Path sourceFile = SAMPLES_DIR.resolve(filename);

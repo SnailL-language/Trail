@@ -206,6 +206,20 @@ public interface SnailListener extends ParseTreeListener {
     void exitExpression(SnailParser.ExpressionContext ctx);
 
     /**
+     * Enter a parse tree produced by {@link SnailParser#assigmentExpression}.
+     *
+     * @param ctx the parse tree
+     */
+    void enterAssigmentExpression(SnailParser.AssigmentExpressionContext ctx);
+
+    /**
+     * Exit a parse tree produced by {@link SnailParser#assigmentExpression}.
+     *
+     * @param ctx the parse tree
+     */
+    void exitAssigmentExpression(SnailParser.AssigmentExpressionContext ctx);
+
+    /**
      * Enter a parse tree produced by {@link SnailParser#binaryExpression}.
      *
      * @param ctx the parse tree
@@ -234,20 +248,6 @@ public interface SnailListener extends ParseTreeListener {
     void exitUnaryExpression(SnailParser.UnaryExpressionContext ctx);
 
     /**
-     * Enter a parse tree produced by {@link SnailParser#assignmentOperator}.
-     *
-     * @param ctx the parse tree
-     */
-    void enterAssignmentOperator(SnailParser.AssignmentOperatorContext ctx);
-
-    /**
-     * Exit a parse tree produced by {@link SnailParser#assignmentOperator}.
-     *
-     * @param ctx the parse tree
-     */
-    void exitAssignmentOperator(SnailParser.AssignmentOperatorContext ctx);
-
-    /**
      * Enter a parse tree produced by {@link SnailParser#primaryExpression}.
      *
      * @param ctx the parse tree
@@ -274,6 +274,34 @@ public interface SnailListener extends ParseTreeListener {
      * @param ctx the parse tree
      */
     void exitLiteral(SnailParser.LiteralContext ctx);
+
+    /**
+     * Enter a parse tree produced by {@link SnailParser#stringLiteral}.
+     *
+     * @param ctx the parse tree
+     */
+    void enterStringLiteral(SnailParser.StringLiteralContext ctx);
+
+    /**
+     * Exit a parse tree produced by {@link SnailParser#stringLiteral}.
+     *
+     * @param ctx the parse tree
+     */
+    void exitStringLiteral(SnailParser.StringLiteralContext ctx);
+
+    /**
+     * Enter a parse tree produced by {@link SnailParser#numberLiteral}.
+     *
+     * @param ctx the parse tree
+     */
+    void enterNumberLiteral(SnailParser.NumberLiteralContext ctx);
+
+    /**
+     * Exit a parse tree produced by {@link SnailParser#numberLiteral}.
+     *
+     * @param ctx the parse tree
+     */
+    void exitNumberLiteral(SnailParser.NumberLiteralContext ctx);
 
     /**
      * Enter a parse tree produced by {@link SnailParser#identifier}.
@@ -330,4 +358,32 @@ public interface SnailListener extends ParseTreeListener {
      * @param ctx the parse tree
      */
     void exitType(SnailParser.TypeContext ctx);
+
+    /**
+     * Enter a parse tree produced by {@link SnailParser#arrayType}.
+     *
+     * @param ctx the parse tree
+     */
+    void enterArrayType(SnailParser.ArrayTypeContext ctx);
+
+    /**
+     * Exit a parse tree produced by {@link SnailParser#arrayType}.
+     *
+     * @param ctx the parse tree
+     */
+    void exitArrayType(SnailParser.ArrayTypeContext ctx);
+
+    /**
+     * Enter a parse tree produced by {@link SnailParser#primitiveType}.
+     *
+     * @param ctx the parse tree
+     */
+    void enterPrimitiveType(SnailParser.PrimitiveTypeContext ctx);
+
+    /**
+     * Exit a parse tree produced by {@link SnailParser#primitiveType}.
+     *
+     * @param ctx the parse tree
+     */
+    void exitPrimitiveType(SnailParser.PrimitiveTypeContext ctx);
 }

@@ -272,6 +272,24 @@ public class SnailBaseListener implements SnailListener {
      * <p>The default implementation does nothing.</p>
      */
     @Override
+    public void enterAssigmentExpression(SnailParser.AssigmentExpressionContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void exitAssigmentExpression(SnailParser.AssigmentExpressionContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
     public void enterBinaryExpression(SnailParser.BinaryExpressionContext ctx) {
     }
 
@@ -308,24 +326,6 @@ public class SnailBaseListener implements SnailListener {
      * <p>The default implementation does nothing.</p>
      */
     @Override
-    public void enterAssignmentOperator(SnailParser.AssignmentOperatorContext ctx) {
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation does nothing.</p>
-     */
-    @Override
-    public void exitAssignmentOperator(SnailParser.AssignmentOperatorContext ctx) {
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation does nothing.</p>
-     */
-    @Override
     public void enterPrimaryExpression(SnailParser.PrimaryExpressionContext ctx) {
     }
 
@@ -354,6 +354,42 @@ public class SnailBaseListener implements SnailListener {
      */
     @Override
     public void exitLiteral(SnailParser.LiteralContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void enterStringLiteral(SnailParser.StringLiteralContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void exitStringLiteral(SnailParser.StringLiteralContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void enterNumberLiteral(SnailParser.NumberLiteralContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void exitNumberLiteral(SnailParser.NumberLiteralContext ctx) {
     }
 
     /**
@@ -426,6 +462,42 @@ public class SnailBaseListener implements SnailListener {
      */
     @Override
     public void exitType(SnailParser.TypeContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void enterArrayType(SnailParser.ArrayTypeContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void exitArrayType(SnailParser.ArrayTypeContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void enterPrimitiveType(SnailParser.PrimitiveTypeContext ctx) {
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation does nothing.</p>
+     */
+    @Override
+    public void exitPrimitiveType(SnailParser.PrimitiveTypeContext ctx) {
     }
 
     /**

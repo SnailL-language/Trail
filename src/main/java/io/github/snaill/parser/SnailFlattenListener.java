@@ -9,7 +9,9 @@ import java.util.Set;
 public class SnailFlattenListener extends SnailBaseListener {
     Queue<ParserRuleContext> nodes = new ArrayDeque<>();
     Set<Class<? extends ParserRuleContext>> excluded = Set.of(SnailParser.StatementContext.class,
-            SnailParser.PrimaryExpressionContext.class, SnailParser.ExpressionContext.class);
+            SnailParser.PrimaryExpressionContext.class, SnailParser.ExpressionContext.class,
+            SnailParser.ParamListContext.class, SnailParser.ArgumentListContext.class, SnailParser.TypeContext.class,
+            SnailParser.LiteralContext.class);
 
     public Queue<ParserRuleContext> getNodes() {
         return nodes;

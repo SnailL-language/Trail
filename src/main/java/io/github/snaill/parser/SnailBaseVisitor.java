@@ -175,6 +175,17 @@ public class SnailBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements 
      * {@link #visitChildren} on {@code ctx}.</p>
      */
     @Override
+    public T visitAssigmentExpression(SnailParser.AssigmentExpressionContext ctx) {
+        return visitChildren(ctx);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     */
+    @Override
     public T visitBinaryExpression(SnailParser.BinaryExpressionContext ctx) {
         return visitChildren(ctx);
     }
@@ -197,17 +208,6 @@ public class SnailBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements 
      * {@link #visitChildren} on {@code ctx}.</p>
      */
     @Override
-    public T visitAssignmentOperator(SnailParser.AssignmentOperatorContext ctx) {
-        return visitChildren(ctx);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The default implementation returns the result of calling
-     * {@link #visitChildren} on {@code ctx}.</p>
-     */
-    @Override
     public T visitPrimaryExpression(SnailParser.PrimaryExpressionContext ctx) {
         return visitChildren(ctx);
     }
@@ -220,6 +220,28 @@ public class SnailBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements 
      */
     @Override
     public T visitLiteral(SnailParser.LiteralContext ctx) {
+        return visitChildren(ctx);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     */
+    @Override
+    public T visitStringLiteral(SnailParser.StringLiteralContext ctx) {
+        return visitChildren(ctx);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     */
+    @Override
+    public T visitNumberLiteral(SnailParser.NumberLiteralContext ctx) {
         return visitChildren(ctx);
     }
 
@@ -264,6 +286,28 @@ public class SnailBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements 
      */
     @Override
     public T visitType(SnailParser.TypeContext ctx) {
+        return visitChildren(ctx);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     */
+    @Override
+    public T visitArrayType(SnailParser.ArrayTypeContext ctx) {
+        return visitChildren(ctx);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     */
+    @Override
+    public T visitPrimitiveType(SnailParser.PrimitiveTypeContext ctx) {
         return visitChildren(ctx);
     }
 }
