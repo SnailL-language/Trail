@@ -1,0 +1,5 @@
+fn main() {
+    while (a > 5) {
+        let c: i32 = "afa";
+    }
+}
