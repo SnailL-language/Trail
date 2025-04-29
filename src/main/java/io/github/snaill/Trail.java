@@ -1,7 +1,6 @@
 package io.github.snaill;
 
-import io.github.snaill.ast.ASTBuilder;
-import io.github.snaill.ast.Node;
+import io.github.snaill.ast.*;
 import io.github.snaill.parser.SnailFlattenListener;
 import io.github.snaill.parser.SnailLexer;
 import io.github.snaill.parser.SnailParser;
@@ -14,10 +13,10 @@ import java.io.IOException;
 
 public class Trail {
 
-    private static final String USAGE = "trail [options] <file_to_compile>";
+    private static final String USAGE = "trail [options] builderType(flatten, reflection) <file_to_compile>";
 
     public static void main(String[] args) {
-        if (args.length == 0) {
+        if (args.length <= 1) {
             System.err.println(USAGE);
             return;
         }
@@ -34,10 +33,16 @@ public class Trail {
                 )
         );
         SnailParser.ProgramContext tree = parser.program();
-        SnailFlattenListener listener = new SnailFlattenListener();
-        new ParseTreeWalker().walk(listener, tree);
-        ASTBuilder builder = new ASTBuilder(listener.getNodes());
-        Node root = builder.build();
-        System.out.println(ASTBuilder.toSourceCode(root, true));
+        ASTBuilder builder = null;
+        if (args[args.length - 2].equals("flatten")) {
+            builder = new ASTFlattenBuilder();
+        } else if (args[args.length - 2].equals("reflection")) {
+            builder = new ASTReflectionBuilder();
+        } else {
+            System.err.println(USAGE);
+            return;
+        }
+        Node root = builder.build(tree);
+        System.out.println(SourceBuilder.toSourceCode(root));
     }
 }

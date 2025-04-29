@@ -2,7 +2,7 @@ package io.github.snaill;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -101,27 +101,28 @@ public class TrailTest {
      * Выполняет тест для указанного файла, сравнивая выходные данные с ожидаемыми.
      *
      * @param filename Имя тестового файла в директории SAMPLES_DIR.
+     * @param builderType Тип сборщика ("flatten" или "reflection").
      * @param expectedOut Ожидаемый стандартный вывод.
      * @param expectedErr Ожидаемый вывод ошибок.
      */
-    private void runTest(String filename, String expectedOut, String expectedErr) {
+    private void runTest(String filename, String builderType, String expectedOut, String expectedErr) {
         Path sourceFile = SAMPLES_DIR.resolve(filename);
         assertTrue(Files.exists(sourceFile), "Test file does not exist: " + sourceFile);
 
-        String[] args = {sourceFile.toString()};
+        String[] args = {builderType, sourceFile.toString()};
         Trail.main(args);
 
-        assertEquals(expectedErr, readFile(errFile), "Unexpected error output for " + filename);
-        assertEquals(expectedOut, readFile(outputFile), "Unexpected standard output for " + filename);
+        assertEquals(expectedErr, readFile(errFile), "Unexpected error output for " + filename + " with builder " + builderType);
+        assertEquals(expectedOut, readFile(outputFile), "Unexpected standard output for " + filename + " with builder " + builderType);
     }
 
     /**
-     * Параметризованный тест для проверки корректности обработки файлов Snail.
+     * Параметризованный тест для проверки корректности обработки файлов Snail с использованием flatten builder.
      *
      * @param filename Имя тестового файла.
      */
     @ParameterizedTest
-    @CsvSource({
+    @ValueSource(strings = {
             "only_main.sn",
             "extra_function.sn",
             "string.sn",
@@ -133,18 +134,70 @@ public class TrailTest {
             "if.sn",
             "big.sn"
     })
-    public void testProcessing(String filename) {
+    public void testProcessingWithFlatten(String filename) {
         Path sourceFile = SAMPLES_DIR.resolve(filename);
         String expectedOut = readFile(sourceFile);
-        runTest(filename, expectedOut, "");
+        runTest(filename, "flatten", expectedOut, "");
     }
 
     /**
-     * Тест для проверки обработки файла с синтаксической ошибкой.
+     * Параметризованный тест для проверки корректности обработки файлов Snail с использованием reflection builder.
+     *
+     * @param filename Имя тестового файла.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "only_main.sn",
+            "extra_function.sn",
+            "string.sn",
+            "func_call.sn",
+            "array.sn",
+            "while.sn",
+            "for.sn",
+            "assignment.sn",
+            "if.sn",
+            "big.sn"
+    })
+    public void testProcessingWithReflection(String filename) {
+        Path sourceFile = SAMPLES_DIR.resolve(filename);
+        String expectedOut = readFile(sourceFile);
+        runTest(filename, "reflection", expectedOut, "");
+    }
+
+    /**
+     * Тест для проверки обработки отсутствия аргументов.
      */
     @Test
-    public void testSyntaxError() {
-        String filename = "invalid_syntax.sn";
-        runTest(filename, "", "Syntax error in " + filename);
+    public void testMissingArguments() {
+        String[] args = {};
+        Trail.main(args);
+
+        assertEquals("trail[options]builderType(flatten,reflection)<file_to_compile>", readFile(errFile), "Unexpected error output for missing arguments");
+        assertEquals("", readFile(outputFile), "Unexpected standard output for missing arguments");
+    }
+
+    /**
+     * Тест для проверки обработки неверного типа сборщика.
+     */
+    @Test
+    public void testInvalidBuilderType() {
+        Path sourceFile = SAMPLES_DIR.resolve("only_main.sn");
+        String[] args = {"invalid", sourceFile.toString()};
+        Trail.main(args);
+
+        assertEquals("trail[options]builderType(flatten,reflection)<file_to_compile>", readFile(errFile), "Unexpected error output for invalid builder type");
+        assertEquals("", readFile(outputFile), "Unexpected standard output for invalid builder type");
+    }
+
+    /**
+     * Тест для проверки обработки несуществующего файла.
+     */
+    @Test
+    public void testNonExistentFile() {
+        String[] args = {"reflection", "non_existent_file.sn"};
+        Trail.main(args);
+
+        assertEquals("Cannotreadfile", readFile(errFile), "Unexpected error output for non-existent file");
+        assertEquals("", readFile(outputFile), "Unexpected standard output for non-existent file");
     }
 }
