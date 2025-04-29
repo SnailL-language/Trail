@@ -30,8 +30,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
+      - name: List test resources
+        run: ls -R src/test/resources || echo "No test resources found"
+
       - name: Build and test with Maven
         run: mvn clean verify
+
+      - name: List target test classes
+        if: always()
+        run: ls -R target/test-classes || echo "No test classes found"
 
       - name: Upload test results
         if: always()
