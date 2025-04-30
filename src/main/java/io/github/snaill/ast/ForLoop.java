@@ -3,7 +3,7 @@ package io.github.snaill.ast;
 import java.util.List;
 
 public class ForLoop extends AbstractNode implements Statement {
-    protected ForLoop(VariableDeclaration declaration, Expression condition, Expression step, Scope body) {
+    public ForLoop(VariableDeclaration declaration, Expression condition, Expression step, Scope body) {
         super(List.of(declaration, condition, step, body));
     }
 
@@ -21,5 +21,13 @@ public class ForLoop extends AbstractNode implements Statement {
 
     public Scope getBody() {
         return (Scope) children.get(3);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof ForLoop) {
+            return super.equals(obj);
+        }
+        return false;
     }
 }

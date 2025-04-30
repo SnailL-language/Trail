@@ -90,7 +90,6 @@ unaryExpression : unaryOperator=('-' | '!') expression;
 // Основные выражения
 primaryExpression
     : literal
-    | unaryExpression
     | identifier
     | functionCall
     | arrayLiteral

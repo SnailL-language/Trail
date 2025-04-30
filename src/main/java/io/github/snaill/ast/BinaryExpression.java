@@ -21,4 +21,13 @@ public class BinaryExpression extends Expression {
     public String getOperator() {
         return operator;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof BinaryExpression other) {
+            return operator.equals(other.operator)
+                && super.equals(other);
+        }
+        return false;
+    }
 }

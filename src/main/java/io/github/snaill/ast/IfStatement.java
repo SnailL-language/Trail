@@ -3,7 +3,7 @@ package io.github.snaill.ast;
 import java.util.List;
 
 public class IfStatement extends AbstractNode implements Statement {
-    protected IfStatement(Expression condition, Scope body) {
+    public IfStatement(Expression condition, Scope body) {
         super(List.of(condition, body));
     }
 
@@ -13,5 +13,13 @@ public class IfStatement extends AbstractNode implements Statement {
 
     public Scope getBody() {
         return (Scope) children.get(1);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof IfStatement) {
+            return super.equals(obj);
+        }
+        return false;
     }
 }

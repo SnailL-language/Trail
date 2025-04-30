@@ -21,4 +21,13 @@ public class VariableDeclaration extends AbstractNode implements Statement {
     public Expression getValue() {
         return (Expression) children.getLast();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof VariableDeclaration other) {
+            return name.equals(other.name)
+                && super.equals(other);
+        }
+        return false;
+    }
 }

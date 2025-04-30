@@ -17,4 +17,13 @@ public class Parameter extends AbstractNode {
     public String getName() {
         return name;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Parameter other) {
+            return name.equals(other.name)
+                && super.equals(other);
+        }
+        return false;
+    }
 }

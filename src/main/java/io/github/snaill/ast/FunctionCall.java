@@ -17,4 +17,13 @@ public class FunctionCall extends Expression {
     public String getName() {
         return name;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof FunctionCall other) {
+            return name.equals(other.name)
+                && super.equals(other);
+        }
+        return false;
+    }
 }

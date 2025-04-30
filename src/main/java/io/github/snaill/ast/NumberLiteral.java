@@ -10,4 +10,12 @@ public class NumberLiteral extends PrimaryExpression {
     public long getValue() {
         return value;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof NumberLiteral other) {
+            return value == other.value;
+        }
+        return false;
+    }
 }

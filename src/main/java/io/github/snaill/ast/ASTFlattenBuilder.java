@@ -20,8 +20,10 @@ public class ASTFlattenBuilder implements ASTBuilder {
     private static final List<Class<? extends ParserRuleContext>> expressions =
             List.of(SnailParser.BinaryExpressionContext.class,
                     SnailParser.UnaryExpressionContext.class,
-                    SnailParser.NumberLiteralContext.class, SnailParser.StringLiteralContext.class,
-                    SnailParser.IdentifierContext.class, SnailParser.AssigmentExpressionContext.class);
+                    SnailParser.NumberLiteralContext.class, 
+                    SnailParser.StringLiteralContext.class,
+                    SnailParser.IdentifierContext.class, 
+                    SnailParser.AssigmentExpressionContext.class);
     private static final List<Class<? extends ParserRuleContext>> statements =
             Stream.concat(
                     Stream.of(
@@ -35,12 +37,13 @@ public class ASTFlattenBuilder implements ASTBuilder {
                     expressions.stream()
             ).collect(Collectors.toList());
 
-    private Queue<ParserRuleContext> nodes = null;
+    private Queue<ParserRuleContext> nodes;
     private Node root;
 
     public ASTFlattenBuilder() {
     }
 
+    @Override
     public Node build(SnailParser.ProgramContext tree) {
         SnailFlattenListener listener = new SnailFlattenListener();
         new ParseTreeWalker().walk(listener, tree);
@@ -51,22 +54,23 @@ public class ASTFlattenBuilder implements ASTBuilder {
         return root;
     }
 
+    @SuppressWarnings("unused")
     private Node buildNode(ParserRuleContext ctx) {
         if (ctx == null) {
             throw new IllegalStateException("Context cannot be null");
         }
 
         return switch (ctx) {
-            case SnailParser.ProgramContext _ -> {
+            case SnailParser.ProgramContext programContext -> {
                 List<Statement> children = collectChildren(globalStatements, Statement.class);
                 yield new Scope(children);
             }
 
-            case SnailParser.ScopeContext _ -> {
+            case SnailParser.ScopeContext scopeContext -> {
                 List<Statement> children = collectChildren(statements, Statement.class);
                 yield new Scope(children);
             }
-            case SnailParser.FuncDeclarationContext _ -> {
+            case SnailParser.FuncDeclarationContext funcDeclarationContext -> {
                 String name = ((SnailParser.FuncDeclarationContext) ctx).IDENTIFIER().getText();
                 List<Parameter> params = collectChildren(SnailParser.ParamContext.class, Parameter.class);
                 Type type;
@@ -78,77 +82,77 @@ public class ASTFlattenBuilder implements ASTBuilder {
                 Scope scope = (Scope) buildNode(nextContext());
                 yield new FunctionDeclaration(name, params, type, scope);
             }
-            case SnailParser.ParamContext _ -> {
+            case SnailParser.ParamContext paramContext -> {
                 String name = ((SnailParser.ParamContext) ctx).IDENTIFIER().getText();
                 Type type = (Type) buildNode(nextContext());
                 yield new Parameter(name, type);
             }
 
-            case SnailParser.VariableDeclarationContext _ -> {
+            case SnailParser.VariableDeclarationContext variableDeclarationContext -> {
                 String name = ((SnailParser.VariableDeclarationContext) ctx).IDENTIFIER().getText();
                 Type type = (Type) buildNode(nextContext());
                 Expression expr = (Expression) buildNode(nextContext());
                 yield new VariableDeclaration(name, type, expr);
             }
-            case SnailParser.StringLiteralContext _ -> {
+            case SnailParser.StringLiteralContext stringLiteralContext -> {
                 String value = ((SnailParser.StringLiteralContext) ctx).STRING().getText();
                 yield new StringLiteral(value);
             }
 
-            case SnailParser.NumberLiteralContext _ -> {
+            case SnailParser.NumberLiteralContext numberLiteralContext -> {
                 long value = Long.parseLong(((SnailParser.NumberLiteralContext) ctx).NUMBER().getText());
                 yield new NumberLiteral(value);
             }
 
-            case SnailParser.IdentifierContext _ -> {
+            case SnailParser.IdentifierContext identifierContext -> {
                 String value = ctx.getChild(TerminalNode.class, 0).getText();
                 yield new Identifier(value);
             }
 
-            case SnailParser.PrimitiveTypeContext _ -> new PrimitiveType(ctx.getText());
+            case SnailParser.PrimitiveTypeContext primitiveTypeContext -> new PrimitiveType(ctx.getText());
 
-            case SnailParser.ArrayTypeContext _ -> {
+            case SnailParser.ArrayTypeContext arrayTypeContext -> {
                 Type type = (Type) buildNode(nextContext());
                 NumberLiteral value = (NumberLiteral) buildNode(nextContext());
                 yield new ArrayType(type, value);
             }
 
-            case SnailParser.BinaryExpressionContext _ -> {
+            case SnailParser.BinaryExpressionContext binaryExpressionContext -> {
                 String operator = ((SnailParser.BinaryExpressionContext) ctx).binaryOperator.getText();
                 Expression left = (Expression) buildNode(nextContext());
                 Expression right = (Expression) buildNode(nextContext());
                 yield new BinaryExpression(left, operator, right);
             }
 
-            case SnailParser.UnaryExpressionContext _ -> {
+            case SnailParser.UnaryExpressionContext unaryExpressionContext -> {
                 String operator = ((SnailParser.UnaryExpressionContext) ctx).unaryOperator.getText();
                 Expression argument = (Expression) buildNode(nextContext());
                 yield new UnaryExpression(operator, argument);
             }
 
-            case SnailParser.ReturnStatementContext _ -> {
+            case SnailParser.ReturnStatementContext returnStatementContext -> {
                 Expression returnable = (Expression) buildNode(nextContext());
                 yield new ReturnStatement(returnable);
             }
 
-            case SnailParser.FunctionCallContext _ -> {
+            case SnailParser.FunctionCallContext functionCallContext -> {
                 String name = ((SnailParser.FunctionCallContext) ctx).IDENTIFIER().getText();
                 List<Expression> arguments = collectChildren(expressions, Expression.class);
                 yield new FunctionCall(name, arguments);
             }
 
-            case SnailParser.ArrayLiteralContext _ -> {
+            case SnailParser.ArrayLiteralContext arrayLiteralContext -> {
                 List<Expression> elements = collectChildren(expressions, Expression.class);
                 yield new ArrayLiteral(elements);
             }
 
-            case SnailParser.WhileLoopContext _ -> {
+            case SnailParser.WhileLoopContext whileLoopContext -> {
                 Expression condition = (Expression) buildNode(nextContext());
                 Scope body = (Scope) buildNode(nextContext());
                 yield new WhileLoop(condition, body);
             }
 
-            case SnailParser.ForLoopContext _ -> {
+            case SnailParser.ForLoopContext forLoopContext -> {
                 VariableDeclaration declaration = (VariableDeclaration) buildNode(nextContext());
                 Expression condition = (Expression) buildNode(nextContext());
                 Expression step = (Expression) buildNode(nextContext());
@@ -156,15 +160,15 @@ public class ASTFlattenBuilder implements ASTBuilder {
                 yield new ForLoop(declaration, condition, step, body);
             }
 
-            case SnailParser.IfConditionContext _ -> {
+            case SnailParser.IfConditionContext ifConditionContext-> {
                 Expression condition = (Expression) buildNode(nextContext());
                 Scope body = (Scope) buildNode(nextContext());
                 yield new IfStatement(condition, body);
             }
 
-            case SnailParser.BreakStatementContext _ -> new BreakStatement();
+            case SnailParser.BreakStatementContext breakStatementContext -> new BreakStatement();
 
-            case SnailParser.AssigmentExpressionContext _ -> {
+            case SnailParser.AssigmentExpressionContext assigmentExpressionContext -> {
                 String variableName = ((SnailParser.AssigmentExpressionContext) ctx).IDENTIFIER().getText();
                 String operator = ((SnailParser.AssigmentExpressionContext) ctx).assigmentOperator.getText();
                 Expression expression = (Expression) buildNode(nextContext());

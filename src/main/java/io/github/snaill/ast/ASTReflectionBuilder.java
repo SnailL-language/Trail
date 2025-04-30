@@ -10,31 +10,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("unused")
 public class ASTReflectionBuilder implements ASTBuilder {
-    private static final List<Class<? extends ParserRuleContext>> globalStatements =
-            List.of(SnailParser.VariableDeclarationContext.class,
-                    SnailParser.FuncDeclarationContext.class);
-    private static final List<Class<? extends ParserRuleContext>> expressions =
-            List.of(SnailParser.BinaryExpressionContext.class,
-                    SnailParser.UnaryExpressionContext.class,
-                    SnailParser.NumberLiteralContext.class, SnailParser.StringLiteralContext.class,
-                    SnailParser.IdentifierContext.class, SnailParser.AssigmentExpressionContext.class);
-    private static final List<Class<? extends ParserRuleContext>> statements =
-            Stream.concat(
-                    Stream.of(
-                            SnailParser.VariableDeclarationContext.class,
-                            SnailParser.ForLoopContext.class,
-                            SnailParser.WhileLoopContext.class,
-                            SnailParser.IfConditionContext.class,
-                            SnailParser.BreakStatementContext.class,
-                            SnailParser.ReturnStatementContext.class
-                    ),
-                    expressions.stream()
-            ).toList();
 
     public ASTReflectionBuilder() {
     }
 
+    @Override
     public Node build(SnailParser.ProgramContext ctx) {
         Node root = parseProgram(ctx);
         return root;

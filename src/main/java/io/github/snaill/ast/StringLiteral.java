@@ -10,4 +10,12 @@ public class StringLiteral extends PrimaryExpression {
     public String getValue() {
         return value;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof StringLiteral other) {
+            return value.equals(other.value);
+        }
+        return false;
+    }
 }

@@ -17,4 +17,13 @@ public class UnaryExpression extends Expression {
     public String getOperator() {
         return operator;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof UnaryExpression other) {
+            return operator.equals(other.operator)
+                && super.equals(other);
+        }
+        return false;
+    }
 }

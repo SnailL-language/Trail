@@ -8,8 +8,8 @@ public abstract class AbstractNode implements Node {
 
     protected List<Node> children;
 
-    protected AbstractNode(List<Node> children) {
-        this.children = children;
+    protected AbstractNode(List<? extends Node> children) {
+        this.children = List.copyOf(children);
     }
 
     @Override
@@ -35,5 +35,13 @@ public abstract class AbstractNode implements Node {
     @Override
     public void setChild(int index, Node child) {
         this.children.set(index, child);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof AbstractNode other) {
+            return children.containsAll(other.children) && other.children.containsAll(children);
+        }
+        return false;
     }
 }

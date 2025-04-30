@@ -10,4 +10,12 @@ public class Identifier extends PrimaryExpression {
     public String getName() {
         return name;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Identifier other) {
+            return name.equals(other.name);
+        }
+        return false;
+    }
 }

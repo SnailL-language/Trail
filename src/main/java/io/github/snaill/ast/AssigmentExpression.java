@@ -23,4 +23,14 @@ public class AssigmentExpression extends Expression implements Statement {
     public Expression getExpression() {
         return (Expression) super.getChild(0);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof AssigmentExpression other) {
+            return variableName.equals(other.variableName)
+                && operator.equals(other.operator)
+                && super.equals(other);
+        }
+        return false;
+    }
 }
