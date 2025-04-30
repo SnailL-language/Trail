@@ -74,7 +74,7 @@ public class ASTFlattenBuilder implements ASTBuilder {
                 String name = ((SnailParser.FuncDeclarationContext) ctx).IDENTIFIER().getText();
                 List<Parameter> params = collectChildren(SnailParser.ParamContext.class, Parameter.class);
                 Type type;
-                if (ctx.getChild(SnailParser.TypeContext.class, 0) != null) {
+                if (((SnailParser.FuncDeclarationContext) ctx).type() != null) {
                     type = (Type) buildNode(nextContext());
                 } else {
                     type = new PrimitiveType("void");
@@ -131,7 +131,10 @@ public class ASTFlattenBuilder implements ASTBuilder {
             }
 
             case SnailParser.ReturnStatementContext returnStatementContext -> {
-                Expression returnable = (Expression) buildNode(nextContext());
+                Expression returnable = null;
+                if (((SnailParser.ReturnStatementContext) ctx).expression() != null) {
+                    returnable = (Expression) buildNode(nextContext());
+                }
                 yield new ReturnStatement(returnable);
             }
 

@@ -1,14 +1,9 @@
 package io.github.snaill;
 
+import io.github.snaill.ast.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import io.github.snaill.ast.*;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -18,12 +13,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 /**
  * Тестовый класс для проверки программы Trail, которая обрабатывает исходные файлы на языке Snail.
  */
 public class TrailTest {
 
-     private static final Path SAMPLES_DIR = Path.of("src", "test", "resources", "test_samples");
+    private static final Path SAMPLES_DIR = Path.of("src", "test", "resources", "test_samples");
     private static Path tempDir;
     private static Path outputFile;
     private static Path errFile;
@@ -140,8 +137,8 @@ public class TrailTest {
     @Test
     public void testMissingArguments() {
         assertThrows(
-            NullPointerException.class, 
-            () -> Trail.build(null, null)
+                NullPointerException.class,
+                () -> Trail.build(null, null)
         );
     }
 
@@ -151,8 +148,8 @@ public class TrailTest {
     @Test
     public void testInvalidBuilderType() {
         assertThrows(
-            RuntimeException.class, 
-            () -> Trail.build("invalid", SAMPLES_DIR.resolve("only_main.sn").toString())
+                RuntimeException.class,
+                () -> Trail.build("invalid", SAMPLES_DIR.resolve("only_main.sn").toString())
         );
     }
 
@@ -162,34 +159,37 @@ public class TrailTest {
     @Test
     public void testNonExistentFile() {
         assertThrows(
-            RuntimeException.class, 
-            () -> Trail.build("reflection", "non_existent_file.sn")
+                RuntimeException.class,
+                () -> Trail.build("reflection", "non_existent_file.sn")
         );
     }
 
     /**
      * Тест для проверки того, что ast строится ожидаемым образом
-      */
-    @Test
-    public void testTreesEquality() {
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "reflection",
+            "flatten"
+    })
+    public void testTreesEquality(String builderType) {
         Node expected = new Scope(List.of(
-            (Statement) new VariableDeclaration("dp",
-                new ArrayType(
-                    new PrimitiveType("i32"),
-                    new NumberLiteral(23577L)), 
-                new ArrayLiteral(List.of())),
-            (Statement) new FunctionDeclaration("main", 
-            List.of(), 
-            new PrimitiveType("void"),
-            new Scope(List.of(
-                (Statement) new VariableDeclaration("x", 
-                    new PrimitiveType("i32"), 
-                    new NumberLiteral(4564L)),
-                (Statement) new ReturnStatement(null)
-            )))
+                new VariableDeclaration("dp",
+                        new ArrayType(
+                                new PrimitiveType("i32"),
+                                new NumberLiteral(23577L)),
+                        new ArrayLiteral(List.of())),
+                new FunctionDeclaration("main",
+                        List.of(),
+                        new PrimitiveType("void"),
+                        new Scope(List.of(
+                                new VariableDeclaration("x",
+                                        new PrimitiveType("i32"),
+                                        new NumberLiteral(4564L)),
+                                new ReturnStatement(null)
+                        )))
         ));
-        runBuilding("reflection", expected);
-        // runBuilding("flatten", expected); fails :(
+        runBuilding(builderType, expected);
     }
 
     /**
@@ -211,7 +211,7 @@ public class TrailTest {
     /**
      * Выполняет тест для указанного файла, сравнивая выходные данные с ожидаемыми.
      *
-     * @param filename Имя тестового файла в директории SAMPLES_DIR.
+     * @param filename    Имя тестового файла в директории SAMPLES_DIR.
      * @param builderType Тип сборщика ("flatten" или "reflection").
      * @param expectedOut Ожидаемый стандартный вывод.
      * @param expectedErr Ожидаемый вывод ошибок.
