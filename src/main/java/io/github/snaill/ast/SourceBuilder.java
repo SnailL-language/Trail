@@ -85,7 +85,7 @@ public class SourceBuilder {
                     ")" +
                     toSourceCode(forLoop.getBody(), false);
             case IfStatement ifStmt -> "if (" + toSourceCode(ifStmt.getCondition(), false) + ") " +
-                    toSourceCode(ifStmt.getBody(), false);
+                    toSourceCode(ifStmt.getBody(), false) + (ifStmt.getElseBody() != null ? "else " + toSourceCode(ifStmt.getElseBody(), false) : "");
             case @SuppressWarnings("unused") BreakStatement breakStatement -> "break;";
             case AssigmentExpression assignExpr -> assignExpr.getVariableName() +
                     " " + assignExpr.getOperator() + " " +

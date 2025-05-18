@@ -84,7 +84,7 @@ public class TrailTest {
     }
 
     /**
-     * Параметризованный тест для проверки корректности обработки файлов Snail с использованием flatten builder.
+     * Параметризованный тест для проверки корректности обработки файлов SnailL.
      *
      * @param filename Имя тестового файла.
      */
@@ -99,36 +99,13 @@ public class TrailTest {
             "for.sn",
             "assignment.sn",
             "if.sn",
-            "big.sn"
+            "big.sn",
+            "else.sn"
     })
-    public void testProcessingWithFlatten(String filename) {
+    public void testProcessing(String filename) {
         Path sourceFile = SAMPLES_DIR.resolve(filename);
         String expectedOut = readFile(sourceFile);
-        runTest(filename, "flatten", expectedOut, "");
-    }
-
-    /**
-     * Параметризованный тест для проверки корректности обработки файлов Snail с использованием reflection builder.
-     *
-     * @param filename Имя тестового файла.
-     */
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "only_main.sn",
-            "extra_function.sn",
-            "string.sn",
-            "func_call.sn",
-            "array.sn",
-            "while.sn",
-            "for.sn",
-            "assignment.sn",
-            "if.sn",
-            "big.sn"
-    })
-    public void testProcessingWithReflection(String filename) {
-        Path sourceFile = SAMPLES_DIR.resolve(filename);
-        String expectedOut = readFile(sourceFile);
-        runTest(filename, "reflection", expectedOut, "");
+        runTest(filename, expectedOut, "");
     }
 
     /**
@@ -138,18 +115,7 @@ public class TrailTest {
     public void testMissingArguments() {
         assertThrows(
                 NullPointerException.class,
-                () -> Trail.build(null, null)
-        );
-    }
-
-    /**
-     * Тест для проверки обработки неверного типа сборщика.
-     */
-    @Test
-    public void testInvalidBuilderType() {
-        assertThrows(
-                RuntimeException.class,
-                () -> Trail.build("invalid", SAMPLES_DIR.resolve("only_main.sn").toString())
+                () -> Trail.build(null)
         );
     }
 
@@ -160,19 +126,15 @@ public class TrailTest {
     public void testNonExistentFile() {
         assertThrows(
                 RuntimeException.class,
-                () -> Trail.build("reflection", "non_existent_file.sn")
+                () -> Trail.build("non_existent_file.sn")
         );
     }
 
     /**
      * Тест для проверки того, что ast строится ожидаемым образом
      */
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "reflection",
-            "flatten"
-    })
-    public void testTreesEquality(String builderType) {
+    @Test
+    public void testTreesEquality() {
         Node expected = new Scope(List.of(
                 new VariableDeclaration("dp",
                         new ArrayType(
@@ -189,7 +151,7 @@ public class TrailTest {
                                 new ReturnStatement(null)
                         )))
         ));
-        runBuilding(builderType, expected);
+        runBuilding(expected);
     }
 
     /**
@@ -212,22 +174,21 @@ public class TrailTest {
      * Выполняет тест для указанного файла, сравнивая выходные данные с ожидаемыми.
      *
      * @param filename    Имя тестового файла в директории SAMPLES_DIR.
-     * @param builderType Тип сборщика ("flatten" или "reflection").
      * @param expectedOut Ожидаемый стандартный вывод.
      * @param expectedErr Ожидаемый вывод ошибок.
      */
-    private void runTest(String filename, String builderType, String expectedOut, String expectedErr) {
+    private void runTest(String filename, String expectedOut, String expectedErr) {
         Path sourceFile = SAMPLES_DIR.resolve(filename);
         assertTrue(Files.exists(sourceFile), "Test file does not exist: " + sourceFile);
 
-        String[] args = {builderType, sourceFile.toString()};
+        String[] args = {sourceFile.toString()};
         Trail.main(args);
 
-        assertEquals(expectedErr, readFile(errFile), "Unexpected error output for " + filename + " with builder " + builderType);
-        assertEquals(expectedOut, readFile(outputFile), "Unexpected standard output for " + filename + " with builder " + builderType);
+        assertEquals(expectedErr, readFile(errFile), "Unexpected error output for " + filename);
+        assertEquals(expectedOut, readFile(outputFile), "Unexpected standard output for " + filename);
     }
 
-    private void runBuilding(String builderType, Node expected) {
+    private void runBuilding(Node expected) {
         final Path tmpFile;
         try {
             tmpFile = Files.createTempFile("test", "tree");
@@ -241,7 +202,7 @@ public class TrailTest {
         } catch (IOException e) {
             throw new RuntimeException("Cannot write to file: ", e);
         }
-        Node actual = Trail.build(builderType, tmpFile.toString());
+        Node actual = Trail.build(tmpFile.toString());
         try {
             Files.delete(tmpFile);
         } catch (IOException e) {

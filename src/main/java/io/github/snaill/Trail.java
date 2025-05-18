@@ -12,10 +12,9 @@ import java.util.Objects;
 
 public class Trail {
 
-    private static final String USAGE = "trail [options] builderType(flatten, reflection) <file_to_compile>";
+    private static final String USAGE = "trail [options] <file_to_compile>";
 
-    public static Node build(String builderType, String filename) {
-        Objects.requireNonNull(builderType);
+    public static Node build(String filename) {
         Objects.requireNonNull(filename);
         final CharStream stream;
         try {
@@ -29,25 +28,18 @@ public class Trail {
                 )
         );
         SnailParser.ProgramContext tree = parser.program();
-        final ASTBuilder builder;
-        if (builderType.equals("flatten")) {
-            builder = new ASTFlattenBuilder();
-        } else if (builderType.equals("reflection")) {
-            builder = new ASTReflectionBuilder();
-        } else {
-            throw new RuntimeException();
-        }
+        final ASTBuilder builder = new ASTReflectionBuilder();
         return builder.build(tree);
     }
 
     public static void main(String[] args) {
-        if (args.length <= 1) {
+        if (args.length < 1) {
             System.err.println(USAGE);
             return;
         }
         final Node root;
         try {
-            root = build(args[args.length - 2], args[args.length - 1]);
+            root = build(args[args.length - 1]);
         } catch (RuntimeException e) {
             if (e.getCause() != null) {
                 System.err.println("Cannot read file " + e.getCause().getMessage());

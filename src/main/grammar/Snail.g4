@@ -60,7 +60,7 @@ whileLoop
 
 // === Условия ===
 ifCondition
-    : 'if' '(' expression ')' scope
+    : 'if' '(' expression ')' scope ('else' scope)?
     ;
 
 // === Специальные операторы ===

@@ -165,8 +165,9 @@ public class ASTReflectionBuilder implements ASTBuilder {
 
     private Node parseIfCondition(SnailParser.IfConditionContext ctx) {
         Expression condition = (Expression) parseExpression(ctx.expression());
-        Scope body = parseScope(ctx.scope());
-        return new IfStatement(condition, body);
+        Scope body = parseScope(ctx.scope(0));
+        Scope elseBody = ctx.scope().size() == 1 ? null : parseScope(ctx.scope(1));
+        return new IfStatement(condition, body, elseBody);
     }
 
     private Node parseBreakStatement(SnailParser.BreakStatementContext ctx) {
