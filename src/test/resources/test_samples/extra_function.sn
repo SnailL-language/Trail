@@ -1,4 +1,5 @@
-fn extra() -> i32 {
+fn extra() -> bool {
+    return true;
 }
 
 fn main() {

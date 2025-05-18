@@ -139,6 +139,12 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitNumberLiteral(SnailParser.NumberLiteralContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link SnailParser#booleanLiteral}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBooleanLiteral(SnailParser.BooleanLiteralContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link SnailParser#identifier}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

@@ -1,6 +1,7 @@
 package io.github.snaill.ast;
 
 import io.github.snaill.parser.SnailParser;
+
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.lang.reflect.InvocationTargetException;
@@ -92,6 +93,10 @@ public class ASTReflectionBuilder implements ASTBuilder {
     private Node parseNumberLiteral(SnailParser.NumberLiteralContext ctx) {
         long value = Long.parseLong(ctx.NUMBER().getText());
         return new NumberLiteral(value);
+    }
+
+    private Node parseBooleanLiteral(SnailParser.BooleanLiteralContext ctx) {
+        return new BooleanLiteral(Boolean.parseBoolean(ctx.getText()));
     }
 
     private Node parseIdentifier(SnailParser.IdentifierContext ctx) {

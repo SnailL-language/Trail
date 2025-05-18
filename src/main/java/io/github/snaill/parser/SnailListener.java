@@ -220,6 +220,16 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitNumberLiteral(SnailParser.NumberLiteralContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link SnailParser#booleanLiteral}.
+	 * @param ctx the parse tree
+	 */
+	void enterBooleanLiteral(SnailParser.BooleanLiteralContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#booleanLiteral}.
+	 * @param ctx the parse tree
+	 */
+	void exitBooleanLiteral(SnailParser.BooleanLiteralContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link SnailParser#identifier}.
 	 * @param ctx the parse tree
 	 */

@@ -99,11 +99,14 @@ primaryExpression
 literal
     : numberLiteral
     | stringLiteral
+    | booleanLiteral
     ;
 
 stringLiteral : STRING;
 
 numberLiteral : NUMBER;
+
+booleanLiteral : 'true' | 'false' ;
 
 identifier : IDENTIFIER;
 
@@ -125,7 +128,7 @@ type
 
 arrayType : '[' type ';' numberLiteral ']';
 
-primitiveType : 'i32' | 'usize' | 'void' | 'string';
+primitiveType : 'i32' | 'usize' | 'void' | 'string' | 'bool';
 
 // === Лексерные правила ===
 NUMBER : [0-9]+;
