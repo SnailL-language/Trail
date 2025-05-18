@@ -47,6 +47,7 @@ public class SourceBuilder {
                     ";";
             case StringLiteral stringLiteral -> stringLiteral.getValue();
             case NumberLiteral numberLiteral -> String.valueOf(numberLiteral.getValue());
+            case BooleanLiteral booleanLiteral -> String.valueOf(booleanLiteral.getValue());
             case Identifier identifier -> identifier.getName();
             case PrimitiveType primitiveType -> primitiveType.getName();
             case ArrayType arrayType -> "[" + toSourceCode(arrayType.getElementType(), false) +
