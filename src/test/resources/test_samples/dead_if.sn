@@ -1,0 +1,7 @@
+fn main() {
+    if (true) {
+        let i : usize = 20;
+    } else {
+        let r : i32 = 245;
+    }
+}

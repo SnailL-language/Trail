@@ -103,9 +103,12 @@ public class TrailTest {
             "else.sn"
     })
     public void testProcessing(String filename) {
-        Path sourceFile = SAMPLES_DIR.resolve(filename);
-        String expectedOut = readFile(sourceFile);
-        runTest(filename, expectedOut, "");
+        runTest(filename, "", "");
+        Path filepath = SAMPLES_DIR.resolve(filename);
+        assertEquals(
+            SourceBuilder.toSourceCode(Trail.build(filepath.toString())).replaceAll("\\s+", ""), 
+            readFile(filepath)
+        );
     }
 
     /**
@@ -154,6 +157,24 @@ public class TrailTest {
         runBuilding(expected);
     }
 
+    @Test
+    public void testDeadIf() {
+        runTest(
+            "dead_if.sn", 
+            "ERROR:else{DEAD_CODE================================letr:i32=245;================================}", 
+            "Fatal.Aborting..."
+        );
+    }
+
+    @Test
+    public void testAfterReturn() {
+        runTest(
+            "after_return.sn", 
+            "ERROR:returnresult;DEAD_CODE================================result=235================================",
+            "Fatal.Aborting..."    
+        );
+    }
+
     /**
      * Читает содержимое файла и возвращает его как строку без пробелов и переносов строк.
      *
@@ -184,8 +205,8 @@ public class TrailTest {
         String[] args = {sourceFile.toString()};
         Trail.main(args);
 
-        assertEquals(expectedErr, readFile(errFile), "Unexpected error output for " + filename);
         assertEquals(expectedOut, readFile(outputFile), "Unexpected standard output for " + filename);
+        assertEquals(expectedErr, readFile(errFile), "Unexpected error output for " + filename);
     }
 
     private void runBuilding(Node expected) {

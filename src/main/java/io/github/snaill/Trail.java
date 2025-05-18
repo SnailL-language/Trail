@@ -1,6 +1,7 @@
 package io.github.snaill;
 
 import io.github.snaill.ast.*;
+import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.parser.SnailLexer;
 import io.github.snaill.parser.SnailParser;
 import org.antlr.v4.runtime.CharStream;
@@ -48,6 +49,12 @@ public class Trail {
             }
             return;
         }
-        System.out.println(SourceBuilder.toSourceCode(root));
+        root.optimize();
+        try {
+            root.check();
+        } catch (FailedCheckException e) {
+            System.err.println("Fatal. Aborting...");
+            return;
+        }
     }
 }

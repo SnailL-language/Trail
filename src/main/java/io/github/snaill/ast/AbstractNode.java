@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import io.github.snaill.result.Result;
+
 public abstract class AbstractNode implements Node {
 
     protected List<Node> children;
@@ -35,6 +37,11 @@ public abstract class AbstractNode implements Node {
     @Override
     public void setChild(int index, Node child) {
         this.children.set(index, child);
+    }
+
+    @Override
+    public List<Result> checkDeadCode() {
+        return children.stream().flatMap(child -> child.checkDeadCode().stream()).toList();
     }
 
     @Override
