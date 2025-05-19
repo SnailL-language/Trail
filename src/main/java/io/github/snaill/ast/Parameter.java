@@ -1,6 +1,7 @@
 package io.github.snaill.ast;
 
 import java.util.List;
+import java.util.Objects;
 
 public class Parameter extends AbstractNode {
     private final String name;
@@ -25,5 +26,10 @@ public class Parameter extends AbstractNode {
                 && super.equals(other);
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, getType());
     }
 }

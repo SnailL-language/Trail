@@ -18,4 +18,9 @@ public class PrimitiveType extends Type {
         }
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
+    }
 }

@@ -91,7 +91,6 @@ public class TrailTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "only_main.sn",
-            "extra_function.sn",
             "string.sn",
             "func_call.sn",
             "array.sn",
@@ -172,6 +171,15 @@ public class TrailTest {
             "after_return.sn", 
             "ERROR:returnresult;DEAD_CODE================================result=235================================",
             "Fatal.Aborting..."    
+        );
+    }
+
+    @Test
+    public void testUnusedFunction() {
+        runTest(
+            "extra_function.sn",
+            "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~fnextra()->bool{returntrue;}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", 
+            ""
         );
     }
 

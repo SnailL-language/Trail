@@ -1,6 +1,8 @@
 package io.github.snaill.ast;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class FunctionDeclaration extends AbstractNode implements Statement {
@@ -28,11 +30,22 @@ public class FunctionDeclaration extends AbstractNode implements Statement {
     }
 
     @Override
+    public void checkUnusedFunctions(Set<FunctionDeclaration> unused) {
+        unused.add(this);
+        super.checkUnusedFunctions(unused);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (obj instanceof FunctionDeclaration other) {
             return name.equals(other.name)
                 && super.equals(other);
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, getReturnType(), getParameterList());
     }
 }

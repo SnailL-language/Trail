@@ -1,6 +1,7 @@
 package io.github.snaill.ast;
 
 import java.util.List;
+import java.util.Set;
 
 public class FunctionCall extends Expression {
     String name;
@@ -16,6 +17,14 @@ public class FunctionCall extends Expression {
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public void checkUnusedFunctions(Set<FunctionDeclaration> unused) {
+        unused.removeAll(unused.stream()
+        .filter(fn -> fn.getName().equals(name) && fn.getParameterList().size() == getArguments().size())
+        .toList());
+        super.checkUnusedFunctions(unused);
     }
 
     @Override

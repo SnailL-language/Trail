@@ -3,6 +3,7 @@ package io.github.snaill.ast;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import io.github.snaill.result.Result;
 
@@ -42,6 +43,11 @@ public abstract class AbstractNode implements Node {
     @Override
     public List<Result> checkDeadCode() {
         return children.stream().flatMap(child -> child.checkDeadCode().stream()).toList();
+    }
+
+    @Override
+    public void checkUnusedFunctions(Set<FunctionDeclaration> unused) {
+        children.stream().forEach(child -> child.checkUnusedFunctions(unused));
     }
 
     @Override

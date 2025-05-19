@@ -1,5 +1,7 @@
 package io.github.snaill.ast;
 
+import java.util.Objects;
+
 public class ArrayType extends Type {
     private final Type elementType;
     private final NumberLiteral size;
@@ -24,5 +26,10 @@ public class ArrayType extends Type {
                 && other.size.equals(size);
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(elementType, size);
     }
 }
