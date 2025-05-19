@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,8 @@ public interface Node {
 
     void checkUnusedFunctions(Set<FunctionDeclaration> unused);
 
+    void checkUnusedVariables(Set<VariableDeclaration> unused);
+
     // void checkTypes();
 
     /**
@@ -39,24 +42,34 @@ public interface Node {
     /**
      * Единый метод для запуска всех проверок корректности кода.
       */
+    @SuppressWarnings("unused")
     default void check() throws FailedCheckException {
-        Set<FunctionDeclaration> unused = new HashSet<>();
-        checkUnusedFunctions(unused);
-        System.out.println(
-            unused.stream()
-            .filter(Predicate.not(fn -> fn.getName().equals("main")))
-            .map(fn -> new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(fn)).toString())
-            .collect(Collectors.joining(System.lineSeparator()))
-        );
+        // checkTypes();
         List<Result> results = checkDeadCode();
-        System.out.println(
-            results.stream()
+        String out = results.stream()
             .map(Object::toString)
-            .collect(Collectors.joining(System.lineSeparator()))
+            .collect(Collectors.joining(System.lineSeparator())
         );
+        if (!out.equals("")) {
+            System.out.println(out);
+        }
         if (results.stream().anyMatch(Result::isCritical)) {
             throw new FailedCheckException();
         }
-        // checkTypes();
+        checkUnused(this::checkUnusedFunctions, fn -> fn.getName().equals("main"));
+        checkUnused(this::checkUnusedVariables, v -> false);
+    }
+
+    private static <T extends Node> void checkUnused(Consumer<Set<T>> checker, Predicate<T> expected) {
+        Set<T> unused = new HashSet<>();
+        checker.accept(unused);
+        String out = unused.stream()
+            .filter(Predicate.not(expected))
+            .map(fn -> new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(fn)).toString())
+            .collect(Collectors.joining(System.lineSeparator())
+        );
+        if (!out.equals("")) {
+            System.out.println(out);
+        }
     }
 }

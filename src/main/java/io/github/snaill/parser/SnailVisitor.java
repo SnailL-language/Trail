@@ -151,6 +151,12 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitIdentifier(SnailParser.IdentifierContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link SnailParser#arrayElement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArrayElement(SnailParser.ArrayElementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link SnailParser#functionCall}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

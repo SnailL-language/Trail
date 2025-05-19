@@ -90,7 +90,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return new StringLiteral(value);
     }
 
-    private Node parseNumberLiteral(SnailParser.NumberLiteralContext ctx) {
+    private NumberLiteral parseNumberLiteral(SnailParser.NumberLiteralContext ctx) {
         long value = Long.parseLong(ctx.NUMBER().getText());
         return new NumberLiteral(value);
     }
@@ -99,7 +99,16 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return new BooleanLiteral(Boolean.parseBoolean(ctx.getText()));
     }
 
-    private Node parseIdentifier(SnailParser.IdentifierContext ctx) {
+    private ArrayElement parseArrayElement(SnailParser.ArrayElementContext ctx) {
+        if (ctx.identifier() != null) {
+            return new ArrayElement(parseIdentifier(ctx.identifier()));
+        }
+        ArrayElement el = parseArrayElement(ctx.arrayElement());
+        el.addDim(parseNumberLiteral(ctx.numberLiteral()));
+        return el;
+    }
+
+    private Identifier parseIdentifier(SnailParser.IdentifierContext ctx) {
         String value = ctx.IDENTIFIER().getText();
         return new Identifier(value);
     }

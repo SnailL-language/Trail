@@ -1,3 +1,4 @@
 fn main() {
     let a: [i32; 3] = [3, 3 + 5, 7];
+    println(a[2]);
 }

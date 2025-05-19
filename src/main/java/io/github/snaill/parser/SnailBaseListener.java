@@ -295,6 +295,18 @@ public class SnailBaseListener implements SnailListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterArrayElement(SnailParser.ArrayElementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitArrayElement(SnailParser.ArrayElementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterFunctionCall(SnailParser.FunctionCallContext ctx) { }
 	/**
 	 * {@inheritDoc}

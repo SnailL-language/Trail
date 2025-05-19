@@ -9,6 +9,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Objects;
 
 public class Trail {
@@ -21,7 +22,7 @@ public class Trail {
         try {
             stream = CharStreams.fromFileName(filename);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
         SnailParser parser = new SnailParser(
                 new CommonTokenStream(
@@ -41,12 +42,11 @@ public class Trail {
         final Node root;
         try {
             root = build(args[args.length - 1]);
+        } catch (UncheckedIOException e) {
+            System.err.println("Cannot read file " + e.getCause().getMessage());
+            return;
         } catch (RuntimeException e) {
-            if (e.getCause() != null) {
-                System.err.println("Cannot read file " + e.getCause().getMessage());
-            } else {
-                System.err.println(USAGE);
-            }
+            System.err.println(e.getMessage());
             return;
         }
         root.optimize();

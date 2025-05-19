@@ -3,5 +3,5 @@ fn f(a: i32, b: i32) -> i32 {
 }
 
 fn main() {
-    let c: i32 = f(3, 4);
+    println(f(3, 4));
 }

@@ -91,6 +91,7 @@ unaryExpression : unaryOperator=('-' | '!') expression;
 primaryExpression
     : literal
     | identifier
+    | arrayElement
     | functionCall
     | arrayLiteral
     ;
@@ -109,6 +110,8 @@ numberLiteral : NUMBER;
 booleanLiteral : 'true' | 'false' ;
 
 identifier : IDENTIFIER;
+
+arrayElement : identifier | arrayElement '[' numberLiteral ']' ;
 
 // Вызов функции
 functionCall

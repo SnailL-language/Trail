@@ -183,6 +183,15 @@ public class TrailTest {
         );
     }
 
+    @Test
+    public void testUnusedVariable() {
+        runTest(
+            "extra_variable.sn",
+            "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~letunused:i32=256;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", 
+            ""
+        );
+    }
+
     /**
      * Читает содержимое файла и возвращает его как строку без пробелов и переносов строк.
      *

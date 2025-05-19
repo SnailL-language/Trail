@@ -51,6 +51,11 @@ public abstract class AbstractNode implements Node {
     }
 
     @Override
+    public void checkUnusedVariables(Set<VariableDeclaration> unused) {
+        children.stream().forEach(child -> child.checkUnusedVariables(unused));
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (obj instanceof AbstractNode other) {
             return children.containsAll(other.children) && other.children.containsAll(children);

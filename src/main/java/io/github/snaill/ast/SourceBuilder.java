@@ -48,6 +48,13 @@ public class SourceBuilder {
             case StringLiteral stringLiteral -> stringLiteral.getValue();
             case NumberLiteral numberLiteral -> String.valueOf(numberLiteral.getValue());
             case BooleanLiteral booleanLiteral -> String.valueOf(booleanLiteral.getValue());
+            case ArrayElement arrayElement -> {
+                StringBuilder sb = new StringBuilder(toSourceCode(arrayElement.getIdentifier()));
+                for (NumberLiteral num : arrayElement.getDims()) {
+                    sb.append('[').append(toSourceCode(num)).append(']');
+                }
+                yield sb.toString();
+            }
             case Identifier identifier -> identifier.getName();
             case PrimitiveType primitiveType -> primitiveType.getName();
             case ArrayType arrayType -> "[" + toSourceCode(arrayType.getElementType(), false) +

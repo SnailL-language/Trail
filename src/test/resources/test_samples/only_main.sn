@@ -2,4 +2,5 @@ fn main() {
     let a: i32 = 32 - 5;
     let b: string = "zaebis";
     let c: i32 = - 2 * a;
+    println(a + b + c);
 }

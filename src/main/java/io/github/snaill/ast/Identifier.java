@@ -1,5 +1,7 @@
 package io.github.snaill.ast;
 
+import java.util.Set;
+
 public class Identifier extends PrimaryExpression {
     final private String name;
 
@@ -9,6 +11,15 @@ public class Identifier extends PrimaryExpression {
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public void checkUnusedVariables(Set<VariableDeclaration> unused) {
+        unused.removeAll(
+            unused.stream()
+            .filter(v -> v.getName().equals(name))
+            .toList()
+        );
     }
 
     @Override
