@@ -2,18 +2,20 @@ package io.github.snaill.ast;
 
 import java.util.List;
 
-public class AssigmentExpression extends Expression implements Statement {
-    private final String variableName;
+public class AssigmentExpression extends Expression {
+    private final Expression left;
     private final String operator;
+    private final Expression expression;
 
-    public AssigmentExpression(String variableName, String operator, Expression expression) {
-        super(List.of(expression));
-        this.variableName = variableName;
+    public AssigmentExpression(Expression left, String operator, Expression expression) {
+        super(expression == null ? List.of(left) : List.of(left, expression));
+        this.left = left;
         this.operator = operator;
+        this.expression = expression;
     }
 
-    public String getVariableName() {
-        return variableName;
+    public Expression getLeft() {
+        return left;
     }
 
     public String getOperator() {
@@ -21,15 +23,15 @@ public class AssigmentExpression extends Expression implements Statement {
     }
 
     public Expression getExpression() {
-        return (Expression) super.getChild(0);
+        return expression;
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof AssigmentExpression other) {
-            return variableName.equals(other.variableName)
-                && operator.equals(other.operator)
-                && super.equals(other);
+            return left.equals(other.left) &&
+                    operator.equals(other.operator) &&
+                    expression.equals(other.expression);
         }
         return false;
     }

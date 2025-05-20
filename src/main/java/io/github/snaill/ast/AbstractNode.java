@@ -1,9 +1,6 @@
 package io.github.snaill.ast;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import io.github.snaill.result.Result;
 
@@ -47,18 +44,18 @@ public abstract class AbstractNode implements Node {
 
     @Override
     public void checkUnusedFunctions(Set<FunctionDeclaration> unused) {
-        children.stream().forEach(child -> child.checkUnusedFunctions(unused));
+        children.forEach(child -> child.checkUnusedFunctions(unused));
     }
 
     @Override
     public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        children.stream().forEach(child -> child.checkUnusedVariables(unused));
+        children.forEach(child -> child.checkUnusedVariables(unused));
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof AbstractNode other) {
-            return children.containsAll(other.children) && other.children.containsAll(children);
+            return new HashSet<>(children).containsAll(other.children) && new HashSet<>(other.children).containsAll(children);
         }
         return false;
     }

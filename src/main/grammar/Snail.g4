@@ -81,7 +81,7 @@ expression
     | '(' expression ')'
     ;
 
-assigmentExpression : IDENTIFIER assigmentOperator=('='| '+=' | '-=' | '*=' | '/=') expression;
+assigmentExpression : identifier assigmentOperator=('='| '+=' | '-=' | '*=' | '/=') expression;
 
 binaryExpression : (primaryExpression | '(' expression ')') binaryOperator=('||' | '&&' | '==' | '!=' | '>' | '<' | '>=' | '<=' | '+' | '-' | '*' | '/') expression;
 
@@ -109,9 +109,11 @@ numberLiteral : NUMBER;
 
 booleanLiteral : 'true' | 'false' ;
 
-identifier : IDENTIFIER;
+identifier : variableIdentifier | arrayElement;
 
-arrayElement : identifier | arrayElement '[' numberLiteral ']' ;
+variableIdentifier : IDENTIFIER;
+
+arrayElement : IDENTIFIER '[' expression ']' | arrayElement '[' numberLiteral ']' ;
 
 // Вызов функции
 functionCall

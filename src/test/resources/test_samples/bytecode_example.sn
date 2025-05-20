@@ -1,0 +1,41 @@
+// Global variables
+let counter: i32 = 0;
+let data: [i32; 5] = [10, 20, 30, 40, 50];
+
+// Function to compute the sum of two numbers with an offset
+fn computeSum(a: i32, b: i32) -> i32 {
+    let sum: i32 = a + b;
+    let offset: i32 = 5;
+    return sum + offset;
+}
+
+// Main function demonstrating various language features
+fn main() {
+    // Local variable for loop index
+    let i: i32 = 0;
+
+    // Loop to double array elements if they are greater than 25
+    while (i < 5) {
+        let value: i32 = data[i];
+        if (value > 25) {
+            data[i] = value * 2;
+        } else {
+            data[i] = value - 5;
+        }
+        i = i + 1;
+    }
+
+    // Update counter based on array values
+    let sum: i32 = computeSum(data[0], data[1]);
+    if (sum >= 100) {
+        counter = sum / 2;
+    } else {
+        counter = sum;
+    }
+
+    // Logical operation example
+    let flag: i32 = 0;
+    if (counter < 50 && data[2] > 50) {
+        flag = 1;
+    }
+}

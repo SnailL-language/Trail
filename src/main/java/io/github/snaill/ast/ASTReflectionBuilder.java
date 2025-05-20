@@ -1,65 +1,47 @@
 package io.github.snaill.ast;
 
 import io.github.snaill.parser.SnailParser;
-
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-@SuppressWarnings("unused")
 public class ASTReflectionBuilder implements ASTBuilder {
-
-    public ASTReflectionBuilder() {
-    }
 
     @Override
     public Node build(SnailParser.ProgramContext ctx) {
-        Node root = parseProgram(ctx);
-        return root;
-    }
-
-    private Node parseProgram(SnailParser.ProgramContext ctx) {
-        List<Statement> children = Stream.concat(
-                ctx.variableDeclaration().stream().map(this::parseVariableDeclaration),
-                ctx.funcDeclaration().stream().map(this::parseFuncDeclaration)
-        ).map(Statement.class::cast).collect(Collectors.toList());
-        return new Scope(children);
+        List<Statement> statements = new ArrayList<>();
+        for (SnailParser.VariableDeclarationContext varDecl : ctx.variableDeclaration()) {
+            statements.add((Statement) parseVariableDeclaration(varDecl));
+        }
+        for (SnailParser.FuncDeclarationContext funcDecl : ctx.funcDeclaration()) {
+            statements.add((Statement) parseFuncDeclaration(funcDecl));
+        }
+        return new Scope(statements);
     }
 
     private Node parseStatement(SnailParser.StatementContext ctx) {
-        return parseContext(ctx, SnailParser.StatementContext.class);
+        return parseContext(ctx.getChild(0), ctx.getChild(0).getClass());
     }
 
-    private Node parseExpression(SnailParser.ExpressionContext ctx) {
-        return parseContext(ctx, SnailParser.ExpressionContext.class);
-    }
-
-    private Node parseType(SnailParser.TypeContext ctx) {
-        return parseContext(ctx, SnailParser.TypeContext.class);
-    }
-
-    private Node parseContext(ParserRuleContext ctx, Class<? extends ParserRuleContext> contextClass) {
-        List<Method> methods = Arrays.stream(contextClass.getDeclaredMethods())
-                .filter(method -> ParserRuleContext.class.isAssignableFrom(method.getReturnType()))
-                .toList();
-        for (Method method : methods) {
-            try {
-                Object result = method.invoke(ctx);
-                if (result != null) {
-                    String parseMethodName = "parse" + method.getName().substring(0, 1).toUpperCase() + method.getName().substring(1);
-                    Method parseMethod = getClass().getDeclaredMethod(parseMethodName, method.getReturnType());
-                    return (Node) parseMethod.invoke(this, result);
-                }
-            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                throw new RuntimeException("Failed to parse context: " + ctx.getClass().getSimpleName(), e);
-            }
+    private Node parseContext(ParseTree ctx, Class<?> contextClass) {
+        if (ctx == null) {
+            return null;
         }
-        throw new IllegalStateException("No matching context found in: " + ctx.getClass().getSimpleName());
+        String methodName = "parse" + contextClass.getSimpleName().replace("Context", "");
+        try {
+            Method method = this.getClass().getDeclaredMethod(methodName, contextClass);
+            return (Node) method.invoke(this, ctx);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException("No parse method for " + contextClass.getSimpleName(), e);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException("Failed to invoke parse method for " + contextClass.getSimpleName(), e);
+        }
     }
 
     private Node parseVariableDeclaration(SnailParser.VariableDeclarationContext ctx) {
@@ -71,12 +53,18 @@ public class ASTReflectionBuilder implements ASTBuilder {
 
     private Node parseFuncDeclaration(SnailParser.FuncDeclarationContext ctx) {
         String name = ctx.IDENTIFIER().getText();
-        List<Parameter> params = ctx.paramList().param().stream()
-                .map(this::parseParam).map(Parameter.class::cast)
-                .toList();
-        Type type = ctx.type() != null ? (Type) parseType(ctx.type()) : new PrimitiveType("void");
+        List<Parameter> params = ctx.paramList() != null ?
+                parseParamList(ctx.paramList()) : List.of();
+        Type returnType = ctx.type() != null ?
+                (Type) parseType(ctx.type()) : new PrimitiveType("void");
         Scope scope = parseScope(ctx.scope());
-        return new FunctionDeclaration(name, params, type, scope);
+        return new FunctionDeclaration(name, params, returnType, scope);
+    }
+
+    private List<Parameter> parseParamList(SnailParser.ParamListContext ctx) {
+        return ctx.param().stream()
+                .map(param -> (Parameter) parseParam(param))
+                .collect(Collectors.toList());
     }
 
     private Node parseParam(SnailParser.ParamContext ctx) {
@@ -85,88 +73,12 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return new Parameter(name, type);
     }
 
-    private Node parseStringLiteral(SnailParser.StringLiteralContext ctx) {
-        String value = ctx.STRING().getText();
-        return new StringLiteral(value);
-    }
-
-    private NumberLiteral parseNumberLiteral(SnailParser.NumberLiteralContext ctx) {
-        long value = Long.parseLong(ctx.NUMBER().getText());
-        return new NumberLiteral(value);
-    }
-
-    private Node parseBooleanLiteral(SnailParser.BooleanLiteralContext ctx) {
-        return new BooleanLiteral(Boolean.parseBoolean(ctx.getText()));
-    }
-
-    private ArrayElement parseArrayElement(SnailParser.ArrayElementContext ctx) {
-        if (ctx.identifier() != null) {
-            return new ArrayElement(parseIdentifier(ctx.identifier()));
-        }
-        ArrayElement el = parseArrayElement(ctx.arrayElement());
-        el.addDim(parseNumberLiteral(ctx.numberLiteral()));
-        return el;
-    }
-
-    private Identifier parseIdentifier(SnailParser.IdentifierContext ctx) {
-        String value = ctx.IDENTIFIER().getText();
-        return new Identifier(value);
-    }
-
-    private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx) {
-        return new PrimitiveType(ctx.getText());
-    }
-
-    private Node parseArrayType(SnailParser.ArrayTypeContext ctx) {
-        Type type = (Type) parseType(ctx.type());
-        NumberLiteral size = (NumberLiteral) parseNumberLiteral(ctx.numberLiteral());
-        return new ArrayType(type, size);
-    }
-
-    private Node parseBinaryExpression(SnailParser.BinaryExpressionContext ctx) {
-        String operator = ctx.binaryOperator.getText();
-        Expression left;
-        if (ctx.primaryExpression() != null) {
-            left = (Expression) parsePrimaryExpression(ctx.primaryExpression());
-        } else {
-            left = (Expression) parseExpression(ctx.expression(0));
-        }
-        Expression right = (Expression) parseExpression(ctx.expression(ctx.primaryExpression() != null ? 0 : 1));
-        return new BinaryExpression(left, operator, right);
-    }
-
-    private Node parseUnaryExpression(SnailParser.UnaryExpressionContext ctx) {
-        String operator = ctx.unaryOperator.getText();
-        Expression argument = (Expression) parseExpression(ctx.expression());
-        return new UnaryExpression(operator, argument);
-    }
-
-    private Node parseReturnStatement(SnailParser.ReturnStatementContext ctx) {
-        Expression returnable = ctx.expression() != null ? (Expression) parseExpression(ctx.expression()) : null;
-        return new ReturnStatement(returnable);
-    }
-
-    private Node parseFunctionCall(SnailParser.FunctionCallContext ctx) {
-        String name = ctx.IDENTIFIER().getText();
-        List<Expression> arguments = ctx.argumentList().expression().stream()
-                .map(this::parseExpression)
-                .map(Expression.class::cast)
+    private Scope parseScope(SnailParser.ScopeContext ctx) {
+        List<Statement> statements = ctx.statement().stream()
+                .map(this::parseStatement)
+                .map(Statement.class::cast)
                 .collect(Collectors.toList());
-        return new FunctionCall(name, arguments);
-    }
-
-    private Node parseArrayLiteral(SnailParser.ArrayLiteralContext ctx) {
-        List<Expression> elements = ctx.expression().stream()
-                .map(this::parseExpression)
-                .map(Expression.class::cast)
-                .collect(Collectors.toList());
-        return new ArrayLiteral(elements);
-    }
-
-    private Node parseWhileLoop(SnailParser.WhileLoopContext ctx) {
-        Expression condition = (Expression) parseExpression(ctx.expression());
-        Scope body = parseScope(ctx.scope());
-        return new WhileLoop(condition, body);
+        return new Scope(statements);
     }
 
     private Node parseForLoop(SnailParser.ForLoopContext ctx) {
@@ -177,10 +89,16 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return new ForLoop(declaration, condition, step, body);
     }
 
+    private Node parseWhileLoop(SnailParser.WhileLoopContext ctx) {
+        Expression condition = (Expression) parseExpression(ctx.expression());
+        Scope body = parseScope(ctx.scope());
+        return new WhileLoop(condition, body);
+    }
+
     private Node parseIfCondition(SnailParser.IfConditionContext ctx) {
         Expression condition = (Expression) parseExpression(ctx.expression());
         Scope body = parseScope(ctx.scope(0));
-        Scope elseBody = ctx.scope().size() == 1 ? null : parseScope(ctx.scope(1));
+        Scope elseBody = ctx.scope().size() > 1 ? parseScope(ctx.scope(1)) : null;
         return new IfStatement(condition, body, elseBody);
     }
 
@@ -188,26 +106,155 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return new BreakStatement();
     }
 
+    private Node parseReturnStatement(SnailParser.ReturnStatementContext ctx) {
+        Expression expr = ctx.expression() != null ? (Expression) parseExpression(ctx.expression()) : null;
+        return new ReturnStatement(expr);
+    }
+
+    private Node parseExpression(SnailParser.ExpressionContext ctx) {
+        if (ctx.assigmentExpression() != null) {
+            return parseAssigmentExpression(ctx.assigmentExpression());
+        } else if (ctx.binaryExpression() != null) {
+            return parseBinaryExpression(ctx.binaryExpression());
+        } else if (ctx.unaryExpression() != null) {
+            return parseUnaryExpression(ctx.unaryExpression());
+        } else if (ctx.primaryExpression() != null) {
+            return parsePrimaryExpression(ctx.primaryExpression());
+        } else if (ctx.getChild(0) instanceof TerminalNode && ctx.getChild(0).getText().equals("(")) {
+            return parseExpression(ctx.expression());
+        }
+        throw new RuntimeException("Unknown expression");
+    }
+
     private Node parseAssigmentExpression(SnailParser.AssigmentExpressionContext ctx) {
-        String variableName = ctx.IDENTIFIER().getText();
+        Expression left;
+        if (ctx.identifier().variableIdentifier() != null) {
+            left = (Expression) parseIdentifier(ctx.identifier());
+        } else if (ctx.identifier().arrayElement() != null) {
+            left = (Expression) parseArrayElement(ctx.identifier().arrayElement());
+        } else {
+            throw new RuntimeException("Invalid left-hand side of assignment");
+        }
         String operator = ctx.assigmentOperator.getText();
-        Expression expression = (Expression) parseExpression(ctx.expression());
-        return new AssigmentExpression(variableName, operator, expression);
+        Expression right = (Expression) parseExpression(ctx.expression());
+        return new AssigmentExpression(left, operator, right);
+    }
+
+    private Node parseBinaryExpression(SnailParser.BinaryExpressionContext ctx) {
+        Expression left = ctx.primaryExpression() != null ?
+                (Expression) parsePrimaryExpression(ctx.primaryExpression()) :
+                (Expression) parseExpression(ctx.expression(0));
+        String operator = ctx.binaryOperator.getText();
+        Expression right = (Expression) parseExpression(ctx.expression(ctx.primaryExpression() != null ? 0 : 1));
+        return new BinaryExpression(left, operator, right);
+    }
+
+    private Node parseUnaryExpression(SnailParser.UnaryExpressionContext ctx) {
+        String operator = ctx.unaryOperator.getText();
+        Expression argument = (Expression) parseExpression(ctx.expression());
+        return new UnaryExpression(operator, argument);
     }
 
     private Node parsePrimaryExpression(SnailParser.PrimaryExpressionContext ctx) {
-        return parseContext(ctx, SnailParser.PrimaryExpressionContext.class);
+        if (ctx.literal() != null) {
+            return parseLiteral(ctx.literal());
+        } else if (ctx.identifier() != null) {
+            return parseIdentifier(ctx.identifier());
+        } else if (ctx.arrayElement() != null) {
+            return parseArrayElement(ctx.arrayElement());
+        } else if (ctx.functionCall() != null) {
+            return parseFunctionCall(ctx.functionCall());
+        } else if (ctx.arrayLiteral() != null) {
+            return parseArrayLiteral(ctx.arrayLiteral());
+        }
+        throw new RuntimeException("Unknown primary expression");
     }
 
     private Node parseLiteral(SnailParser.LiteralContext ctx) {
-        return parseContext(ctx, SnailParser.LiteralContext.class);
+        if (ctx.numberLiteral() != null) {
+            return parseNumberLiteral(ctx.numberLiteral());
+        } else if (ctx.stringLiteral() != null) {
+            return parseStringLiteral(ctx.stringLiteral());
+        } else if (ctx.booleanLiteral() != null) {
+            return parseBooleanLiteral(ctx.booleanLiteral());
+        }
+        throw new RuntimeException("Unknown literal");
     }
 
-    private Scope parseScope(SnailParser.ScopeContext ctx) {
-        List<Statement> children = ctx.statement().stream()
-                .map(this::parseStatement)
-                .map(Statement.class::cast)
+    private Node parseNumberLiteral(SnailParser.NumberLiteralContext ctx) {
+        return new NumberLiteral(Long.parseLong(ctx.NUMBER().getText()));
+    }
+
+    private Node parseStringLiteral(SnailParser.StringLiteralContext ctx) {
+        String text = ctx.STRING().getText();
+        return new StringLiteral(text.substring(1, text.length() - 1));
+    }
+
+    private Node parseBooleanLiteral(SnailParser.BooleanLiteralContext ctx) {
+        return new BooleanLiteral(ctx.getText().equals("true"));
+    }
+
+    private Node parseIdentifier(SnailParser.IdentifierContext ctx) {
+        if (ctx.variableIdentifier() != null) {
+            return new Identifier(ctx.variableIdentifier().IDENTIFIER().getText());
+        } else if (ctx.arrayElement() != null) {
+            return parseArrayElement(ctx.arrayElement());
+        }
+        throw new RuntimeException("Invalid identifier");
+    }
+
+    private Node parseArrayElement(SnailParser.ArrayElementContext ctx) {
+        Identifier identifier = new Identifier(ctx.IDENTIFIER().getText());
+        List<Expression> indices = new ArrayList<>();
+        if (ctx.expression() != null) {
+            indices.add((Expression) parseExpression(ctx.expression()));
+        } else if (ctx.numberLiteral() != null) {
+            indices.add((Expression) parseNumberLiteral(ctx.numberLiteral()));
+        }
+        if (ctx.arrayElement() != null) {
+            ArrayElement inner = (ArrayElement) parseArrayElement(ctx.arrayElement());
+            identifier = (Identifier) inner.getIdentifier();
+            indices.addAll(inner.getDims());
+        }
+        return new ArrayElement(identifier, indices);
+    }
+
+    private Node parseFunctionCall(SnailParser.FunctionCallContext ctx) {
+        String name = ctx.IDENTIFIER().getText();
+        List<Expression> args = ctx.argumentList() != null ?
+                parseArgumentList(ctx.argumentList()) : List.of();
+        return new FunctionCall(name, args);
+    }
+
+    private List<Expression> parseArgumentList(SnailParser.ArgumentListContext ctx) {
+        return ctx.expression().stream()
+                .map(expr -> (Expression) parseExpression(expr))
                 .collect(Collectors.toList());
-        return new Scope(children);
+    }
+
+    private Node parseArrayLiteral(SnailParser.ArrayLiteralContext ctx) {
+        List<Expression> elements = ctx.expression().stream()
+                .map(expr -> (Expression) parseExpression(expr))
+                .collect(Collectors.toList());
+        return new ArrayLiteral(elements);
+    }
+
+    private Node parseType(SnailParser.TypeContext ctx) {
+        if (ctx.primitiveType() != null) {
+            return parsePrimitiveType(ctx.primitiveType());
+        } else if (ctx.arrayType() != null) {
+            return parseArrayType(ctx.arrayType());
+        }
+        throw new RuntimeException("Unknown type");
+    }
+
+    private Node parseArrayType(SnailParser.ArrayTypeContext ctx) {
+        Type elementType = (Type) parseType(ctx.type());
+        NumberLiteral size = new NumberLiteral(Long.parseLong(ctx.numberLiteral().getText()));
+        return new ArrayType(elementType, size);
+    }
+
+    private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx) {
+        return new PrimitiveType(ctx.getText());
     }
 }

@@ -45,12 +45,12 @@ public class SourceBuilder {
                     ": " + toSourceCode(var.getType(), false) +
                     " = " + toSourceCode(var.getValue(), false) +
                     ";";
-            case StringLiteral stringLiteral -> stringLiteral.getValue();
+            case StringLiteral stringLiteral -> "\"" + stringLiteral.getValue() + "\"";
             case NumberLiteral numberLiteral -> String.valueOf(numberLiteral.getValue());
             case BooleanLiteral booleanLiteral -> String.valueOf(booleanLiteral.getValue());
             case ArrayElement arrayElement -> {
                 StringBuilder sb = new StringBuilder(toSourceCode(arrayElement.getIdentifier()));
-                for (NumberLiteral num : arrayElement.getDims()) {
+                for (Expression num : arrayElement.getDims()) {
                     sb.append('[').append(toSourceCode(num)).append(']');
                 }
                 yield sb.toString();
@@ -95,7 +95,7 @@ public class SourceBuilder {
             case IfStatement ifStmt -> "if (" + toSourceCode(ifStmt.getCondition(), false) + ") " +
                     toSourceCode(ifStmt.getBody(), false) + (ifStmt.getElseBody() != null ? "else " + toSourceCode(ifStmt.getElseBody(), false) : "");
             case @SuppressWarnings("unused") BreakStatement breakStatement -> "break;";
-            case AssigmentExpression assignExpr -> assignExpr.getVariableName() +
+            case AssigmentExpression assignExpr -> toSourceCode(assignExpr.getLeft(), false) +
                     " " + assignExpr.getOperator() + " " +
                     toSourceCode(assignExpr.getExpression(), false);
             default -> "// Неизвестный узел: " + node.getClass().getSimpleName();

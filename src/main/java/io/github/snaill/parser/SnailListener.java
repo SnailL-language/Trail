@@ -240,6 +240,16 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitIdentifier(SnailParser.IdentifierContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link SnailParser#variableIdentifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterVariableIdentifier(SnailParser.VariableIdentifierContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#variableIdentifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitVariableIdentifier(SnailParser.VariableIdentifierContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link SnailParser#arrayElement}.
 	 * @param ctx the parse tree
 	 */

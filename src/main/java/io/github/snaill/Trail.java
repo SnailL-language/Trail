@@ -1,6 +1,7 @@
 package io.github.snaill;
 
 import io.github.snaill.ast.*;
+import io.github.snaill.bytecode.BytecodeEmitter;
 import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.parser.SnailLexer;
 import io.github.snaill.parser.SnailParser;
@@ -10,6 +11,10 @@ import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.Objects;
 
 public class Trail {
@@ -56,5 +61,11 @@ public class Trail {
             System.err.println("Fatal. Aborting...");
             return;
         }
+//        BytecodeEmitter emitter = new BytecodeEmitter((Scope) root);
+//        try {
+//            System.out.println(emitter.emitToDebugString());
+//        } catch (IOException e) {
+//            System.err.println("Error write creating bytecode " + e.getMessage());
+//        }
     }
 }

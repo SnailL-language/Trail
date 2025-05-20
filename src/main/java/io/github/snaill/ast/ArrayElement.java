@@ -1,39 +1,30 @@
 package io.github.snaill.ast;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
-public class ArrayElement extends PrimaryExpression {
-    
-    private final Identifier name;
-    private final List<NumberLiteral> dims = new ArrayList<>();
+public class ArrayElement extends Expression {
+    private final Expression identifier;
+    private final List<Expression> dims;
 
-    public ArrayElement(Identifier name) {
-        this.name = name;
+    public ArrayElement(Expression identifier, List<Expression> dims) {
+        super(List.copyOf(dims));
+        this.identifier = identifier;
+        this.dims = dims;
     }
 
-    public Identifier getIdentifier() {
-        return name;
+    public Expression getIdentifier() {
+        return identifier;
     }
 
-    public void addDim(NumberLiteral dim) {
-        dims.add(dim);
-    }
-
-    public List<NumberLiteral> getDims() {
+    public List<Expression> getDims() {
         return dims;
-    }
-
-    @Override
-    public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        name.checkUnusedVariables(unused);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ArrayElement other) {
-            return name.equals(other.name) && dims.equals(other.dims);
+            return identifier.equals(other.identifier) &&
+                    dims.equals(other.dims);
         }
         return false;
     }

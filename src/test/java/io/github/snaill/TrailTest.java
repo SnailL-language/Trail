@@ -1,6 +1,7 @@
 package io.github.snaill;
 
 import io.github.snaill.ast.*;
+import io.github.snaill.bytecode.BytecodeEmitter;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -11,6 +12,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TrailTest {
 
     private static final Path SAMPLES_DIR = Path.of("src", "test", "resources", "test_samples");
+    private static final Path SAMPLES_BYTECODE_DIR = Path.of("src", "test", "resources", "test_samples_bytecode");
     private static Path tempDir;
     private static Path outputFile;
     private static Path errFile;
@@ -105,8 +108,8 @@ public class TrailTest {
         runTest(filename, "", "");
         Path filepath = SAMPLES_DIR.resolve(filename);
         assertEquals(
-            SourceBuilder.toSourceCode(Trail.build(filepath.toString())).replaceAll("\\s+", ""), 
-            readFile(filepath)
+                readFile(filepath),
+                SourceBuilder.toSourceCode(Trail.build(filepath.toString())).replaceAll("\\s+", "")
         );
     }
 
@@ -159,36 +162,36 @@ public class TrailTest {
     @Test
     public void testDeadIf() {
         runTest(
-            "dead_if.sn", 
-            "ERROR:else{DEAD_CODE================================letr:i32=245;================================}", 
-            "Fatal.Aborting..."
+                "dead_if.sn",
+                "ERROR:else{DEAD_CODE================================letr:i32=245;================================}",
+                "Fatal.Aborting..."
         );
     }
 
     @Test
     public void testAfterReturn() {
         runTest(
-            "after_return.sn", 
-            "ERROR:returnresult;DEAD_CODE================================result=235================================",
-            "Fatal.Aborting..."    
+                "after_return.sn",
+                "ERROR:returnresult;DEAD_CODE================================result=235================================",
+                "Fatal.Aborting..."
         );
     }
 
     @Test
     public void testUnusedFunction() {
         runTest(
-            "extra_function.sn",
-            "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~fnextra()->bool{returntrue;}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", 
-            ""
+                "extra_function.sn",
+                "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~fnextra()->bool{returntrue;}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+                ""
         );
     }
 
     @Test
     public void testUnusedVariable() {
         runTest(
-            "extra_variable.sn",
-            "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~letunused:i32=256;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", 
-            ""
+                "extra_variable.sn",
+                "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~letunused:i32=256;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+                ""
         );
     }
 

@@ -1,5 +1,6 @@
 package io.github.snaill.ast;
 
+import java.util.HashSet;
 import java.util.List;
 
 public class ArrayLiteral extends PrimaryExpression {
@@ -16,8 +17,8 @@ public class ArrayLiteral extends PrimaryExpression {
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ArrayLiteral other) {
-            return elements.containsAll(other.elements)
-                && other.elements.containsAll(elements);
+            return new HashSet<>(elements).containsAll(other.elements)
+                && new HashSet<>(other.elements).containsAll(elements);
         }
         return false;
     }
