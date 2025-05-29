@@ -9,4 +9,14 @@ public class FailedCheckException extends Exception {
     public FailedCheckException(Throwable cause) { super(cause); }
 
     public FailedCheckException(String message, Throwable cause) { super(message, cause); }
+
+    @Override
+    public String getMessage() {
+        return super.getMessage();
+    }
+
+    @Override
+    public String toString() {
+        return getMessage();
+    }
 }

@@ -1,24 +1,23 @@
 package io.github.snaill.ast;
 
+import io.github.snaill.bytecode.BytecodeConstants;
+import io.github.snaill.bytecode.BytecodeContext;
+import io.github.snaill.bytecode.BytecodeUtils;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-public class Identifier extends PrimaryExpression {
-    final private String name;
+/**
+ * Представляет ссылку на переменную в AST.
+ * Генерирует байткод для загрузки значения переменной.
+ */
+public class VariableReference extends Expression {
+    private final String name;
 
-    public Identifier(String name) {
+    public VariableReference(String name) {
         super(List.of());
         this.name = name;
-    }
-
-    @Override
-    public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public String getName() {
@@ -26,16 +25,12 @@ public class Identifier extends PrimaryExpression {
     }
 
     @Override
-    public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        unused.removeIf(v -> v.getName().equals(name));
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Identifier other) {
-            return name.equals(other.name) && super.equals(other);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        try {
+            return visitor.visit(this);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
         }
-        return false;
     }
 
     @Override
@@ -73,9 +68,21 @@ public class Identifier extends PrimaryExpression {
     }
 
     @Override
+    public void checkUnusedVariables(Set<VariableDeclaration> unused) {
+        unused.removeIf(v -> v.getName().equals(name));
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof VariableReference other) {
+            return name.equals(other.name);
+        }
+        return false;
+    }
+
+    @Override
     public Type getType(Scope scope) throws io.github.snaill.exception.FailedCheckException {
-        // Проверяем, не обращаемся ли к переменной в её собственной инициализации
-        VariableDeclaration decl = scope.resolveVariable(name, this);
+        VariableDeclaration decl = scope.resolveVariable(name);
         if (decl == null) {
             String before = getSource() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), name.length()) :
@@ -101,4 +108,4 @@ public class Identifier extends PrimaryExpression {
         }
         return null;
     }
-}
+} 

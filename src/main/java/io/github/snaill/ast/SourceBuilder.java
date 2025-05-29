@@ -1,6 +1,8 @@
 package io.github.snaill.ast;
 
 import java.util.stream.Collectors;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
 
 public class SourceBuilder {
     public static String toSourceCode(Node node) {
@@ -17,9 +19,6 @@ public class SourceBuilder {
                 StringBuilder sb = new StringBuilder();
                 for (Statement stmt : scope.getStatements()) {
                     sb.append(toSourceCode(stmt, false));
-                    if (stmt instanceof Expression) {
-                        sb.append(';');
-                    }
                 }
                 if (!isRoot) {
                     sb.insert(0, "{").append("}");
@@ -29,7 +28,7 @@ public class SourceBuilder {
             case FunctionDeclaration func -> {
                 StringBuilder sb = new StringBuilder();
                 sb.append("fn ").append(func.getName()).append("(");
-                String params = func.getParameterList().stream()
+                String params = func.getParameters().stream()
                         .map(param -> toSourceCode(param, false))
                         .collect(Collectors.joining(", "));
                 sb.append(params).append(")");
@@ -37,14 +36,13 @@ public class SourceBuilder {
                 if (!returnType.equals("void")) {
                     sb.append(" -> ").append(returnType);
                 }
-                sb.append(toSourceCode(func.getScope(), false));
+                sb.append(toSourceCode(func.getBody(), false));
                 yield sb.toString();
             }
             case Parameter param -> param.getName() + ": " + toSourceCode(param.getType(), false);
             case VariableDeclaration var -> "let " + var.getName() +
                     ": " + toSourceCode(var.getType(), false) +
-                    " = " + toSourceCode(var.getValue(), false) +
-                    ";";
+                    " = " + toSourceCode(var.getValue(), false) + ";";
             case StringLiteral stringLiteral -> "\"" + stringLiteral.getValue() + "\"";
             case NumberLiteral numberLiteral -> String.valueOf(numberLiteral.getValue());
             case BooleanLiteral booleanLiteral -> String.valueOf(booleanLiteral.getValue());
@@ -88,17 +86,60 @@ public class SourceBuilder {
             }
             case WhileLoop whileLoop -> "while (" + toSourceCode(whileLoop.getCondition(), false) + ") " +
                     toSourceCode(whileLoop.getBody(), false);
-            case ForLoop forLoop -> "for (" + toSourceCode(forLoop.getDeclaration(), false) +
-                    toSourceCode(forLoop.getCondition(), false) + "; " + toSourceCode(forLoop.getStep(), false) +
-                    ")" +
-                    toSourceCode(forLoop.getBody(), false);
+            case ForLoop forLoop -> {
+                String decl = toSourceCode((VariableDeclaration) forLoop.getBody().getChildren().get(0), false);
+                String cond = toSourceCode(forLoop.getCondition(), false);
+                String step = toSourceCode(forLoop.getStep(), false);
+                java.util.List<Statement> stmts = forLoop.getBody().getStatements();
+                StringBuilder body = new StringBuilder();
+                for (int i = 1; i < stmts.size(); i++) {
+                    body.append(toSourceCode(stmts.get(i), false));
+                }
+                yield "for(" + decl + cond + "; " + step + "){" + body + "}";
+            }
             case IfStatement ifStmt -> "if (" + toSourceCode(ifStmt.getCondition(), false) + ") " +
                     toSourceCode(ifStmt.getBody(), false) + (ifStmt.getElseBody() != null ? "else " + toSourceCode(ifStmt.getElseBody(), false) : "");
             case @SuppressWarnings("unused") BreakStatement breakStatement -> "break;";
-            case AssigmentExpression assignExpr -> toSourceCode(assignExpr.getLeft(), false) +
-                    " " + assignExpr.getOperator() + " " +
-                    toSourceCode(assignExpr.getExpression(), false);
+            case AssignmentExpression assignExpr -> {
+                String op = "=";
+                if (assignExpr.getRight() instanceof BinaryExpression bin &&
+                    bin.getLeft().equals(assignExpr.getLeft())) {
+                    String bop = bin.getOperator();
+                    if (bop.equals("+") || bop.equals("-") || bop.equals("*") || bop.equals("/")) {
+                        op = bop + "=";
+                        yield toSourceCode(assignExpr.getLeft(), false) + op + toSourceCode(bin.getRight(), false);
+                    }
+                }
+                yield toSourceCode(assignExpr.getLeft(), false) + " = " + toSourceCode(assignExpr.getRight(), false);
+            }
+            case ExpressionStatement exprStmt -> {
+                yield toSourceCode(exprStmt.getExpression(), false) + ";";
+            }
             default -> "// Неизвестный узел: " + node.getClass().getSimpleName();
         };
+    }
+
+    public static String toSourceCode(ParserRuleContext ctx) {
+        if (ctx == null) return "";
+        Token start = ctx.getStart();
+        Token stop = ctx.getStop();
+        int startLine = start != null ? start.getLine() : -1;
+        int startChar = start != null ? start.getCharPositionInLine() : -1;
+        int stopLine = stop != null ? stop.getLine() : -1;
+        int stopChar = stop != null ? stop.getCharPositionInLine() : -1;
+        String text = ctx.getText();
+        return String.format("[line %d:%d - %d:%d] %s", startLine, startChar, stopLine, stopChar, text);
+    }
+
+    // Возвращает исходную строку и строку-указатель с ^ под ошибкой
+    public static String toSourceLine(String source, int line, int charPosition, int length) {
+        if (source == null || line < 1) return "";
+        String[] lines = source.split("\r?\n");
+        if (line > lines.length) return "";
+        String codeLine = lines[line - 1];
+        StringBuilder pointer = new StringBuilder();
+        for (int i = 0; i < charPosition; i++) pointer.append(codeLine.charAt(i) == '\t' ? '\t' : ' ');
+        for (int i = 0; i < Math.max(1, length); i++) pointer.append('^');
+        return codeLine + System.lineSeparator() + pointer;
     }
 }

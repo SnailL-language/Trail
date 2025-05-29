@@ -23,4 +23,18 @@ public class PrimitiveType extends Type {
     public int hashCode() {
         return name.hashCode();
     }
+
+    @Override
+    public <T> T accept(ASTVisitor<T> visitor) {
+        try {
+            return visitor.visit(this);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }

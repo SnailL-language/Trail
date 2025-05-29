@@ -21,15 +21,28 @@ public class ArrayType extends Type {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof ArrayType other) {
-            return other.elementType.equals(elementType) 
-                && other.size.equals(size);
-        }
-        return false;
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        ArrayType other = (ArrayType) obj;
+        return elementType.equals(other.elementType) && size.equals(other.size);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(elementType, size);
+        return java.util.Objects.hash(elementType, size);
+    }
+
+    @Override
+    public <T> T accept(ASTVisitor<T> visitor) {
+        try {
+            return visitor.visit(this);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "[" + elementType + ";" + size + "]";
     }
 }

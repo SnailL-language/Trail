@@ -1,35 +1,50 @@
 package io.github.snaill.ast;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Представляет параметр функции в AST.
+ */
 public class Parameter extends AbstractNode {
     private final String name;
+    private final Type type;
 
     public Parameter(String name, Type type) {
         super(List.of(type));
         this.name = name;
+        this.type = type;
     }
 
-    public Type getType() {
-        return (Type) getChild(0);
+    @Override
+    public <T> T accept(ASTVisitor<T> visitor) {
+        try {
+            return visitor.visit(this);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String getName() {
         return name;
     }
 
+    public Type getType() {
+        return type;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof Parameter other) {
             return name.equals(other.name)
-                && super.equals(other);
+                && type.equals(other.type);
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, getType());
+        return Objects.hash(name, type);
     }
 }

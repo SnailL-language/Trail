@@ -2,8 +2,11 @@ package io.github.snaill.ast;
 
 import java.util.List;
 
+/**
+ * Базовый класс для первичных выражений в AST.
+ */
 public abstract class PrimaryExpression extends Expression {
-    protected PrimaryExpression() {
-        super(List.of());
+    public PrimaryExpression(List<Node> children) {
+        super(children);
     }
 }

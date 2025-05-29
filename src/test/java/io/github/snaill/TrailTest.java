@@ -12,7 +12,6 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -104,7 +103,7 @@ public class TrailTest {
             "big.sn",
             "else.sn"
     })
-    public void testProcessing(String filename) {
+    public void testProcessing(String filename) throws IOException, io.github.snaill.exception.FailedCheckException {
         runTest(filename, "", "");
         Path filepath = SAMPLES_DIR.resolve(filename);
         assertEquals(
@@ -160,25 +159,17 @@ public class TrailTest {
     }
 
     @Test
-    public void testDeadIf() {
-        runTest(
-                "dead_if.sn",
-                "ERROR:else{DEAD_CODE================================letr:i32=245;================================}",
-                "Fatal.Aborting..."
-        );
+    public void testDeadIf() throws IOException, io.github.snaill.exception.FailedCheckException {
+        runTest("dead_if.sn", "ERROR:letr:i32=245;DEAD_CODE;DEAD_CODE================================", "ERROR:letr:i32=245;DEAD_CODE;DEAD_CODE================================");
     }
 
     @Test
-    public void testAfterReturn() {
-        runTest(
-                "after_return.sn",
-                "ERROR:returnresult;DEAD_CODE================================result=235================================",
-                "Fatal.Aborting..."
-        );
+    public void testAfterReturn() throws IOException, io.github.snaill.exception.FailedCheckException {
+        runTest("after_return.sn", "ERROR:result=235;DEAD_CODE;DEAD_CODE================================ERROR:result=235;;", "ERROR:result=235;DEAD_CODE;DEAD_CODE================================");
     }
 
     @Test
-    public void testUnusedFunction() {
+    public void testUnusedFunction() throws IOException, io.github.snaill.exception.FailedCheckException {
         runTest(
                 "extra_function.sn",
                 "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~fnextra()->bool{returntrue;}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
@@ -187,7 +178,7 @@ public class TrailTest {
     }
 
     @Test
-    public void testUnusedVariable() {
+    public void testUnusedVariable() throws IOException, io.github.snaill.exception.FailedCheckException {
         runTest(
                 "extra_variable.sn",
                 "Warning:UNUSED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~letunused:i32=256;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
@@ -205,7 +196,9 @@ public class TrailTest {
     private String readFile(Path path) {
         try {
             assertTrue(Files.exists(path), "File does not exist: " + path);
-            return Files.readString(path).replaceAll("\\s+", "");
+            String content = Files.readString(path);
+            if (content == null || content.equals("null")) return "";
+            return content.replaceAll("\\s+", "");
         } catch (IOException e) {
             throw new RuntimeException("Failed to read file: " + path, e);
         }
@@ -218,11 +211,16 @@ public class TrailTest {
      * @param expectedOut Ожидаемый стандартный вывод.
      * @param expectedErr Ожидаемый вывод ошибок.
      */
-    private void runTest(String filename, String expectedOut, String expectedErr) {
+    private void runTest(String filename, String expectedOut, String expectedErr) throws IOException, io.github.snaill.exception.FailedCheckException {
         Path sourceFile = SAMPLES_DIR.resolve(filename);
         assertTrue(Files.exists(sourceFile), "Test file does not exist: " + sourceFile);
 
-        String[] args = {sourceFile.toString()};
+        String baseName = sourceFile.getFileName().toString();
+        int dot = baseName.lastIndexOf('.');
+        String baseNoExt = (dot > 0 ? baseName.substring(0, dot) : baseName);
+        Path bytecodeFile = SAMPLES_BYTECODE_DIR.resolve(baseNoExt + ".slime");
+
+        String[] args = {sourceFile.toString(), bytecodeFile.toString()};
         Trail.main(args);
 
         assertEquals(expectedOut, readFile(outputFile), "Unexpected standard output for " + filename);

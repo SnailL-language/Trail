@@ -2,4 +2,10 @@ package io.github.snaill.result;
 
 public enum ErrorType {
     DEAD_CODE,
+    UNKNOWN_VARIABLE,
+    TYPE_MISMATCH,
+    UNKNOWN_TYPE,
+    UNKNOWN_OPERATOR,
+    INVALID_ASSIGNMENT,
+    NOT_AN_ARRAY
 }

@@ -1,6 +1,7 @@
 fn main() {
+    let a: i32 = 100;
     while (a > 5) {
-        let c: i32 = "afa";
+        let c: string = "afa";
         println(c);
     }
 }

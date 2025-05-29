@@ -7,8 +7,8 @@ fn factorial(n: usize) -> usize {
 
 
 fn main() {
-    for (let i: i32 = 0;  i < 3; i += 1) {
-        let b: i32 = factorial(i);
+    for (let i: usize = 0;  i < 3; i += 1) {
+        let b: usize = factorial(i);
         if (b > 1000) {
             break;
         }

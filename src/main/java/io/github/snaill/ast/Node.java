@@ -13,10 +13,30 @@ import io.github.snaill.result.Result;
 import io.github.snaill.result.Warning;
 import io.github.snaill.result.WarningType;
 
+/**
+ * Base interface for all Abstract Syntax Tree (AST) nodes.
+ * Each node must be able to accept a visitor.
+ */
 public interface Node {
-    Node getChild(int index);
+    /**
+     * Accepts an AST visitor.
+     *
+     * @param visitor The visitor to accept.
+     * @param <T> The return type of the visitor's methods.
+     * @return The result of the visit operation.
+     */
+    <T> T accept(ASTVisitor<T> visitor);
 
-    Collection<Node> getChildren();
+    /**
+     * Gets the child nodes of this AST node.
+     * This is useful for generic tree traversal if needed, 
+     * though the Visitor pattern is preferred for type-safe operations.
+     *
+     * @return A list of child nodes. Implementations should return an empty list if there are no children.
+     */
+    List<Node> getChildren();
+
+    Node getChild(int index);
 
     void setChildren(Collection<Node> children);
 
@@ -44,32 +64,54 @@ public interface Node {
       */
     @SuppressWarnings("unused")
     default void check() throws FailedCheckException {
-        // checkTypes();
         List<Result> results = checkDeadCode();
-        String out = results.stream()
-            .map(Object::toString)
-            .collect(Collectors.joining(System.lineSeparator())
-        );
-        if (!out.equals("")) {
-            System.out.println(out);
-        }
-        if (results.stream().anyMatch(Result::isCritical)) {
+        // Сначала печатаем только ошибки
+        results.stream().filter(r -> r instanceof io.github.snaill.result.CompilationError).forEach(r -> System.err.println(r));
+        // Всегда ищем и печатаем неиспользуемые
+        Set<FunctionDeclaration> unusedFns = new java.util.HashSet<>();
+        checkUnusedFunctions(unusedFns);
+        unusedFns.stream().filter(fn -> !fn.getName().equals("main")).forEach(fn -> System.err.println(new io.github.snaill.result.Warning(io.github.snaill.result.WarningType.UNUSED, io.github.snaill.ast.SourceBuilder.toSourceCode(fn))));
+        Set<VariableDeclaration> unusedVars = new java.util.HashSet<>();
+        checkUnusedVariables(unusedVars);
+        unusedVars.forEach(var -> System.err.println(new io.github.snaill.result.Warning(io.github.snaill.result.WarningType.UNUSED, io.github.snaill.ast.SourceBuilder.toSourceCode(var))));
+        boolean hasCritical = results.stream().anyMatch(Result::isCritical);
+        if (hasCritical) {
             throw new FailedCheckException();
         }
-        checkUnused(this::checkUnusedFunctions, fn -> fn.getName().equals("main"));
-        checkUnused(this::checkUnusedVariables, v -> false);
+    }
+
+    /**
+     * Проверка корректности кода с учётом текущего Scope (для типизации).
+     */
+    default void check(Scope scope) throws io.github.snaill.exception.FailedCheckException {
+        for (Node child : getChildren()) {
+            if (child != null) {
+                child.check(scope);
+            }
+        }
     }
 
     private static <T extends Node> void checkUnused(Consumer<Set<T>> checker, Predicate<T> expected) {
         Set<T> unused = new HashSet<>();
         checker.accept(unused);
-        String out = unused.stream()
+        unused.stream()
             .filter(Predicate.not(expected))
-            .map(fn -> new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(fn)).toString())
-            .collect(Collectors.joining(System.lineSeparator())
-        );
-        if (!out.equals("")) {
-            System.out.println(out);
-        }
+            .map(fn -> new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(fn)))
+            .forEach(w -> {
+                if (w.isCritical()) {
+                    System.err.println(w);
+                } else {
+                    System.out.println(w);
+                }
+            });
+    }
+
+    /**
+     * Генерирует байткод для данного узла AST.
+     * @param out поток для записи байткода
+     * @param context контекст генерации байткода
+     */
+    default void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+        throw new UnsupportedOperationException("emitBytecode не реализован для " + getClass().getSimpleName());
     }
 }

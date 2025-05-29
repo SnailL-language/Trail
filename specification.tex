@@ -1,0 +1,586 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian,english]{babel}
+\usepackage{geometry}
+\geometry{margin=0.5in}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tocloft}
+\usepackage{caption}
+\usepackage{adjustbox}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{longtable}
+\tcbuselibrary{listings, skins}
+
+\lstdefinestyle{snailstyle}{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{red},
+    breaklines=true,
+    breakatwhitespace=true,
+    showspaces=false,
+    showstringspaces=false,
+    frame=none,
+    numbers=none,
+}
+
+\newtcblisting{snailcode}[1][]{
+    listing only,
+    listing style=snailstyle,
+    colback=gray!10,
+    colframe=blue!50,
+    boxrule=0.5mm,
+    arc=3mm,
+    title=Source Code,
+    fonttitle=\bfseries,
+    #1
+}
+
+\newtcolorbox{bytecodebox}[1][]{
+    colback=gray!5,
+    colframe=black!50,
+    boxrule=0.5mm,
+    arc=3mm,
+    title=Bytecode Output,
+    fonttitle=\bfseries,
+    #1
+}
+
+\captionsetup[table]{position=below}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{\textbf{SnailVM Specification}}
+\author{}
+\date{12:35 AM BST, May 21, 2025} % Обновлено время и дата
+
+\begin{document}
+
+    \maketitle
+    \tableofcontents
+    \clearpage
+
+    \section{Overview}
+    SnailVM is a stack-based virtual machine designed to execute programs written in the Snail programming language, a statically-typed language supporting functions, loops, conditionals, and arrays. The virtual machine processes a compact bytecode format that represents Snail programs efficiently. This specification details the bytecode file structure, instruction set, type system, error handling, and includes examples of compilation from Snail source code to bytecode.
+
+    \section{Bytecode File Format}
+    The SnailVM bytecode file is a binary format organized into distinct sections to facilitate program execution. Each section is described below with its specific format.
+
+    \subsection{Header Format}
+    \begin{tabular}{|l|l|p{6cm}|}
+        \hline
+        \textbf{Field} & \textbf{Size} & \textbf{Description} \\ \hline
+        Magic Number & 4 bytes & Fixed value \texttt{0x534E4131} (ASCII: \texttt{SNA1}) to identify the file. \\ \hline
+        Version & 2 bytes & Bytecode format version in big-endian (e.g., \texttt{0x0001} for version 1). \\ \hline
+        Main Function Index & 2 bytes & Index of the \texttt{main} function in the function table (big-endian). If \texttt{main} is absent, set to \texttt{0xFFFF} (-1). \\ \hline
+    \end{tabular}
+    \captionof{table}{Header Format}
+    \label{tab:header_format}
+
+    \subsection{Constant Pool Format}
+    \begin{tabular}{|l|l|p{6cm}|}
+        \hline
+        \textbf{Type ID} & \textbf{Type} & \textbf{Binary Format} \\ \hline
+        \texttt{0x01} & \texttt{i32} & 4-byte signed integer (big-endian). \\ \hline
+        \texttt{0x02} & \texttt{usize} & 4-byte unsigned integer (big-endian). \\ \hline
+        \texttt{0x03} & \texttt{string} & 2-byte length (unsigned, big-endian), followed by UTF-8 bytes. \\ \hline
+    \end{tabular}
+    \captionof{table}{Constant Pool Entry Format}
+    \label{tab:constant_pool_format}
+
+    The pool starts with a 2-byte (big-endian) number indicating the number of entries.
+
+    \subsection{Function Table Format}
+    \begin{tabular}{|l|p{9cm}|}
+        \hline
+        \textbf{Field} & \textbf{Description} \\ \hline
+        Number of Functions & 2 bytes (big-endian), number of functions. \\ \hline
+        Name Length & 1 byte, length of the function name (n). \\ \hline
+        Name & n bytes, UTF-8 encoded function name. \\ \hline
+        Number of Parameters & 1 byte, count of function parameters. \\ \hline
+        Return Type & 1 byte, type ID (see Table \ref{tab:type_identifiers}). \\ \hline
+        Number of Local Variables & 2 bytes (big-endian), count of local variables (including parameters). \\ \hline
+        Bytecode Length & 4 bytes (big-endian), length of the function's bytecode (t). \\ \hline
+        Bytecode & t bytes, the function's executable bytecode. \\ \hline
+    \end{tabular}
+    \captionof{table}{Function Table Entry Format}
+    \label{tab:function_table_format}
+
+    \subsection{Function Call and Local Variable Pool}
+    When a function is called, the caller pushes all arguments onto the stack in left-to-right order. Upon entering the function, the callee pops the arguments from the stack in reverse order (last argument first), assigning them to local variable slots 0..N-1, where N is the number of parameters. The local variable pool for a function thus starts with its parameters, followed by other local variables declared in the function body. All accesses to parameters and local variables use their respective indices in this pool.
+
+    \subsection{Global Variables Format}
+    \begin{tabular}{|l|p{9cm}|}
+        \hline
+        \textbf{Field} & \textbf{Description} \\ \hline
+        Number of Variables & 2 bytes (big-endian), number of variables. \\ \hline
+        Name Length & 1 byte, length of the variable name (n). \\ \hline
+        Name & n bytes, UTF-8 encoded variable name. \\ \hline
+        Type ID & 1 byte, type of the variable (see Table \ref{tab:type_identifiers}). \\ \hline
+        (Array only) & If Type ID = \texttt{0x04} (array): 1 byte for element type ID, 4 bytes (big-endian) for array size. \\ \hline
+    \end{tabular}
+    \captionof{table}{Global Variable Entry Format}
+    \label{tab:global_variables_format}
+
+    \subsection{Global Bytecode}
+    This section contains bytecode executed before the \texttt{main} function, typically for initializing global variables. It starts with a 4-byte (big-endian) length, followed by the bytecode.
+
+    \section{Bytecode Generation Architecture}
+
+    \subsection{General Approach}
+    Bytecode generation in SnailVM is based on object-oriented design principles. Each node of the abstract syntax tree (AST) implements the \texttt{emitBytecode} method, which is responsible for generating its own bytecode. The central facade, \texttt{BytecodeEmitter}, only assembles the final file, delegating all instruction generation logic to the nodes themselves.
+
+    \subsection{Variable Pools}
+    \textbf{Global variable pool} is formed from all variables declared at the top level of the program. Each variable receives a unique index in the pool, which is used for generating \texttt{PUSH\_GLOBAL}, \texttt{STORE\_GLOBAL}, etc.
+
+    \textbf{Local variable pool} is formed separately for each function. It includes:
+    \begin{itemize}
+      \item Function parameters (indices 0..N-1)
+      \item All variables declared inside the function body (indices continue after parameters)
+    \end{itemize}
+    Access to local variables is performed via \texttt{PUSH\_LOCAL}, \texttt{STORE\_LOCAL} instructions with the corresponding index.
+
+    \subsection{Bytecode Generation Context}
+    The \texttt{BytecodeContext} class stores tables of constants, global variables, functions, and local variables. It provides methods for obtaining indices and adding new elements. Each AST node uses this context for correct addressing during bytecode generation.
+
+    \subsection{Example: Bytecode Generation for a Number Literal}
+    \begin{snailcode}
+    public class NumberLiteral extends PrimaryExpression {
+        private final long value;
+        // ...
+        @Override
+        public void emitBytecode(ByteArrayOutputStream out, BytecodeContext context) throws IOException {
+            int constIndex = context.addConstant(value);
+            out.write(BytecodeConstants.Opcode.PUSH_CONST);
+            BytecodeUtils.writeU16(out, constIndex);
+        }
+    }
+    \end{snailcode}
+
+    \subsection{UML Diagram (Pseudocode)}
+    \begin{verbatim}
+    +-------------------+         +-------------------+
+    |   BytecodeEmitter |<>------>|  BytecodeContext  |
+    +-------------------+         +-------------------+
+            |
+            v
+    +-------------------+
+    |      AST Node     |<--+ (each node implements emitBytecode)
+    +-------------------+
+    \end{verbatim}
+
+    \subsection{Advantages}
+    \begin{itemize}
+      \item Easy to extend: adding new constructs only requires implementing the \texttt{emitBytecode} method in the new node.
+      \item Clean architecture: the facade contains no instruction generation logic.
+      \item Simplified maintenance and testing.
+    \end{itemize}
+
+    \section{Instruction Set}
+    SnailVM employs a stack-based architecture with single-byte opcodes.
+
+    \subsection{Stack and Memory Operations}
+    \begin{tabular}{|l|l|p{4cm}|l|l|}
+    \hline
+    \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
+    \texttt{0x01} & \texttt{PUSH\_CONST} & Pushes a constant from the constant pool. & 2-byte index (big-endian) & [] $\rightarrow$ [value] \\ \hline
+    \texttt{0x02} & \texttt{PUSH\_LOCAL} & Pushes a local variable's value onto the stack. & 2-byte index (big-endian) & [] $\rightarrow$ [value] \\ \hline
+    \texttt{0x03} & \texttt{PUSH\_GLOBAL} & Pushes a global variable's value onto the stack. & 2-byte index (big-endian) & [] $\rightarrow$ [value] \\ \hline
+    \texttt{0x04} & \texttt{STORE\_LOCAL} & Stores a value from the stack into a local variable. & 2-byte index (big-endian) & [value] $\rightarrow$ [] \\ \hline
+    \texttt{0x05} & \texttt{STORE\_GLOBAL} & Stores a value from the stack into a global variable. & 2-byte index (big-endian) & [value] $\rightarrow$ [] \\ \hline
+    \texttt{0x06} & \texttt{POP} & Discards the top value from the stack. & None & [value] $\rightarrow$ [] \\ \hline
+    \end{tabular}
+    \captionof{table}{Stack and Memory Operations}
+    \label{tab:stack_memory_operations}
+
+    \subsection{Arithmetic and Logic Operations}
+    \begin{tabular}{|l|l|p{3cm}|l|l|}
+    \hline
+    \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
+    \texttt{0x10} & \texttt{ADD} & Adds the top two integers on the stack. & None & [a, b] $\rightarrow$ [a+b] \\ \hline
+    \texttt{0x11} & \texttt{SUB} & Subtracts the top integer from the second-top integer. & None & [a, b] $\rightarrow$ [a-b] \\ \hline
+    \texttt{0x12} & \texttt{MUL} & Multiplies the top two integers on the stack. & None & [a, b] $\rightarrow$ [a*b] \\ \hline
+    \texttt{0x13} & \texttt{DIV} & Divides the second-top integer by the top integer. & None & [a, b] $\rightarrow$ [a/b] \\ \hline
+    \texttt{0x14} & \texttt{MOD} & Computes the remainder of the division of the second-top integer by the top integer. & None & [a, b] $\rightarrow$ [a \% b] \\ \hline
+    \texttt{0x20} & \texttt{EQ} & Checks if the top two values are equal. & None & [a, b] $\rightarrow$ [bool] \\ \hline
+    \texttt{0x21} & \texttt{NEQ} & Checks if the top two values are not equal. & None & [a, b] $\rightarrow$ [bool] \\ \hline
+    \texttt{0x22} & \texttt{LT} & Checks if the second-top integer is less than the top integer. & None & [a, b] $\rightarrow$ [bool] \\ \hline
+    \texttt{0x23} & \texttt{LE} & Checks if the second-top integer is less than or equal to the top integer. & None & [a, b] $\rightarrow$ [bool] \\ \hline
+    \texttt{0x24} & \texttt{GT} & Checks if the second-top integer is greater than the top integer. & None & [a, b] $\rightarrow$ [bool] \\ \hline
+    \texttt{0x25} & \texttt{GTE} & Checks if the second-top integer is greater than or equal to the top integer. & None & [a, b] $\rightarrow$ [bool] \\ \hline
+    \texttt{0x26} & \texttt{AND} & Performs a logical AND on the top two booleans. & None & [a, b] $\rightarrow$ [a \&\& b] \\ \hline
+    \texttt{0x27} & \texttt{OR} & Performs a logical OR on the top two booleans. & None & [a, b] $\rightarrow$ [a || b] \\ \hline
+    \texttt{0x28} & \texttt{NOT} & Negates the top boolean value. & None & [a] $\rightarrow$ [!a] \\ \hline
+    \end{tabular}
+    \captionof{table}{Arithmetic and Logic Operations}
+    \label{tab:arithmetic_logic_operations}
+
+    \subsection{Control Flow Operations}
+    \begin{tabular}{|l|l|p{4cm}|l|l|}
+    \hline
+    \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
+    \texttt{0x30} & \texttt{JMP} & Unconditionally jumps to a specified bytecode address. & 2-byte relative offset (big-endian) & [] $\rightarrow$ [] \\ \hline
+    \texttt{0x31} & \texttt{JMP\_IF\_FALSE} & Jumps to a specified address if the top boolean is false. & 2-byte relative offset (big-endian) & [bool] $\rightarrow$ [] \\ \hline
+    \texttt{0x32} & \texttt{CALL} & Calls a function at the specified index, passing arguments from the stack. & 2-byte function index (big-endian) & [args] $\rightarrow$ [ret] \\ \hline
+    \texttt{0x33} & \texttt{RET} & Returns from a function with the top stack value as the return value. & None & [value] $\rightarrow$ [] \\ \hline
+    \texttt{0x34} & \texttt{HALT} & Stops the execution of the virtual machine. & None & [] $\rightarrow$ [] \\ \hline
+    \end{tabular}
+    \captionof{table}{Control Flow Operations}
+    \label{tab:control_flow_operations}
+
+    \subsection{Array Operations}
+    \begin{tabular}{|l|l|p{2.5cm}|l|l|}
+    \hline
+    \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
+    \texttt{0x40} & \texttt{NEW\_ARRAY} & Creates a new array of the specified size and type. & 2-byte size, 1-byte type ID & [] $\rightarrow$ [array] \\ \hline
+    \texttt{0x41} & \texttt{GET\_ARRAY} & Retrieves the element at the specified index from the array. & None & [array, index] $\rightarrow$ [value] \\ \hline
+    \texttt{0x42} & \texttt{SET\_ARRAY} & Sets the element at the specified index in the array. & None & [array, index, value] $\rightarrow$ [] \\ \hline
+    \end{tabular}
+    \captionof{table}{Array Operations}
+    \label{tab:array_operations}
+
+    \subsection{Intrinsic Instructions}
+    \begin{tabular}{|l|l|p{4cm}|l|l|}
+    \hline
+    \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
+    \texttt{0x50} & \texttt{INTRINSIC\_CALL} & Calls a built-in intrinsic function identified by its index in the Intrinsic Table. & 2-byte index (big-endian) & [args] $\rightarrow$ [ret] \\ \hline
+    \end{tabular}
+    \captionof{table}{Intrinsic Instructions}
+    \label{tab:intrinsic_instructions}
+
+    \subsection{Intrinsic Functions}
+    \begin{tabular}{|l|l|l|p{4cm}|l|}
+    \hline
+    \textbf{Name} & \textbf{Parameters} & \textbf{Return Type} & \textbf{Description} & \textbf{Stack Effect} \\ \hline
+    \texttt{println} & 1 (any type convertible to string) & \texttt{void} (0x00) & Outputs the argument to the console followed by a newline and discards the top stack value. & [value] $\rightarrow$ [] \\ \hline
+    \end{tabular}
+    \captionof{table}{Intrinsic Functions}
+    \label{tab:intrinsic_functions}
+
+    \textbf{Note:} The Intrinsic Table can be extended with more built-in functions as needed. Each intrinsic is identified by its index in the table.
+
+    \section{Type System}
+    SnailVM supports \texttt{i32}, \texttt{usize}, \texttt{string}, \texttt{void}, and \texttt{array} types.
+
+    \subsection{Type Identifiers}
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Type ID} & \textbf{Type} \\ \hline
+    \texttt{0x00} & \texttt{void} \\ \hline
+    \texttt{0x01} & \texttt{i32} (also used for bool) \\ \hline
+    \texttt{0x02} & \texttt{usize} \\ \hline
+    \texttt{0x03} & \texttt{string} \\ \hline
+    \texttt{0x04} & \texttt{array} \\ \hline
+    \end{tabular}
+    \captionof{table}{Type Identifiers}
+    \label{tab:type_identifiers}
+
+    \textbf{Note:} The type \\texttt{bool} is represented as \\texttt{i32} (0 for false, 1 for true) in the bytecode and type tables.
+
+    \section{Error Diagnostics}
+
+    The SnailL compiler, upon encountering an error, outputs a detailed message including:
+    \begin{itemize}
+      \item The relevant fragment of the source code
+      \item A pointer line with the \texttt{^} character under the error location
+      \item The error type
+      \item A human-readable error description
+    \end{itemize}
+
+    \textbf{Example: Type mismatch}
+    \begin{snailcode}
+    let x: i32 = "abc";
+    \end{snailcode}
+    \begin{verbatim}
+    ERROR:
+    let x: i32 = "abc";
+                ^^^
+    TYPE_MISMATCH
+    =================================
+    Type mismatch: cannot assign string to i32
+    =================================
+    \end{verbatim}
+
+    \textbf{Example: Unknown variable}
+    \begin{snailcode}
+    y = 5;
+    \end{snailcode}
+    \begin{verbatim}
+    ERROR:
+    y = 5;
+    ^
+    UNKNOWN_VARIABLE
+    =================================
+    Unknown variable: y
+    =================================
+    \end{verbatim}
+
+    \textbf{Example: Unknown operator}
+    \begin{snailcode}
+    let x: i32 = 1 %% 2;
+    \end{snailcode}
+    \begin{verbatim}
+    ERROR:
+    let x: i32 = 1 %% 2;
+                 ^
+    UNKNOWN_OPERATOR
+    =================================
+    Unknown operator: %%
+    =================================
+    \end{verbatim}
+
+    \textbf{Example: Dead code}
+    \begin{snailcode}
+    fn f() {
+        return 1;
+        let x = 2; // dead code
+    }
+    \end{snailcode}
+    \begin{verbatim}
+    ERROR:
+    return 1;
+    let x = 2;
+    DEAD_CODE
+    =================================
+    Code after return is unreachable
+    =================================
+    \end{verbatim}
+
+    \textbf{Note:} All errors always include the source line and the error position using the \texttt{^} character.
+
+    \subsection*{bool type}
+    The \texttt{bool} type is represented as \texttt{i32} (0 --- false, 1 --- true) in all type tables and in bytecode.
+
+    \section{Compilation Example}
+    \subsection{Source Code}
+    \begin{snailcode}
+    let counter: i32 = 0;
+    let data: [i32; 5] = [10, 20, 30, 40, 50];
+
+    fn computeSum(a: i32, b: i32) -> i32 {
+    let sum: i32 = a + b;
+    let offset: i32 = 5;
+    return sum + offset;
+    }
+
+    fn main() -> void {
+    let i: i32 = 0;
+    while (i < 5) {
+    let value: i32 = data[i];
+    if (value > 25) {
+    data[i] = value * 2;
+    } else {
+    data[i] = value - 5;
+    }
+    i = i + 1;
+    }
+    let sum: i32 = computeSum(data[0], data[1]);
+    if (sum >= 100) {
+    counter = sum / 2;
+    } else {
+    counter = sum;
+    }
+    let flag: i32 = 0;
+    if (counter < 50 && data[2] > 50) {
+    flag = 1;
+    }
+    println(sum); // Example usage of println
+    }
+    \end{snailcode}
+
+    \subsection{Bytecode Output}
+    \begin{longtable}{|c|l|p{6cm}|}
+    \hline
+    \textbf{Address} & \textbf{Byte(s)} & \textbf{Description} \\ \hline
+    \endhead
+    \multicolumn{3}{r}{\textit{Continuation on next page}} \\
+    \endfoot
+    \endlastfoot
+    \multicolumn{3}{|l|}{\textbf{Header}} \\ \hline
+    - & \texttt{53 4E 41 31} & Magic Number: 0x534E4131 \\ \hline
+    - & \texttt{00 01} & Version: 0x0001 \\ \hline
+    - & \texttt{00 01} & Main Function Index: 0x0001 \\ \hline
+    \multicolumn{3}{|l|}{\textbf{Constant Pool} (11 entries, \texttt{00 0B})} \\ \hline
+    0 & \texttt{01 00 00 00 00} & i32: 0 \\ \hline
+    1 & \texttt{01 00 00 00 05} & i32: 5 \\ \hline
+    2 & \texttt{01 00 00 00 0A} & i32: 10 \\ \hline
+    3 & \texttt{01 00 00 00 14} & i32: 20 \\ \hline
+    4 & \texttt{01 00 00 00 1E} & i32: 30 \\ \hline
+    5 & \texttt{01 00 00 00 28} & i32: 40 \\ \hline
+    6 & \texttt{01 00 00 00 32} & i32: 50 \\ \hline
+    7 & \texttt{01 00 00 00 19} & i32: 25 \\ \hline
+    8 & \texttt{01 00 00 00 02} & i32: 2 \\ \hline
+    9 & \texttt{01 00 00 00 01} & i32: 1 \\ \hline
+    10 & \texttt{01 00 00 00 64} & i32: 100 \\ \hline
+    \multicolumn{3}{|l|}{\textbf{Function Table} (2 functions, \texttt{00 02})} \\ \hline
+    - & \texttt{0A} & Name length: 10 ("computeSum") \\ \hline
+    - & \texttt{63 6F 6D 70 75 74 65 53 75 6D} & Name: "computeSum" \\ \hline
+    - & \texttt{02} & Parameters: 2 \\ \hline
+    - & \texttt{01} & Return type: i32 \\ \hline
+    - & \texttt{00 04} & Local variables: 4 (a, b, sum, offset) \\ \hline
+    - & \texttt{00 00 00 18} & Bytecode length: 24 \\ \hline
+    0x00 & \texttt{02 00 00} & PUSH\_LOCAL\_$0$ (a) \\ \hline
+    0x03 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (b) \\ \hline
+    0x06 & \texttt{10} & ADD \\ \hline
+    0x07 & \texttt{03 00 02} & STORE\_LOCAL\_$2$ (sum) \\ \hline
+    0x0A & \texttt{01 00 01} & PUSH\_CONST 1 (5) \\ \hline
+    0x0D & \texttt{03 00 03} & STORE\_LOCAL\_$3$ (offset) \\ \hline
+    0x10 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (sum) \\ \hline
+    0x13 & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (offset) \\ \hline
+    0x16 & \texttt{10} & ADD \\ \hline
+    0x17 & \texttt{33} & RET \\ \hline
+    - & \texttt{04} & Name length: 4 ("main") \\ \hline
+    - & \texttt{6D 61 69 6E} & Name: "main" \\ \hline
+    - & \texttt{00} & Parameters: 0 \\ \hline
+    - & \texttt{00} & Return type: void \\ \hline
+    - & \texttt{00 06} & Local variables: 6 (counter, data, i, value, sum, flag) \\ \hline
+    - & \texttt{00 00 00 B3} & Bytecode length: 179 (updated due to println) \\ \hline
+    0x00 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
+    0x03 & \texttt{03 00 02} & STORE\_LOCAL\_$2$ (i) \\ \hline
+    0x06 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
+    0x09 & \texttt{01 00 01} & PUSH\_CONST 1 (5) \\ \hline
+    0x0C & \texttt{22} & LT \\ \hline
+    0x0D & \texttt{31 00 67} & JMP\_IF\_FALSE 103 (to 0x74) \\ \hline
+    0x10 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x13 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
+    0x16 & \texttt{41} & GET\_ARRAY \\ \hline
+    0x17 & \texttt{03 00 03} & STORE\_LOCAL\_$3$ (value) \\ \hline
+    0x1A & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (value) \\ \hline
+    0x1D & \texttt{01 00 07} & PUSH\_CONST 7 (25) \\ \hline
+    0x20 & \texttt{24} & GT \\ \hline
+    0x21 & \texttt{31 00 1A} & JMP\_IF\_FALSE 26 (to 0x3B) \\ \hline
+    0x24 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x27 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
+    0x2A & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (value) \\ \hline
+    0x2D & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
+    0x30 & \texttt{12} & MUL \\ \hline
+    0x31 & \texttt{42} & SET\_ARRAY \\ \hline
+    0x32 & \texttt{04} & POP \\ \hline
+    0x33 & \texttt{30 00 13} & JMP 19 (to 0x46) \\ \hline
+    0x36 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x39 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
+    0x3C & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (value) \\ \hline
+    0x3F & \texttt{01 00 01} & PUSH\_CONST 1 (5) \\ \hline
+    0x42 & \texttt{11} & SUB \\ \hline
+    0x43 & \texttt{42} & SET\_ARRAY \\ \hline
+    0x44 & \texttt{04} & POP \\ \hline
+    0x45 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
+    0x48 & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
+    0x4B & \texttt{10} & ADD \\ \hline
+    0x4C & \texttt{03 00 02} & STORE\_LOCAL\_$2$ (i) \\ \hline
+    0x4F & \texttt{04} & POP \\ \hline
+    0x50 & \texttt{30 FF B6} & JMP -74 (to 0x06) \\ \hline
+    0x53 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x56 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
+    0x59 & \texttt{41} & GET\_ARRAY \\ \hline
+    0x5A & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x5D & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
+    0x60 & \texttt{41} & GET\_ARRAY \\ \hline
+    0x61 & \texttt{32 00 00} & CALL 0 (computeSum) \\ \hline
+    0x64 & \texttt{03 00 04} & STORE\_LOCAL\_$4$ (sum) \\ \hline
+    0x67 & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
+    0x6A & \texttt{01 00 0A} & PUSH\_CONST 10 (100) \\ \hline
+    0x6D & \texttt{25} & GTE \\ \hline
+    0x6E & \texttt{31 00 10} & JMP\_IF\_FALSE 16 (to 0x7E) \\ \hline
+    0x71 & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
+    0x74 & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
+    0x77 & \texttt{13} & DIV \\ \hline
+    0x78 & \texttt{03 00 00} & STORE\_LOCAL\_$0$ (counter) \\ \hline
+    0x7B & \texttt{04} & POP \\ \hline
+    0x7C & \texttt{30 00 05} & JMP 5 (to 0x81) \\ \hline
+    0x7F & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
+    0x82 & \texttt{03 00 00} & STORE\_LOCAL\_$0$ (counter) \\ \hline
+    0x85 & \texttt{04} & POP \\ \hline
+    0x86 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
+    0x89 & \texttt{03 00 05} & STORE\_LOCAL\_$5$ (flag) \\ \hline
+    0x8C & \texttt{02 00 00} & PUSH\_LOCAL\_$0$ (counter) \\ \hline
+    0x8F & \texttt{01 00 01} & PUSH\_CONST 1 (50) \\ \hline
+    0x92 & \texttt{22} & LT \\ \hline
+    0x93 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x96 & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
+    0x99 & \texttt{41} & GET\_ARRAY \\ \hline
+    0x9A & \texttt{01 00 01} & PUSH\_CONST 1 (50) \\ \hline
+    0x9D & \texttt{24} & GT \\ \hline
+    0x9E & \texttt{26} & AND \\ \hline
+    0x9F & \texttt{31 00 07} & JMP\_IF\_FALSE 7 (to 0xA6) \\ \hline
+    0xA2 & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
+    0xA5 & \texttt{03 00 05} & STORE\_LOCAL\_$5$ (flag) \\ \hline
+    0xA8 & \texttt{04} & POP \\ \hline
+    0xA9 & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
+    0xAC & \texttt{50 00 00} & INTRINSIC\_CALL 0 (println) \\ \hline
+    0xAF & \texttt{04} & POP \\ \hline
+    0xB0 & \texttt{33} & RET \\ \hline
+    \multicolumn{3}{|l|}{\textbf{Intrinsic Table} (1 entry, \texttt{00 01})} \\ \hline
+    - & \texttt{07} & Name length: 7 ("println") \\ \hline
+    - & \texttt{70 72 69 6E 74 6C 6E} & Name: "println" \\ \hline
+    - & \texttt{01} & Parameters: 1 \\ \hline
+    - & \texttt{00} & Return type: void \\ \hline
+    \multicolumn{3}{|l|}{\textbf{Global Variables} (2 variables, \texttt{00 02})} \\ \hline
+    - & \texttt{07} & Name length: 7 ("counter") \\ \hline
+    - & \texttt{63 6F 75 6E 74 65 72} & Name: "counter" \\ \hline
+    - & \texttt{01} & Type: i32 \\ \hline
+    - & \texttt{04} & Name length: 4 ("data") \\ \hline
+    - & \texttt{64 61 74 61} & Name: "data" \\ \hline
+    - & \texttt{04 01 00 00 00 05} & Type: array of i32, size 5 \\ \hline
+    \multicolumn{3}{|l|}{\textbf{Global Bytecode} (Length: \texttt{00 00 00 43}, 67 bytes)} \\ \hline
+    0x00 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
+    0x03 & \texttt{03 00 00} & STORE\_LOCAL\_$0$ (counter) \\ \hline
+    0x06 & \texttt{40 00 01 01} & NEW\_ARRAY 1, type i32 (size 5) \\ \hline
+    0x0A & \texttt{03 00 01} & STORE\_LOCAL\_$1$ (data) \\ \hline
+    0x0D & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x10 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
+    0x13 & \texttt{01 00 02} & PUSH\_CONST 2 (10) \\ \hline
+    0x16 & \texttt{42} & SET\_ARRAY \\ \hline
+    0x17 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x1A & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
+    0x1D & \texttt{01 00 03} & PUSH\_CONST 3 (20) \\ \hline
+    0x20 & \texttt{42} & SET\_ARRAY \\ \hline
+    0x21 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x24 & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
+    0x27 & \texttt{01 00 04} & PUSH\_CONST 4 (30) \\ \hline
+    0x2A & \texttt{42} & SET\_ARRAY \\ \hline
+    0x2B & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x2E & \texttt{01 00 09} & PUSH\_CONST 9 (3) \\ \hline
+    0x31 & \texttt{01 00 05} & PUSH\_CONST 5 (40) \\ \hline
+    0x34 & \texttt{42} & SET\_ARRAY \\ \hline
+    0x35 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
+    0x38 & \texttt{01 00 09} & PUSH\_CONST 9 (4) \\ \hline
+    0x3B & \texttt{01 00 06} & PUSH\_CONST 6 (50) \\ \hline
+    0x3E & \texttt{42} & SET\_ARRAY \\ \hline
+    0x3F & \texttt{32 00 01} & CALL 1 (main) \\ \hline
+    0x42 & \texttt{34} & HALT \\ \hline
+    \end{longtable}
+
+    \subsection{Execution Flow}
+    \begin{itemize}
+    \item \textbf{Header}: Points to \texttt{main} (index 1).
+    \item \textbf{Constant Pool}: Contains 0, 5, 10, 20, 30, 40, 50, 25, 2, 1, 100.
+    \item \textbf{Function Table}:
+    - \texttt{computeSum}: Computes and returns \texttt{a + b + 5}.
+    - \texttt{main}: Executes loop, calls \texttt{computeSum}, updates \texttt{counter}, sets \texttt{flag}, and prints \texttt{sum} with \texttt{println}.
+    \item \textbf{Intrinsic Table}: Contains \texttt{println} with 1 parameter and void return type.
+    \item \textbf{Global Variables}: \texttt{counter} and \texttt{data}.
+    \item \textbf{Global Bytecode}: Initializes \texttt{counter} and \texttt{data}, calls \texttt{main}.
+    \end{itemize}
+
+    \section{Compilation Process}
+    The Snail compiler parses the source code, generates an abstract syntax tree (AST), and emits bytecode based on the instruction set.
+
+    \section{Conclusion}
+    SnailVM provides an efficient and robust bytecode format for executing Snail programs.
+
+\end{document}

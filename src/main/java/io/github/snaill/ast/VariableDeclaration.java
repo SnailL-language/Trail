@@ -1,14 +1,35 @@
 package io.github.snaill.ast;
 
+import io.github.snaill.bytecode.BytecodeConstants;
+import io.github.snaill.bytecode.BytecodeContext;
+import io.github.snaill.bytecode.BytecodeUtils;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import io.github.snaill.exception.FailedCheckException;
+import java.util.Arrays;
+import java.util.Objects;
 
+/**
+ * Представляет объявление переменной в AST.
+ * Генерирует байткод для создания и инициализации переменной.
+ */
 public class VariableDeclaration extends AbstractNode implements Statement {
     private final String name;
 
     public VariableDeclaration(String name, Type type, Expression value) {
-        super(List.of(type, value));
+        super(java.util.Arrays.asList(type, value));
         this.name = name;
+    }
+
+    @Override
+    public <T> T accept(ASTVisitor<T> visitor) {
+        try {
+            return visitor.visit(this);
+        } catch (IOException e) {
+            throw new RuntimeException(e); // Or a more specific unchecked exception
+        }
     }
 
     public String getName() {
@@ -20,13 +41,16 @@ public class VariableDeclaration extends AbstractNode implements Statement {
     }
 
     public Expression getValue() {
-        return (Expression) children.getLast();
+        return (Expression) children.get(1);
     }
 
     @Override
     public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        unused.add(this);
-        super.checkUnusedVariables(unused);
+        // no-op: VariableDeclaration не должна удалять себя из unused
+    }
+
+    public Scope getParentScope() {
+        return getEnclosingScope();
     }
 
     @Override
@@ -41,5 +65,78 @@ public class VariableDeclaration extends AbstractNode implements Statement {
     @Override
     public int hashCode() {
         return name.hashCode();
+    }
+
+    @Override
+    public void check(Scope scope) throws FailedCheckException {
+        Type declared = getType();
+        Expression value = getValue();
+        if (value != null) {
+            Type actual = value.getType(scope);
+            if (declared instanceof PrimitiveType pt && pt.getName().equals("usize") && value instanceof NumberLiteral nl && nl.isNonNegative()) {
+                super.check(scope);
+                return;
+            }
+            if (!declared.equals(actual)) {
+                String before = getSource() != null ?
+                    io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), name.length()) :
+                    io.github.snaill.ast.SourceBuilder.toSourceCode(this);
+                throw new FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        io.github.snaill.result.ErrorType.TYPE_MISMATCH,
+                        before,
+                        "Type mismatch: cannot assign " + actual + " to " + declared,
+                        ""
+                    ).toString()
+                );
+            }
+        }
+        super.check(scope);
+    }
+
+    @Override
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+        emitBytecode(out, context, null);
+    }
+
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+        if (getValue() != null) {
+            getValue().emitBytecode(out, context, currentFunction);
+            if (currentFunction != null) {
+                int localIndex = context.getLocalVarIndex(currentFunction, getName());
+                if (localIndex == -1) {
+                    throw new io.github.snaill.exception.FailedCheckException("Local variable not found: " + getName());
+                }
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, localIndex);
+            } else {
+                int globalIndex = context.getGlobalVarIndex(getName());
+                if (globalIndex == -1) {
+                    globalIndex = context.addGlobalVariable(getName());
+                }
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_GLOBAL);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "let " + name + ": " + getType() + (getValue() != null ? (" = " + getValue()) : "") + ";";
+    }
+
+    private byte getElementTypeId(Type type) {
+        if (type instanceof PrimitiveType pt) {
+            return switch (pt.getName()) {
+                case "i32" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+                case "usize" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.USIZE;
+                case "string" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
+                case "bool" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+                default -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+            };
+        } else if (type instanceof ArrayType) {
+            return io.github.snaill.bytecode.BytecodeConstants.TypeId.ARRAY;
+        }
+        return io.github.snaill.bytecode.BytecodeConstants.TypeId.I32; // Fallback
     }
 }

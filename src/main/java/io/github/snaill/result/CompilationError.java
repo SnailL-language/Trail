@@ -20,18 +20,10 @@ public class CompilationError implements Result {
     @Override
     public String toString() {
         return String.format(
-            "ERROR: %s%s%s%s%s%s%s%s%s%s%s",  
-            NEW_LINE,
+            "ERROR:%s%s%s",
             before,
-            NEW_LINE, 
-            type,
-            NEW_LINE,
-            SEPARATION,
-            error,
-            NEW_LINE,
-            SEPARATION,
-            after,
-            NEW_LINE
+            type == ErrorType.DEAD_CODE ? error + ";DEAD_CODE================================" : error,
+            after.isEmpty() ? "" : ";" + after + ";================================"
         );
     }
 
