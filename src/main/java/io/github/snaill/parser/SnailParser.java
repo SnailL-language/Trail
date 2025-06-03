@@ -1399,7 +1399,7 @@ public class SnailParser extends Parser {
 				enterOuterAlt(_localctx, 3);
 				{
 				setState(199);
-				arrayElement(0);
+				arrayElement();
 				}
 				break;
 			case 4:
@@ -1685,7 +1685,7 @@ public class SnailParser extends Parser {
 				enterOuterAlt(_localctx, 2);
 				{
 				setState(216);
-				arrayElement(0);
+				arrayElement();
 				}
 				break;
 			}
@@ -1747,14 +1747,11 @@ public class SnailParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class ArrayElementContext extends ParserRuleContext {
 		public TerminalNode IDENTIFIER() { return getToken(SnailParser.IDENTIFIER, 0); }
-		public ExpressionContext expression() {
-			return getRuleContext(ExpressionContext.class,0);
+		public List<ExpressionContext> expression() {
+			return getRuleContexts(ExpressionContext.class);
 		}
-		public ArrayElementContext arrayElement() {
-			return getRuleContext(ArrayElementContext.class,0);
-		}
-		public NumberLiteralContext numberLiteral() {
-			return getRuleContext(NumberLiteralContext.class,0);
+		public ExpressionContext expression(int i) {
+			return getRuleContext(ExpressionContext.class,i);
 		}
 		public ArrayElementContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -1776,57 +1773,32 @@ public class SnailParser extends Parser {
 	}
 
 	public final ArrayElementContext arrayElement() throws RecognitionException {
-		return arrayElement(0);
-	}
-
-	private ArrayElementContext arrayElement(int _p) throws RecognitionException {
-		ParserRuleContext _parentctx = _ctx;
-		int _parentState = getState();
-		ArrayElementContext _localctx = new ArrayElementContext(_ctx, _parentState);
-		ArrayElementContext _prevctx = _localctx;
-		int _startState = 48;
-		enterRecursionRule(_localctx, 48, RULE_arrayElement, _p);
+		ArrayElementContext _localctx = new ArrayElementContext(_ctx, getState());
+		enterRule(_localctx, 48, RULE_arrayElement);
+		int _la;
 		try {
-			int _alt;
 			enterOuterAlt(_localctx, 1);
 			{
-			{
-			setState(222);
+			setState(221);
 			match(IDENTIFIER);
-			setState(223);
-			match(T__36);
-			setState(224);
-			expression();
-			setState(225);
-			match(T__37);
-			}
-			_ctx.stop = _input.LT(-1);
-			setState(234);
+			setState(226); 
 			_errHandler.sync(this);
-			_alt = getInterpreter().adaptivePredict(_input,16,_ctx);
-			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
-				if ( _alt==1 ) {
-					if ( _parseListeners!=null ) triggerExitRuleEvent();
-					_prevctx = _localctx;
-					{
-					{
-					_localctx = new ArrayElementContext(_parentctx, _parentState);
-					pushNewRecursionContext(_localctx, _startState, RULE_arrayElement);
-					setState(227);
-					if (!(precpred(_ctx, 1))) throw new FailedPredicateException(this, "precpred(_ctx, 1)");
-					setState(228);
-					match(T__36);
-					setState(229);
-					numberLiteral();
-					setState(230);
-					match(T__37);
-					}
-					} 
+			_la = _input.LA(1);
+			do {
+				{
+				{
+				setState(222);
+				match(T__36);
+				setState(223);
+				expression();
+				setState(224);
+				match(T__37);
 				}
-				setState(236);
+				}
+				setState(228); 
 				_errHandler.sync(this);
-				_alt = getInterpreter().adaptivePredict(_input,16,_ctx);
-			}
+				_la = _input.LA(1);
+			} while ( _la==T__36 );
 			}
 		}
 		catch (RecognitionException re) {
@@ -1835,7 +1807,7 @@ public class SnailParser extends Parser {
 			_errHandler.recover(this, re);
 		}
 		finally {
-			unrollRecursionContexts(_parentctx);
+			exitRule();
 		}
 		return _localctx;
 	}
@@ -1871,13 +1843,13 @@ public class SnailParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(237);
+			setState(230);
 			match(IDENTIFIER);
-			setState(238);
+			setState(231);
 			match(T__2);
-			setState(239);
+			setState(232);
 			argumentList();
-			setState(240);
+			setState(233);
 			match(T__3);
 			}
 		}
@@ -1926,35 +1898,35 @@ public class SnailParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(242);
+			setState(235);
 			match(T__36);
-			setState(251);
+			setState(244);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if ((((_la) & ~0x3f) == 0 && ((1L << _la) & 123405147832328L) != 0)) {
 				{
-				setState(243);
+				setState(236);
 				expression();
-				setState(248);
+				setState(241);
 				_errHandler.sync(this);
 				_la = _input.LA(1);
 				while (_la==T__5) {
 					{
 					{
-					setState(244);
+					setState(237);
 					match(T__5);
-					setState(245);
+					setState(238);
 					expression();
 					}
 					}
-					setState(250);
+					setState(243);
 					_errHandler.sync(this);
 					_la = _input.LA(1);
 				}
 				}
 			}
 
-			setState(253);
+			setState(246);
 			match(T__37);
 			}
 		}
@@ -2000,7 +1972,7 @@ public class SnailParser extends Parser {
 		TypeContext _localctx = new TypeContext(_ctx, getState());
 		enterRule(_localctx, 54, RULE_type);
 		try {
-			setState(257);
+			setState(250);
 			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case T__38:
@@ -2010,14 +1982,14 @@ public class SnailParser extends Parser {
 			case T__42:
 				enterOuterAlt(_localctx, 1);
 				{
-				setState(255);
+				setState(248);
 				primitiveType();
 				}
 				break;
 			case T__36:
 				enterOuterAlt(_localctx, 2);
 				{
-				setState(256);
+				setState(249);
 				arrayType();
 				}
 				break;
@@ -2069,15 +2041,15 @@ public class SnailParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(259);
+			setState(252);
 			match(T__36);
-			setState(260);
+			setState(253);
 			type();
-			setState(261);
+			setState(254);
 			match(T__0);
-			setState(262);
+			setState(255);
 			numberLiteral();
-			setState(263);
+			setState(256);
 			match(T__37);
 			}
 		}
@@ -2120,7 +2092,7 @@ public class SnailParser extends Parser {
 		try {
 			enterOuterAlt(_localctx, 1);
 			{
-			setState(265);
+			setState(258);
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 17042430230528L) != 0)) ) {
 			_errHandler.recoverInline(this);
@@ -2143,23 +2115,8 @@ public class SnailParser extends Parser {
 		return _localctx;
 	}
 
-	public boolean sempred(RuleContext _localctx, int ruleIndex, int predIndex) {
-		switch (ruleIndex) {
-		case 24:
-			return arrayElement_sempred((ArrayElementContext)_localctx, predIndex);
-		}
-		return true;
-	}
-	private boolean arrayElement_sempred(ArrayElementContext _localctx, int predIndex) {
-		switch (predIndex) {
-		case 0:
-			return precpred(_ctx, 1);
-		}
-		return true;
-	}
-
 	public static final String _serializedATN =
-		"\u0004\u00011\u010c\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
+		"\u0004\u00011\u0105\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
 		"\u0002\u0007\u0002\u0002\u0003\u0007\u0003\u0002\u0004\u0007\u0004\u0002"+
 		"\u0005\u0007\u0005\u0002\u0006\u0007\u0006\u0002\u0007\u0007\u0007\u0002"+
 		"\b\u0007\b\u0002\t\u0007\t\u0002\n\u0007\n\u0002\u000b\u0007\u000b\u0002"+
@@ -2193,17 +2150,16 @@ public class SnailParser extends Parser {
 		"\u0012\u0003\u0012\u00d0\b\u0012\u0001\u0013\u0001\u0013\u0001\u0014\u0001"+
 		"\u0014\u0001\u0015\u0001\u0015\u0001\u0016\u0001\u0016\u0003\u0016\u00da"+
 		"\b\u0016\u0001\u0017\u0001\u0017\u0001\u0018\u0001\u0018\u0001\u0018\u0001"+
-		"\u0018\u0001\u0018\u0001\u0018\u0001\u0018\u0001\u0018\u0001\u0018\u0001"+
-		"\u0018\u0001\u0018\u0005\u0018\u00e9\b\u0018\n\u0018\f\u0018\u00ec\t\u0018"+
+		"\u0018\u0001\u0018\u0004\u0018\u00e3\b\u0018\u000b\u0018\f\u0018\u00e4"+
 		"\u0001\u0019\u0001\u0019\u0001\u0019\u0001\u0019\u0001\u0019\u0001\u001a"+
-		"\u0001\u001a\u0001\u001a\u0001\u001a\u0005\u001a\u00f7\b\u001a\n\u001a"+
-		"\f\u001a\u00fa\t\u001a\u0003\u001a\u00fc\b\u001a\u0001\u001a\u0001\u001a"+
-		"\u0001\u001b\u0001\u001b\u0003\u001b\u0102\b\u001b\u0001\u001c\u0001\u001c"+
+		"\u0001\u001a\u0001\u001a\u0001\u001a\u0005\u001a\u00f0\b\u001a\n\u001a"+
+		"\f\u001a\u00f3\t\u001a\u0003\u001a\u00f5\b\u001a\u0001\u001a\u0001\u001a"+
+		"\u0001\u001b\u0001\u001b\u0003\u001b\u00fb\b\u001b\u0001\u001c\u0001\u001c"+
 		"\u0001\u001c\u0001\u001c\u0001\u001c\u0001\u001c\u0001\u001d\u0001\u001d"+
-		"\u0001\u001d\u0000\u00010\u001e\u0000\u0002\u0004\u0006\b\n\f\u000e\u0010"+
+		"\u0001\u001d\u0000\u0000\u001e\u0000\u0002\u0004\u0006\b\n\f\u000e\u0010"+
 		"\u0012\u0014\u0016\u0018\u001a\u001c\u001e \"$&(*,.02468:\u0000\u0005"+
 		"\u0002\u0000\u000b\u000b\u0012\u0015\u0001\u0000\u0016!\u0002\u0000\u001f"+
-		"\u001f\"\"\u0001\u0000#$\u0001\u0000\'+\u010e\u0000?\u0001\u0000\u0000"+
+		"\u001f\"\"\u0001\u0000#$\u0001\u0000\'+\u0107\u0000?\u0001\u0000\u0000"+
 		"\u0000\u0002S\u0001\u0000\u0000\u0000\u0004U\u0001\u0000\u0000\u0000\u0006"+
 		"h\u0001\u0000\u0000\u0000\bj\u0001\u0000\u0000\u0000\nv\u0001\u0000\u0000"+
 		"\u0000\fx\u0001\u0000\u0000\u0000\u000e\u0081\u0001\u0000\u0000\u0000"+
@@ -2214,9 +2170,9 @@ public class SnailParser extends Parser {
 		" \u00c2\u0001\u0000\u0000\u0000\"\u00ca\u0001\u0000\u0000\u0000$\u00cf"+
 		"\u0001\u0000\u0000\u0000&\u00d1\u0001\u0000\u0000\u0000(\u00d3\u0001\u0000"+
 		"\u0000\u0000*\u00d5\u0001\u0000\u0000\u0000,\u00d9\u0001\u0000\u0000\u0000"+
-		".\u00db\u0001\u0000\u0000\u00000\u00dd\u0001\u0000\u0000\u00002\u00ed"+
-		"\u0001\u0000\u0000\u00004\u00f2\u0001\u0000\u0000\u00006\u0101\u0001\u0000"+
-		"\u0000\u00008\u0103\u0001\u0000\u0000\u0000:\u0109\u0001\u0000\u0000\u0000"+
+		".\u00db\u0001\u0000\u0000\u00000\u00dd\u0001\u0000\u0000\u00002\u00e6"+
+		"\u0001\u0000\u0000\u00004\u00eb\u0001\u0000\u0000\u00006\u00fa\u0001\u0000"+
+		"\u0000\u00008\u00fc\u0001\u0000\u0000\u0000:\u0102\u0001\u0000\u0000\u0000"+
 		"<>\u0003\u000e\u0007\u0000=<\u0001\u0000\u0000\u0000>A\u0001\u0000\u0000"+
 		"\u0000?=\u0001\u0000\u0000\u0000?@\u0001\u0000\u0000\u0000@C\u0001\u0000"+
 		"\u0000\u0000A?\u0001\u0000\u0000\u0000BD\u0003\u0004\u0002\u0000CB\u0001"+
@@ -2296,32 +2252,28 @@ public class SnailParser extends Parser {
 		"\u0007\u0003\u0000\u0000\u00d6+\u0001\u0000\u0000\u0000\u00d7\u00da\u0003"+
 		".\u0017\u0000\u00d8\u00da\u00030\u0018\u0000\u00d9\u00d7\u0001\u0000\u0000"+
 		"\u0000\u00d9\u00d8\u0001\u0000\u0000\u0000\u00da-\u0001\u0000\u0000\u0000"+
-		"\u00db\u00dc\u0005.\u0000\u0000\u00dc/\u0001\u0000\u0000\u0000\u00dd\u00de"+
-		"\u0006\u0018\uffff\uffff\u0000\u00de\u00df\u0005.\u0000\u0000\u00df\u00e0"+
-		"\u0005%\u0000\u0000\u00e0\u00e1\u0003\u001a\r\u0000\u00e1\u00e2\u0005"+
-		"&\u0000\u0000\u00e2\u00ea\u0001\u0000\u0000\u0000\u00e3\u00e4\n\u0001"+
-		"\u0000\u0000\u00e4\u00e5\u0005%\u0000\u0000\u00e5\u00e6\u0003(\u0014\u0000"+
-		"\u00e6\u00e7\u0005&\u0000\u0000\u00e7\u00e9\u0001\u0000\u0000\u0000\u00e8"+
-		"\u00e3\u0001\u0000\u0000\u0000\u00e9\u00ec\u0001\u0000\u0000\u0000\u00ea"+
-		"\u00e8\u0001\u0000\u0000\u0000\u00ea\u00eb\u0001\u0000\u0000\u0000\u00eb"+
-		"1\u0001\u0000\u0000\u0000\u00ec\u00ea\u0001\u0000\u0000\u0000\u00ed\u00ee"+
-		"\u0005.\u0000\u0000\u00ee\u00ef\u0005\u0003\u0000\u0000\u00ef\u00f0\u0003"+
-		"\n\u0005\u0000\u00f0\u00f1\u0005\u0004\u0000\u0000\u00f13\u0001\u0000"+
-		"\u0000\u0000\u00f2\u00fb\u0005%\u0000\u0000\u00f3\u00f8\u0003\u001a\r"+
-		"\u0000\u00f4\u00f5\u0005\u0006\u0000\u0000\u00f5\u00f7\u0003\u001a\r\u0000"+
-		"\u00f6\u00f4\u0001\u0000\u0000\u0000\u00f7\u00fa\u0001\u0000\u0000\u0000"+
-		"\u00f8\u00f6\u0001\u0000\u0000\u0000\u00f8\u00f9\u0001\u0000\u0000\u0000"+
-		"\u00f9\u00fc\u0001\u0000\u0000\u0000\u00fa\u00f8\u0001\u0000\u0000\u0000"+
-		"\u00fb\u00f3\u0001\u0000\u0000\u0000\u00fb\u00fc\u0001\u0000\u0000\u0000"+
-		"\u00fc\u00fd\u0001\u0000\u0000\u0000\u00fd\u00fe\u0005&\u0000\u0000\u00fe"+
-		"5\u0001\u0000\u0000\u0000\u00ff\u0102\u0003:\u001d\u0000\u0100\u0102\u0003"+
-		"8\u001c\u0000\u0101\u00ff\u0001\u0000\u0000\u0000\u0101\u0100\u0001\u0000"+
-		"\u0000\u0000\u01027\u0001\u0000\u0000\u0000\u0103\u0104\u0005%\u0000\u0000"+
-		"\u0104\u0105\u00036\u001b\u0000\u0105\u0106\u0005\u0001\u0000\u0000\u0106"+
-		"\u0107\u0003(\u0014\u0000\u0107\u0108\u0005&\u0000\u0000\u01089\u0001"+
-		"\u0000\u0000\u0000\u0109\u010a\u0007\u0004\u0000\u0000\u010a;\u0001\u0000"+
-		"\u0000\u0000\u0014?ES\\ehsv|\u009f\u00a6\u00b2\u00bd\u00ca\u00cf\u00d9"+
-		"\u00ea\u00f8\u00fb\u0101";
+		"\u00db\u00dc\u0005.\u0000\u0000\u00dc/\u0001\u0000\u0000\u0000\u00dd\u00e2"+
+		"\u0005.\u0000\u0000\u00de\u00df\u0005%\u0000\u0000\u00df\u00e0\u0003\u001a"+
+		"\r\u0000\u00e0\u00e1\u0005&\u0000\u0000\u00e1\u00e3\u0001\u0000\u0000"+
+		"\u0000\u00e2\u00de\u0001\u0000\u0000\u0000\u00e3\u00e4\u0001\u0000\u0000"+
+		"\u0000\u00e4\u00e2\u0001\u0000\u0000\u0000\u00e4\u00e5\u0001\u0000\u0000"+
+		"\u0000\u00e51\u0001\u0000\u0000\u0000\u00e6\u00e7\u0005.\u0000\u0000\u00e7"+
+		"\u00e8\u0005\u0003\u0000\u0000\u00e8\u00e9\u0003\n\u0005\u0000\u00e9\u00ea"+
+		"\u0005\u0004\u0000\u0000\u00ea3\u0001\u0000\u0000\u0000\u00eb\u00f4\u0005"+
+		"%\u0000\u0000\u00ec\u00f1\u0003\u001a\r\u0000\u00ed\u00ee\u0005\u0006"+
+		"\u0000\u0000\u00ee\u00f0\u0003\u001a\r\u0000\u00ef\u00ed\u0001\u0000\u0000"+
+		"\u0000\u00f0\u00f3\u0001\u0000\u0000\u0000\u00f1\u00ef\u0001\u0000\u0000"+
+		"\u0000\u00f1\u00f2\u0001\u0000\u0000\u0000\u00f2\u00f5\u0001\u0000\u0000"+
+		"\u0000\u00f3\u00f1\u0001\u0000\u0000\u0000\u00f4\u00ec\u0001\u0000\u0000"+
+		"\u0000\u00f4\u00f5\u0001\u0000\u0000\u0000\u00f5\u00f6\u0001\u0000\u0000"+
+		"\u0000\u00f6\u00f7\u0005&\u0000\u0000\u00f75\u0001\u0000\u0000\u0000\u00f8"+
+		"\u00fb\u0003:\u001d\u0000\u00f9\u00fb\u00038\u001c\u0000\u00fa\u00f8\u0001"+
+		"\u0000\u0000\u0000\u00fa\u00f9\u0001\u0000\u0000\u0000\u00fb7\u0001\u0000"+
+		"\u0000\u0000\u00fc\u00fd\u0005%\u0000\u0000\u00fd\u00fe\u00036\u001b\u0000"+
+		"\u00fe\u00ff\u0005\u0001\u0000\u0000\u00ff\u0100\u0003(\u0014\u0000\u0100"+
+		"\u0101\u0005&\u0000\u0000\u01019\u0001\u0000\u0000\u0000\u0102\u0103\u0007"+
+		"\u0004\u0000\u0000\u0103;\u0001\u0000\u0000\u0000\u0014?ES\\ehsv|\u009f"+
+		"\u00a6\u00b2\u00bd\u00ca\u00cf\u00d9\u00e4\u00f1\u00f4\u00fa";
 	public static final ATN _ATN =
 		new ATNDeserializer().deserialize(_serializedATN.toCharArray());
 	static {

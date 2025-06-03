@@ -113,7 +113,7 @@ identifier : variableIdentifier | arrayElement;
 
 variableIdentifier : IDENTIFIER;
 
-arrayElement : IDENTIFIER '[' expression ']' | arrayElement '[' numberLiteral ']' ;
+arrayElement : IDENTIFIER ('[' expression ']')+ ;
 
 // Вызов функции
 functionCall
