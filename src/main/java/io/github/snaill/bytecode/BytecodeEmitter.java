@@ -197,6 +197,17 @@ public class BytecodeEmitter {
             for (Expression arg : call.getArguments()) {
                 addConstants(arg);
             }
+        } else if (expr instanceof AssignmentExpression assignExpr) { // Новый блок
+            // Обрабатываем правую часть присваивания
+            addConstants(assignExpr.getRight());
+            // Обрабатываем левую часть, если это, например, ArrayAccess с литералом в индексе
+            addConstants(assignExpr.getLeft());
+        } else if (expr instanceof ArrayAccess arrayAccess) { // Новый блок
+            // Обрабатываем выражение индекса
+            addConstants(arrayAccess.getIndex());
+            // Также можно обработать выражение самого массива, если оно может быть литералом,
+            // но обычно это идентификатор.
+            // addConstants(arrayAccess.getArrayExpression());
         }
     }
 
