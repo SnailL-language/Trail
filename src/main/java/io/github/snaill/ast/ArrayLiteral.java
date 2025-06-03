@@ -73,7 +73,9 @@ public class ArrayLiteral extends PrimaryExpression {
             for (int i = 0; i < size; i++) {
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_LOCAL);
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, tmpIdx);
-                new NumberLiteral(i).emitBytecode(out, context);
+                // Используем константы для индексов массива, чтобы гарантировать правильную индексацию
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, context.addConstant((long)i));
                 elements.get(i).emitBytecode(out, context, currentFunction);
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.SET_ARRAY);
             }
@@ -91,7 +93,9 @@ public class ArrayLiteral extends PrimaryExpression {
             for (int i = 0; i < size; i++) {
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_GLOBAL);
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, tmpIdx);
-                new NumberLiteral(i).emitBytecode(out, context);
+                // Используем константы для индексов массива, чтобы гарантировать правильную индексацию
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, context.addConstant((long)i));
                 elements.get(i).emitBytecode(out, context, currentFunction);
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.SET_ARRAY);
             }

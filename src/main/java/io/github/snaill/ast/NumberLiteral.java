@@ -39,7 +39,20 @@ public class NumberLiteral extends PrimaryExpression {
     }
 
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
-        int constIndex = context.addConstant(getValue());
+        // Добавляем константу в пул констант и получаем её индекс
+        Long longValue = getValue();
+        int existingIndex = context.getConstantIndex(longValue);
+        int constIndex;
+        
+        if (existingIndex != -1) {
+            // Используем существующий индекс константы
+            constIndex = existingIndex;
+        } else {
+            // Добавляем новую константу
+            constIndex = context.addConstant(longValue);
+        }
+        
+        // Генерируем инструкцию PUSH_CONST с индексом константы
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, constIndex);
     }

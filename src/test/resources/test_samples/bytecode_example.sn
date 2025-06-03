@@ -33,9 +33,11 @@ fn main() {
         counter = sum;
     }
 
-    // Logical operation example
+    // Logical operation example with explicit parentheses
     let flag: i32 = 0;
-    if (counter < 50 && data[2] > 50) {
+    if ((counter < 50) && (data[2] > 50)) {
         flag = 1;
-    }
+
+
+    println(flag);
 }

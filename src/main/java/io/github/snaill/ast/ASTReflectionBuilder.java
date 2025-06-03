@@ -17,28 +17,40 @@ public class ASTReflectionBuilder implements ASTBuilder {
 
     @Override
     public Node build(SnailParser.ProgramContext ctx) throws io.github.snaill.exception.FailedCheckException {
-        // Сначала собираем все глобальные переменные (до первой функции)
+        System.out.println("DEBUG: Starting AST build from ProgramContext");
+        
+        // Сначала создаем корневую область видимости с пустым списком statements
         List<Statement> statements = new ArrayList<>();
+        Scope rootScope = new Scope(statements, null);
+        
+        // Собираем все глобальные переменные (до первой функции)
         int i = 0;
         while (i < ctx.getChildCount()) {
             ParseTree child = ctx.getChild(i);
             if (child instanceof SnailParser.VariableDeclarationContext varCtx) {
-                Statement var = (Statement) parseVariableDeclaration(varCtx, null);
+                Statement var = (Statement) parseVariableDeclaration(varCtx, rootScope);
                 if (var != null) statements.add(var);
                 i++;
             } else {
                 break;
             }
         }
+        
         // Затем все функции (минимум одна по грамматике)
         for (; i < ctx.getChildCount(); i++) {
             ParseTree child = ctx.getChild(i);
             if (child instanceof SnailParser.FuncDeclarationContext funcCtx) {
-                Statement func = (Statement) parseFuncDeclaration(funcCtx, null);
+                // Передаем rootScope как родительскую область видимости
+                Statement func = (Statement) parseFuncDeclaration(funcCtx, rootScope);
                 if (func != null) statements.add(func);
             }
         }
-        Scope rootScope = new Scope(statements, null);
+        
+        // Обновляем children в rootScope, хотя это уже должно быть сделано автоматически
+        // Явно приводим List<Statement> к Collection<Node>
+        rootScope.setChildren(new ArrayList<Node>(statements));
+        
+        System.out.println("DEBUG: Completed AST build from ProgramContext");
         return rootScope;
     }
 
@@ -115,6 +127,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
 
     private Node parseVariableDeclaration(SnailParser.VariableDeclarationContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        System.out.println("DEBUG: Processing variable declaration: " + ctx.IDENTIFIER().getText());
         String name = ctx.IDENTIFIER().getText();
         Type type = (Type) parseType(ctx.type());
         Expression expr = (Expression) parseExpression(ctx.expression(), parent);
@@ -136,8 +149,9 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 parseParamList(ctx.paramList()) : List.of();
         Type returnType = ctx.type() != null ?
                 (Type) parseType(ctx.type()) : new PrimitiveType("void");
-        // Тело функции — отдельный scope, параметры НЕ добавляем как VariableDeclaration
-        Scope funcScope = new Scope(new ArrayList<>(), null, null);
+        // Тело функции — отдельный scope с доступом к глобальным переменным через родительскую область видимости
+        // Параметры НЕ добавляем как VariableDeclaration, они обрабатываются в методе resolveVariable
+        Scope funcScope = new Scope(new ArrayList<>(), parent, null);
         FunctionDeclaration funcDecl = new FunctionDeclaration(name, params, returnType, funcScope);
         Scope body = parseScope(ctx.scope(), funcScope, funcDecl);
         funcScope.setChildren(body.getChildren());
@@ -464,6 +478,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
 
     private Node parseIdentifier(SnailParser.IdentifierContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        System.out.println("DEBUG: Accessing identifier: " + ctx.getText());
         if (ctx.variableIdentifier() != null) {
             String name = ctx.variableIdentifier().IDENTIFIER().getText();
             if (parent != null && parent.resolveVariable(name) == null) {
@@ -502,15 +517,12 @@ public class ASTReflectionBuilder implements ASTBuilder {
     private Node parseArrayElement(SnailParser.ArrayElementContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
         Identifier identifier = new Identifier(ctx.IDENTIFIER().getText());
         List<Expression> indices = new ArrayList<>();
+        // Обрабатываем все индексы для многомерных массивов
         if (ctx.expression() != null) {
-            indices.add((Expression) parseExpression(ctx.expression(), parent));
-        } else if (ctx.numberLiteral() != null) {
-            indices.add((Expression) parseNumberLiteral(ctx.numberLiteral()));
-        }
-        if (ctx.arrayElement() != null) {
-            ArrayElement inner = (ArrayElement) parseArrayElement(ctx.arrayElement(), parent);
-            identifier = (Identifier) inner.getIdentifier();
-            indices.addAll(inner.getDims());
+            List<SnailParser.ExpressionContext> expressions = ctx.expression();
+            for (SnailParser.ExpressionContext expr : expressions) {
+                indices.add((Expression) parseExpression(expr, parent));
+            }
         }
         ArrayElement arrElem = new ArrayElement(identifier, indices);
         if (ctx.IDENTIFIER() != null) {

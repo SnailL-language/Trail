@@ -74,6 +74,16 @@ public class Identifier extends PrimaryExpression {
 
     @Override
     public Type getType(Scope scope) throws io.github.snaill.exception.FailedCheckException {
+        // Записываем отладочное сообщение в файл
+        try {
+            java.io.PrintWriter debugLog = new java.io.PrintWriter(new java.io.FileWriter("debug_identifier_log.txt", true));
+            debugLog.println("Looking for variable in check phase: " + name);
+            debugLog.close();
+        } catch (java.io.IOException e) {
+            // Игнорируем ошибку записи
+        }
+        // Добавляем отладочный вывод в stderr
+        System.err.println("DEBUG: Checking variable in getType: " + name);
         // Проверяем, не обращаемся ли к переменной в её собственной инициализации
         VariableDeclaration decl = scope.resolveVariable(name, this);
         if (decl == null) {

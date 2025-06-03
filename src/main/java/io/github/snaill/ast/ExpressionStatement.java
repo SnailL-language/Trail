@@ -27,8 +27,13 @@ public class ExpressionStatement extends AbstractNode implements Statement {
     }
 
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
-        getExpression().emitBytecode(out, context, currentFunction);
-        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP); // Удаляем результат выражения из стека
+        Expression expr = getExpression();
+        expr.emitBytecode(out, context, currentFunction);
+        
+        // Не добавляем POP после выражений, которые сами не оставляют значение на стеке
+        if (!(expr instanceof AssignmentExpression && ((AssignmentExpression)expr).getLeft() instanceof ArrayElement)) {
+            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP); // Удаляем результат выражения из стека
+        }
     }
 
     @Override

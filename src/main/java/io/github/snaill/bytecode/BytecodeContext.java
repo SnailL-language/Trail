@@ -12,7 +12,19 @@ public class BytecodeContext {
     private final Map<Object, Integer> constantIndices = new HashMap<>();
     private final List<String> globalVariables = new ArrayList<>();
     private final Map<String, Integer> globalVarIndices = new HashMap<>();
-    private final List<FunctionDeclaration> functions = new ArrayList<>();
+    /**
+     * Список всех глобальных выражений и объявлений
+     */
+    private List<Statement> globalStatements = new ArrayList<>();
+    
+    /**
+     * Таблица функций, содержащая все объявленные функции
+     */
+    private final List<FunctionDeclaration> functionTable = new ArrayList<>();
+    
+    /**
+     * Индексы функций в таблице функций, для быстрого доступа по имени
+     */
     private final Map<String, Integer> functionIndices = new HashMap<>();
     private final Map<FunctionDeclaration, Map<String, Integer>> localVarIndices = new HashMap<>();
 
@@ -32,10 +44,15 @@ public class BytecodeContext {
         return globalVarIndices.get(name);
     }
 
+    /**
+     * Добавляет функцию в таблицу функций и возвращает ее индекс
+     * @param func функция для добавления
+     * @return индекс функции в таблице
+     */
     public int addFunction(FunctionDeclaration func) {
         if (!functionIndices.containsKey(func.getName())) {
-            functions.add(func);
-            functionIndices.put(func.getName(), functions.size() - 1);
+            functionTable.add(func);
+            functionIndices.put(func.getName(), functionTable.size() - 1);
         }
         return functionIndices.get(func.getName());
     }
@@ -65,9 +82,37 @@ public class BytecodeContext {
         return functionIndices.getOrDefault(name, -1);
     }
 
+    /**
+     * Добавляет глобальное выражение в список
+     * @param stmt глобальное выражение или объявление
+     */
+    public void addGlobalStatement(Statement stmt) {
+        globalStatements.add(stmt);
+    }
+    
+    /**
+     * Устанавливает список глобальных выражений
+     * @param statements список глобальных выражений
+     */
+    public void setGlobalStatements(List<Statement> statements) {
+        this.globalStatements = new ArrayList<>(statements);
+    }
+    
+    /**
+     * Получает список глобальных выражений
+     * @return список глобальных выражений
+     */
+    public List<Statement> getGlobalStatements() {
+        return globalStatements;
+    }
+    
     public List<Object> getConstants() { return constants; }
     public List<String> getGlobalVariables() { return globalVariables; }
-    public List<FunctionDeclaration> getFunctions() { return functions; }
+    /**
+     * Возвращает таблицу функций
+     * @return список функций
+     */
+    public List<FunctionDeclaration> getFunctions() { return functionTable; }
     public Map<String, Integer> getGlobalVarIndices() { return globalVarIndices; }
     public Map<FunctionDeclaration, Map<String, Integer>> getLocalVarIndices() { return localVarIndices; }
 } 

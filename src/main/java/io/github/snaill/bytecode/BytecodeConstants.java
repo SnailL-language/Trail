@@ -29,13 +29,19 @@ public class BytecodeConstants {
      * Опкоды инструкций
      */
     public static class Opcode {
+        public static final byte NOP = 0x00;
         // Операции со стеком и памятью
         public static final byte PUSH_CONST = 0x01;
         public static final byte PUSH_LOCAL = 0x02;
-        public static final byte PUSH_GLOBAL = 0x03;
-        public static final byte STORE_LOCAL = 0x04;
+        public static final byte PUSH_GLOBAL = 0x03; // Was 0x04 in old spec, 0x03 is correct
+        public static final byte STORE_LOCAL = 0x04; // Was 0x03 in old spec, 0x04 is correct
         public static final byte STORE_GLOBAL = 0x05;
         public static final byte POP = 0x06;
+        /**
+         * Дублирует значение на вершине стека.
+         * Эффект на стек: [value] → [value, value]
+         */
+        public static final byte DUP = 0x07;
 
         // Арифметические и логические операции
         public static final byte ADD = 0x10;
@@ -54,10 +60,38 @@ public class BytecodeConstants {
         public static final byte NOT = 0x28;
 
         // Операции управления потоком
+        /** 
+         * Безусловный переход на указанное смещение (в байтах) от текущего положения.
+         * Аргумент: 2 байта со знаком (big-endian), смещение в байтах относительно текущей позиции
+         */
         public static final byte JMP = 0x30;
+        
+        /**
+         * Условный переход, если верхнее значение стека равно 0 (false).
+         * Аргумент: 2 байта со знаком (big-endian), смещение в байтах относительно текущей позиции
+         */
         public static final byte JMP_IF_FALSE = 0x31;
+        
+        /**
+         * Условный переход, если верхнее значение стека не равно 0 (true).
+         * Аргумент: 2 байта со знаком (big-endian), смещение в байтах относительно текущей позиции
+         */
+        public static final byte JMP_IF_TRUE = 0x35; // Ensure this is present
+        
+        /**
+         * Вызов функции по индексу из таблицы функций.
+         * Аргумент: 2 байта (big-endian), индекс функции
+         */
         public static final byte CALL = 0x32;
+        
+        /**
+         * Возврат из функции (со значением, если оно есть на стеке).
+         */
         public static final byte RET = 0x33;
+        
+        /**
+         * Остановка виртуальной машины.
+         */
         public static final byte HALT = 0x34;
 
         // Операции с массивами

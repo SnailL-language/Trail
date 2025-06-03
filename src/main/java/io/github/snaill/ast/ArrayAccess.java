@@ -39,9 +39,24 @@ public class ArrayAccess extends Expression {
         emitBytecode(out, context, null);
     }
 
-    public void emitBytecode(ByteArrayOutputStream out, BytecodeContext context, FunctionDeclaration currentFunction) throws IOException, FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+        // Сначала генерируем код для массива
         getArray().emitBytecode(out, context, currentFunction);
-        getIndex().emitBytecode(out, context, currentFunction);
+        
+        // Оптимизация для литеральных индексов
+        if (getIndex() instanceof NumberLiteral) {
+            NumberLiteral indexLiteral = (NumberLiteral) getIndex();
+            long value = indexLiteral.getValue();
+            // Напрямую добавляем индекс в пул констант
+            Integer intValue = (int) value;
+            int constIndex = context.addConstant(intValue);
+            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
+            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, constIndex);
+        } else {
+            // Обычная генерация кода для переменных или выражений
+            getIndex().emitBytecode(out, context, currentFunction);
+        }
+        
         out.write(BytecodeConstants.Opcode.GET_ARRAY);
     }
 

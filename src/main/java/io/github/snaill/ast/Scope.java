@@ -260,10 +260,51 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
     }
 
     public VariableDeclaration resolveVariable(String name) {
-        return resolveVariable(name, null);
+        System.out.println("DEBUG: Resolving variable: " + name);
+        
+        // Проверяем параметры функции, если мы находимся в области видимости функции
+        if (enclosingFunction != null) {
+            for (Parameter param : enclosingFunction.getParameters()) {
+                if (param.getName().equals(name)) {
+                    System.out.println("DEBUG: Found parameter " + name + " in function " + enclosingFunction.getName());
+                    // Создаем временное объявление переменной на основе параметра
+                    return new VariableDeclaration(name, param.getType(), null);
+                }
+            }
+        }
+        
+        // Проверяем локальные переменные в текущей области видимости
+        for (Node child : children) {
+            if (child instanceof VariableDeclaration varDecl && varDecl.getName().equals(name)) {
+                System.out.println("DEBUG: Found variable " + name + " in current scope");
+                return varDecl;
+            }
+        }
+        
+        // Если не нашли, ищем в родительской области видимости
+        if (parent != null) {
+            System.out.println("DEBUG: Variable " + name + " not found in current scope, checking parent scope");
+            return parent.resolveVariable(name);
+        }
+        
+        System.out.println("DEBUG: Variable " + name + " not found in any scope");
+        return null;
     }
 
     public VariableDeclaration resolveVariable(String name, Node context) {
+        System.out.println("DEBUG: Resolving variable with context: " + name);
+        
+        // Проверяем параметры функции, если мы находимся в области видимости функции
+        if (enclosingFunction != null) {
+            for (Parameter param : enclosingFunction.getParameters()) {
+                if (param.getName().equals(name)) {
+                    System.out.println("DEBUG: Found parameter " + name + " in function " + enclosingFunction.getName());
+                    // Создаем временное объявление переменной на основе параметра
+                    return new VariableDeclaration(name, param.getType(), null);
+                }
+            }
+        }
+        
         // Сначала ищем VariableDeclaration
         for (Node child : children) {
             if (child instanceof VariableDeclaration vd && vd.getName().equals(name)) {
@@ -271,22 +312,18 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
                 if (context != null && vd.getValue() == context) {
                     continue;
                 }
+                System.out.println("DEBUG: Found variable " + name + " in current scope");
                 return vd;
             }
         }
-        // Если scope принадлежит функции, ищем среди её параметров
-        FunctionDeclaration func = findEnclosingFunction();
-        if (func != null) {
-            for (Parameter p : func.getParameters()) {
-                if (p.getName().equals(name)) {
-                    return new VariableDeclaration(p.getName(), p.getType(), null);
-                }
-            }
-        }
-        // Рекурсивно ищем в родителе
+        
+        // Если не нашли, ищем в родительской области видимости
         if (parent != null) {
+            System.out.println("DEBUG: Variable " + name + " not found in current scope, checking parent scope");
             return parent.resolveVariable(name, context);
         }
+        
+        System.out.println("DEBUG: Variable " + name + " not found in any scope");
         return null;
     }
 

@@ -43,19 +43,56 @@ public class WhileLoop extends AbstractNode implements Statement {
         emitBytecode(out, context, null);
     }
 
+    /**
+     * Генерирует байткод для цикла while со следующей структурой:
+     * 
+     * start:
+     *   <байткод условия>
+     *   JMP_IF_FALSE end
+     *   <байткод тела>
+     *   JMP start (указывает наверх для продолжения цикла)
+     * end:
+     */
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
-        int start = out.size();
+        // Запоминаем начальную позицию цикла
+        int startPos = out.size();
+        
+        // Генерируем байткод для условия
         getCondition().emitBytecode(out, context, currentFunction);
+        
+        // Генерируем условный переход в конец цикла, если условие ложно
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP_IF_FALSE);
         int jmpIfFalseOffset = out.size();
-        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Placeholder for jump offset
+        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Заглушка для смещения
+        
+        // Генерируем байткод для тела цикла
         getBody().emitBytecode(out, context, currentFunction);
+        
+        // Генерируем безусловный переход назад к началу цикла
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP);
-        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, start - out.size() - 2);
-        int end = out.size();
-        // Обновляем значение jump offset
+        
+        // Вычисляем смещение для перехода назад (отрицательное смещение)
+        // Обратите внимание: смещение вычисляется относительно текущей позиции после опкода JMP
+        // И должно учитывать 2 байта самого смещения
+        int currentPos = out.size();
+        int backOffset = startPos - currentPos - 2; // -2 для учета размера самого смещения (2 байта)
+        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, backOffset);
+        
+        // Запоминаем конечную позицию цикла
+        int endPos = out.size();
+        
+        // Обновляем заглушку для смещения в JMP_IF_FALSE
         byte[] bytes = out.toByteArray();
-        io.github.snaill.bytecode.BytecodeUtils.writeU16(new java.io.ByteArrayOutputStream() { @Override public void write(int b) { bytes[jmpIfFalseOffset + (count++)] = (byte)b; } private int count = 0; }, end - jmpIfFalseOffset - 2);
+        // Вычисляем смещение от позиции после JMP_IF_FALSE до конца цикла
+        int forwardOffset = endPos - jmpIfFalseOffset - 2; // -2 для учета размера самого смещения (2 байта)
+        io.github.snaill.bytecode.BytecodeUtils.writeU16(new java.io.ByteArrayOutputStream() { 
+            @Override public void write(int b) { 
+                bytes[jmpIfFalseOffset + (count++)] = (byte)b; 
+            } 
+            private int count = 0; 
+        }, forwardOffset);
+        
+        // Записываем обновленный байткод
         out.reset();
         out.write(bytes);
     }

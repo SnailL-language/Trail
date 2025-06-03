@@ -1,7 +1,11 @@
 package io.github.snaill;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.github.snaill.ast.*;
 import io.github.snaill.bytecode.BytecodeEmitter;
+import io.github.snaill.bytecode.BytecodeEmitter.BytecodeEmitterException;
 import io.github.snaill.bytecode.DebugBytecodeViewer;
 import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.parser.SnailLexer;
@@ -13,21 +17,180 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+
+import io.github.snaill.result.CompilationError;
+import io.github.snaill.result.ErrorType;
+import io.github.snaill.result.Result;
 import java.util.Objects;
 
-public class Trail {
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
-    private static final String USAGE = "trail [options] <file_to_compile>\n" +
-            "    --emit-source         print pretty source from AST\n" +
-            "    --debug-bytecode FILE print debug view of bytecode file (.slime)\n" +
-            "    --emit-bytecode FILE  output bytecode to FILE (default: <input>.slime)\n";
+/**
+ * Trail - компилятор для языка Snail.
+ * Компилирует исходный код на языке Snail в байткод для SnailVM.
+ */
+@Command(
+    name = "trail",
+    version = "1.0",
+    description = "Trail - компилятор для языка Snail",
+    mixinStandardHelpOptions = true,
+    requiredOptionMarker = '*'  // Маркер для обязательных опций в справке
+)
+public class Trail implements Callable<Integer> {
 
-    public static Node build(String filename) {
+    private static final Logger logger = LoggerFactory.getLogger(Trail.class);
+
+    /**
+     * Исходный файл для компиляции
+     */
+    @Option(names = {"-f", "--file"}, description = "Файл для компиляции", paramLabel = "<file>")
+    private String sourceFile;
+    
+    /**
+     * Вывести форматированный исходный код на основе AST
+     */
+    @Option(names = "--emit-source", description = "Вывести форматированный исходный код на основе AST")
+    private boolean emitSource = false;
+    
+    /**
+     * Отладочный вывод байткода
+     */
+    @Option(names = "--debug-bytecode", description = "Вывести отладочную информацию о байткоде", paramLabel = "<bytecode-file>")
+    private String debugBytecodeFile;
+    
+    /**
+     * Выходной файл для байткода
+     */
+    @Option(names = {"--emit-bytecode", "-o"}, description = "Записать байткод в указанный файл", paramLabel = "<output-file>")
+    private String emitBytecodeFile;
+    
+    /**
+     * Включить отладочный вывод
+     */
+    @Option(names = {"-d", "--debug"}, description = "Включить отладочные сообщения")
+    private boolean debug = false;
+
+    /**
+     * Отладочный просмотр байткода
+     * 
+     * @param bytecodeFile Путь к файлу байткода для просмотра
+     * @return Код возврата (0 = успешно, 1 = ошибка)
+     */
+    private int debugBytecode(String bytecodeFile) {
+        try {
+            logger.info("Starting bytecode debug for file: {}", bytecodeFile);
+            byte[] bytecode = Files.readAllBytes(Paths.get(bytecodeFile));
+            String disassembly = DebugBytecodeViewer.disassemble(bytecode);
+            System.out.println(disassembly); // Используем System.out.println для вывода результатов дизассемблера
+            return 0;
+        } catch (Exception e) {
+            logger.error("Error debugging bytecode: " + e.getMessage());
+            if (debug) {
+                e.printStackTrace();
+            }
+            return 1;
+        }
+    }
+    
+    /**
+     * Выводит список ошибок компиляции в консоль
+     * @param errors список ошибок компиляции
+     */
+    private void printCompilationError(List<CompilationError> errors) {
+        if (errors == null || errors.isEmpty()) {
+            logger.error("Неизвестная ошибка компиляции");
+            return;
+        }
+        
+        for (CompilationError error : errors) {
+            logger.error(error.toString());
+        }
+    }
+
+    /**
+     * Класс-адаптер для обертывания Scope в AST
+     */
+    private static class ASTImpl implements AST {
+        private final Scope root;
+        
+        public ASTImpl(Scope root) {
+            this.root = root;
+        }
+        
+        @Override
+        public Scope getRoot() {
+            return root;
+        }
+        
+        @Override
+        public <T> T accept(ASTVisitor<T> visitor) {
+            return root.accept(visitor);
+        }
+        
+        @Override
+        public Node getChild(int index) {
+            return root.getChild(index);
+        }
+        
+        @Override
+        public int getChildCount() {
+            return root.getChildCount();
+        }
+        
+        @Override
+        public void setChild(int index, Node child) {
+            root.setChild(index, child);
+        }
+        
+        @Override
+        public List<Node> getChildren() {
+            return root.getChildren();
+        }
+        
+        @Override
+        public void setChildren(Collection<Node> children) {
+            root.setChildren(children);
+        }
+        
+        @Override
+        public List<Result> checkDeadCode() {
+            return root.checkDeadCode();
+        }
+        
+        @Override
+        public void checkUnusedVariables(Set<VariableDeclaration> usedVariables) {
+            root.checkUnusedVariables(usedVariables);
+        }
+        
+        @Override
+        public void checkUnusedFunctions(Set<FunctionDeclaration> usedFunctions) {
+            root.checkUnusedFunctions(usedFunctions);
+        }
+    }
+    
+    /**
+     * Строит AST из исходного файла
+     * 
+     * @param filename Путь к исходному файлу
+     * @return Построенное AST
+     */
+    public static AST build(String filename) {
+        logger.debug("Starting build process for file: " + filename);
         Objects.requireNonNull(filename);
         final CharStream stream;
         try {
             stream = CharStreams.fromFileName(filename);
+            logger.debug("Successfully read file: " + filename);
         } catch (IOException e) {
+            logger.debug("Failed to read file: " + filename);
             throw new UncheckedIOException(e);
         }
         SnailParser parser = new SnailParser(
@@ -36,109 +199,187 @@ public class Trail {
                 )
         );
         SnailParser.ProgramContext tree = parser.program();
+        logger.debug("Parsed program context for: " + filename);
         final ASTBuilder builder = new ASTReflectionBuilder();
         try {
-            return builder.build(tree);
+            Node result = builder.build(tree);
+            logger.debug("Successfully built AST for: " + filename);
+            if (result instanceof Scope) {
+                return new ASTImpl((Scope)result);
+            } else if (result instanceof AST) {
+                return (AST)result;
+            } else {
+                throw new RuntimeException("Unexpected AST node type: " + result.getClass().getName());
+            }
         } catch (io.github.snaill.exception.FailedCheckException e) {
+            logger.debug("Failed to build AST for: " + filename);
             throw new RuntimeException(e);
         }
     }
 
-    public static void main(String[] args) throws IOException, io.github.snaill.exception.FailedCheckException {
-        if (args.length < 1) {
-            System.err.println(USAGE);
-            return;
-        }
-        boolean emitSource = false;
-        String filename = null;
-        String debugBytecodeFile = null;
-        String emitBytecodeFile = null;
-        String positionalOutFile = null;
-        int positionalCount = 0;
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "--emit-source" -> emitSource = true;
-                case "--debug-bytecode" -> {
-                    if (i + 1 < args.length) {
-                        debugBytecodeFile = args[++i];
-                    } else {
-                        System.err.println("Missing file for --debug-bytecode");
-                        return;
-                    }
-                }
-                case "--emit-bytecode" -> {
-                    if (i + 1 < args.length) {
-                        emitBytecodeFile = args[++i];
-                    } else {
-                        System.err.println("Missing file for --emit-bytecode");
-                        return;
-                    }
-                }
-                default -> {
-                    if (positionalCount == 0) {
-                        filename = args[i];
-                        positionalCount++;
-                    } else if (positionalCount == 1) {
-                        positionalOutFile = args[i];
-                        positionalCount++;
-                    }
-                }
-            }
-        }
-        if (debugBytecodeFile != null) {
-            try {
-                byte[] code = Files.readAllBytes(java.nio.file.Path.of(debugBytecodeFile));
-                System.out.println(DebugBytecodeViewer.disassemble(code));
-            } catch (IOException e) {
-                System.err.println("Cannot read bytecode file: " + e.getMessage());
-            }
-            return;
-        }
-        if (filename == null) {
-            System.err.println(USAGE);
-            return;
-        }
-        final Node root;
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new Trail()).execute(args);
+        System.exit(exitCode);
+    }
+    
+    /**
+     * Основной метод выполнения команды, реализующий интерфейс Callable.
+     * 
+     * @return Код возврата программы (0 = успешно, 1 = ошибка)
+     */
+    @Override
+    public Integer call() {
         try {
-            root = build(filename);
-        } catch (UncheckedIOException e) {
-            System.err.println("Cannot read file " + e.getCause().getMessage());
-            return;
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && !e.getMessage().isEmpty() && !e.getMessage().equals("null")) {
-                System.err.print(e.getMessage());
+            // Если указан файл для отладочного просмотра байткода
+            if (debugBytecodeFile != null) {
+                // Для отладки байткода не требуется исходный файл
+                return debugBytecode(debugBytecodeFile);
             }
-            return;
-        }
-        root.optimize();
-        try {
-            root.check();
-        } catch (FailedCheckException e) {
-            if (e.getMessage() != null && !e.getMessage().isEmpty() && !e.getMessage().equals("null")) {
-                System.err.print(e.getMessage());
+            
+            // Начинаем отладочный вывод, если включен режим отладки
+            if (debug) {
+                logger.debug("Starting compiler with source file: " + sourceFile);
             }
-            System.err.print("Fatal.Aborting...");
-            return;
-        }
-        if (emitSource) {
+            
+            // Проверяем наличие исходного файла
+            if (sourceFile == null) {
+                logger.error("Не указан исходный файл для компиляции");
+                return 1;
+            }
+            
+            // Построение AST
+            Node node = build(sourceFile);
+            
+            // Вывод исходного кода на основе AST, если указана опция --emit-source
+            if (emitSource) {
+                System.out.println(node);
+            }
+    
+            // Проверка типов и другие статические проверки
+            if (debug) {
+                logger.debug("Starting check process for source: " + sourceFile);
+            }
             try {
-                System.out.println(SourceBuilder.toSourceCode(root));
-            } catch (Exception e) {
-                System.err.println("Error printing AST/source: " + e.getMessage());
+                Check check = new Check();
+                node.accept(check);
+    
+                if (debug) {
+                    logger.debug("Starting check process for source: " + sourceFile);
+                }
+                check.check(node instanceof AST ? ((AST) node).getRoot() : (Scope) node);
+                logger.info("Check completed successfully.");
+            } catch (FailedCheckException e) {
+                printCompilationError(e.getErrors());
+                return 1;
             }
-            return;
-        }
-        // По умолчанию: компилируем в байткод-файл
-        String outFile = emitBytecodeFile;
-        if (outFile == null) {
-            if (positionalOutFile != null) {
-                outFile = positionalOutFile;
+            
+            // Определяем выходной файл для байткода
+            String outputFile;
+            if (emitBytecodeFile != null) {
+                outputFile = emitBytecodeFile;
             } else {
-                int dot = filename.lastIndexOf('.');
-                outFile = (dot > 0 ? filename.substring(0, dot) : filename) + ".slime";
+                String baseName = sourceFile.replaceFirst("\\.[^.]+$", "");
+                outputFile = baseName + ".snb";
             }
+    
+            // Генерируем байткод
+            try {
+                BytecodeEmitter emitter = new BytecodeEmitter();
+                if (node instanceof AST) {
+                    emitter.emitBytecode((AST) node, outputFile);
+                } else if (node instanceof Scope) {
+                    // Создаем адаптер для Scope
+                    emitter.emitBytecode(new ASTImpl((Scope) node), outputFile);
+                } else {
+                    throw new RuntimeException("Unexpected node type: " + node.getClass().getName());
+                }
+                return 0; // Успешное выполнение
+            } catch (BytecodeEmitterException e) {
+                logger.error("Ошибка генерации байткода: " + e.getMessage());
+                if (debug) {
+                    e.printStackTrace();
+                }
+                return 1;
+            } catch (Exception e) {
+                logger.error("Непредвиденная ошибка: " + e.getMessage());
+                if (debug) {
+                    e.printStackTrace();
+                }
+                return 1;
+            }
+        } catch (Exception e) {
+            logger.error("Ошибка компиляции: " + e.getMessage());
+            if (debug) {
+                e.printStackTrace();
+            }
+            return 1;
         }
-        byte[] bytecode = new BytecodeEmitter((Scope) root).emit();
-        Files.write(java.nio.file.Path.of(outFile), bytecode);
+    }
+
+    public static List<CompilationError> check(String sourceCode, String sourceName) {
+        logger.error("DEBUG: Starting check process for source: " + sourceName);
+        List<CompilationError> errors = new ArrayList<>();
+        try {
+            // Создаем поток из исходного кода
+            CharStream charStream = CharStreams.fromString(sourceCode);
+            
+            // Создаем лексер
+            SnailLexer lexer = new SnailLexer(charStream);
+            lexer.removeErrorListeners();
+            
+            // Создаем парсер
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            SnailParser parser = new SnailParser(tokens);
+            parser.removeErrorListeners();
+            
+            // Анонимный класс для сбора ошибок
+            class ErrorCollector extends org.antlr.v4.runtime.BaseErrorListener {
+                private final List<CompilationError> syntaxErrors = new ArrayList<>();
+                
+                @Override
+                public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> recognizer, 
+                                       Object offendingSymbol, 
+                                       int line, 
+                                       int charPositionInLine, 
+                                       String msg, 
+                                       org.antlr.v4.runtime.RecognitionException e) {
+                    // Создаем ошибку компиляции из синтаксической ошибки ANTLR
+                    CompilationError error = new CompilationError(
+                            ErrorType.UNKNOWN_TYPE, // Для синтаксических ошибок используем UNKNOWN_TYPE
+                            line + "," + charPositionInLine,
+                            "Syntax error: " + msg,
+                            offendingSymbol != null ? offendingSymbol.toString() : ""
+                    );
+                    syntaxErrors.add(error);
+                }
+                
+                public List<CompilationError> getErrors() {
+                    return syntaxErrors;
+                }
+            }
+            
+            // Создаем и добавляем слушатель ошибок
+            ErrorCollector errorCollector = new ErrorCollector();
+            lexer.addErrorListener(errorCollector);
+            parser.addErrorListener(errorCollector);
+            
+            // Парсим программу
+            parser.program();
+            
+            // Собираем ошибки
+            errors.addAll(errorCollector.getErrors());
+            
+        } catch (Exception e) {
+            // Добавляем исключение как ошибку компиляции
+            CompilationError error = new CompilationError(
+                ErrorType.UNKNOWN_TYPE, // Для общих ошибок парсинга используем UNKNOWN_TYPE
+                "<unknown>",
+                "Exception during parsing: " + e.getMessage(),
+                ""
+            );
+            errors.add(error);
+            e.printStackTrace();
+        }
+        return errors;
     }
 }

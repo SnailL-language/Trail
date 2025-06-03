@@ -43,8 +43,10 @@ public class AssignmentExpression extends Expression {
         Expression right = getRight();
         right.emitBytecode(out, context, currentFunction);
         if (left instanceof Identifier id) {
+            System.err.println("Looking for variable: " + id.getName());
             if (currentFunction != null) {
                 int localIndex = context.getLocalVarIndex(currentFunction, id.getName());
+                System.err.println("Local index for " + id.getName() + ": " + localIndex);
                 if (localIndex != -1) {
                     out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
                     io.github.snaill.bytecode.BytecodeUtils.writeU16(out, localIndex);
@@ -52,6 +54,7 @@ public class AssignmentExpression extends Expression {
                 }
             }
             int globalIndex = context.getGlobalVarIndex(id.getName());
+            System.err.println("Global index for " + id.getName() + ": " + globalIndex);
             if (globalIndex != -1) {
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_GLOBAL);
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);

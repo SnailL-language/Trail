@@ -58,6 +58,7 @@ public class IfStatement extends AbstractNode implements Statement /*, BytecodeE
     }
 
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+        // Продолжаем с генерацией байткода для if
         getCondition().emitBytecode(out, context, currentFunction);
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP_IF_FALSE);
         int jmpIfFalseOffset = out.size();

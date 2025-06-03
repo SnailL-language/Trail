@@ -81,8 +81,24 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
         // Регистрируем функцию в контексте
         context.addFunction(this);
+        
+        // Сохраняем аргументы со стека в локальные переменные
+        // Параметры имеют индексы 0..N-1, где N - количество параметров
+        // При вызове функции аргументы уже находятся на стеке, в порядке слева направо
+        // Сохраняем их в обратном порядке (последний аргумент вверху стека)
+        if (this.parameters != null && !this.parameters.isEmpty()) {
+            int paramCount = this.parameters.size();
+            // Аргументы на стеке идут в обратном порядке (последний аргумент вверху стека)
+            // Поэтому мы сохраняем их в локальные переменные начиная с последнего индекса
+            for (int i = paramCount - 1; i >= 0; i--) {
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, i);
+            }
+        }
+        
         // Генерируем байткод тела функции
         getBody().emitBytecode(out, context, this);
+        
         // Добавляем инструкцию возврата, если её нет
         if (!hasReturnStatement(getBody())) {
             out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
