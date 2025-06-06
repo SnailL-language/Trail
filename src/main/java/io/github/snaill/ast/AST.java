@@ -9,5 +9,5 @@ public interface AST extends Node {
      * Возвращает корневой узел AST (обычно Scope).
      * @return корневой узел AST
      */
-    Scope getRoot();
+    Scope root();
 }

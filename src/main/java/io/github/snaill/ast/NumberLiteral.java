@@ -3,12 +3,6 @@ package io.github.snaill.ast;
 import java.io.IOException;
 import java.util.List; // For super constructor
 
-// Unused imports commented out or to be removed by IDE
-// import io.github.snaill.bytecode.BytecodeConstants;
-// import io.github.snaill.bytecode.BytecodeContext;
-// import io.github.snaill.bytecode.BytecodeUtils;
-// import java.io.ByteArrayOutputStream;
-
 /**
  * Представляет числовой литерал в AST.
  */
@@ -22,11 +16,7 @@ public class NumberLiteral extends PrimaryExpression {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     public long getValue() {
@@ -34,11 +24,11 @@ public class NumberLiteral extends PrimaryExpression {
     }
 
     @Override
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException {
         emitBytecode(out, context, null);
     }
 
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException {
         // Добавляем константу в пул констант и получаем её индекс
         Long longValue = getValue();
         int existingIndex = context.getConstantIndex(longValue);

@@ -13,15 +13,11 @@ public class ReturnStatement extends AbstractNode implements Statement {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     public Expression getReturnable() {
-        return children.size() > 0 ? (Expression) getChild(0) : null;
+        return !children.isEmpty() ? (Expression) getChild(0) : null;
     }
 
     @Override

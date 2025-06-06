@@ -1,16 +1,20 @@
 package io.github.snaill.ast;
 
+import io.github.snaill.result.Result;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 
-import io.github.snaill.result.Result;
-
 public abstract class AbstractNode implements Node {
+    protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractNode.class);
 
     protected List<Node> children;
     protected int line = -1;
     protected int charPosition = -1;
     protected String source = null;
     protected transient boolean wasDeadCodeReported = false;
+    protected Scope enclosingScope; // Added for all nodes
 
     protected AbstractNode(List<? extends Node> children) {
         this.children = new ArrayList<>(children);
@@ -78,36 +82,57 @@ public abstract class AbstractNode implements Node {
         return false;
     }
 
+    @Override
     public void setSourceInfo(int line, int charPosition, String source) {
         this.line = line;
         this.charPosition = charPosition;
         this.source = source;
     }
 
+    @Override
     public int getLine() { return line; }
+    @Override
     public int getCharPosition() { return charPosition; }
+    @Override
     public String getSource() { return source; }
 
     @Override
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
-        throw new UnsupportedOperationException("emitBytecode не реализован для " + getClass().getSimpleName());
+    public String getSourceInfo() {
+        if (source == null && line == -1 && charPosition == -1) {
+            return "<unknown source info>";
+        }
+        return String.format("line %d, char %d in %s", line, charPosition, source != null ? source : "<unknown file>");
+    }
+
+    public Scope getEnclosingScope() { // Added for all nodes
+        return enclosingScope;
+    }
+
+    public void setEnclosingScope(Scope enclosingScope) {
+        this.enclosingScope = enclosingScope;
+        if (this instanceof Identifier && enclosingScope == null) {
+            LOGGER.warn("SCOPE_SET_NULL_FOR_IDENTIFIER: Node type: {}, ID: {}, Source: {}",
+                    this.getClass().getSimpleName(),
+                    ((Identifier)this).getName(),
+                    this.getSourceInfo());
+        } else if (this instanceof Identifier) {
+             LOGGER.trace("SCOPE_SET_FOR_IDENTIFIER: Node type: {}, ID: {}, Scope Hash: {}, Source: {}",
+                    this.getClass().getSimpleName(),
+                    ((Identifier)this).getName(),
+                    System.identityHashCode(enclosingScope),
+                    this.getSourceInfo());
+        }
     }
 
     @Override
     public void check() throws io.github.snaill.exception.FailedCheckException {
         // Только Scope отвечает за печать UNUSED
         List<io.github.snaill.result.Result> results = checkDeadCode();
-        results.stream().filter(r -> r instanceof io.github.snaill.result.CompilationError).forEach(r -> System.err.println(r));
+        results.stream().filter(r -> r instanceof io.github.snaill.result.CompilationError).forEach(System.err::println);
         // Рекурсивно вызываем check() у всех детей
         for (Node child : children) {
-            if (child != null) child.check();
+            child.check();
         }
-    }
-
-    public Scope getEnclosingScope() {
-        Node p = this;
-        while (p != null && !(p instanceof Scope)) p = p instanceof AbstractNode ? ((AbstractNode)p).getParentNode() : null;
-        return (Scope)p;
     }
 
     public Node getParentNode() {

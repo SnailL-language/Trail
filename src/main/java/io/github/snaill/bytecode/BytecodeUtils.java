@@ -89,4 +89,15 @@ public class BytecodeUtils {
         int length = readU16(bytes, offset);
         return new String(bytes, offset + 2, length, StandardCharsets.UTF_8);
     }
+
+    /**
+     * Обновляет 16-битное беззнаковое целое число в массиве байт по указанному смещению.
+     */
+    public static void patchU16(byte[] bytes, int offset, int value) {
+        if (bytes == null || offset < 0 || offset + 1 >= bytes.length) {
+            throw new IllegalArgumentException("Invalid arguments for patchU16");
+        }
+        bytes[offset] = (byte) ((value >> 8) & 0xFF);
+        bytes[offset + 1] = (byte) (value & 0xFF);
+    }
 }

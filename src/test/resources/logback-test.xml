@@ -1,0 +1,18 @@
+<configuration>
+    <!-- Console appender for tests -->
+    <appender name="CONSOLE_TEST" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set io.github.snaill to WARN for tests -->
+    <logger name="io.github.snaill" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE_TEST" />
+    </logger>
+
+    <!-- Root logger for tests, can be set to a higher level if needed -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE_TEST" />
+    </root>
+</configuration>

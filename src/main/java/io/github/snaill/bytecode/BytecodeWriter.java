@@ -241,7 +241,7 @@ public class BytecodeWriter {
                 // Проверяем тело цикла for и инициализацию
                 List<Node> children = forLoop.getChildren();
                 // Проверяем инициализатор цикла
-                if (children.size() >= 1 && children.get(0) instanceof VariableDeclaration) {
+                if (!children.isEmpty() && children.get(0) instanceof VariableDeclaration) {
                     count++;
                 }
                 // Проверяем тело цикла
@@ -277,7 +277,7 @@ public class BytecodeWriter {
      * Записывает секцию глобального байткода для инициализации переменных
      * @param program корневой узел AST
      */
-    private void writeGlobalBytecode(Scope program) throws IOException, FailedCheckException {
+    private void writeGlobalBytecode(Scope program) throws IOException {
         ByteArrayOutputStream globalOut = new ByteArrayOutputStream();
         
         // Проверяем, что программа не null

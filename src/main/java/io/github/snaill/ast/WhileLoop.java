@@ -1,9 +1,7 @@
 package io.github.snaill.ast;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import io.github.snaill.bytecode.BytecodeUtils;
 
 /**
  * Представляет цикл while в AST.
@@ -15,11 +13,7 @@ public class WhileLoop extends AbstractNode implements Statement {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e); 
-        }
+        return visitor.visit(this);
     }
 
     public Expression getCondition() {

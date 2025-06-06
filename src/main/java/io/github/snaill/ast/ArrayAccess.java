@@ -27,11 +27,7 @@ public class ArrayAccess extends Expression {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     @Override
@@ -44,8 +40,7 @@ public class ArrayAccess extends Expression {
         getArray().emitBytecode(out, context, currentFunction);
         
         // Оптимизация для литеральных индексов
-        if (getIndex() instanceof NumberLiteral) {
-            NumberLiteral indexLiteral = (NumberLiteral) getIndex();
+        if (getIndex() instanceof NumberLiteral indexLiteral) {
             long value = indexLiteral.getValue();
             // Напрямую добавляем индекс в пул констант
             Integer intValue = (int) value;

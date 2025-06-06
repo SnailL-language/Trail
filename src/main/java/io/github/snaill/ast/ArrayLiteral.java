@@ -2,23 +2,18 @@ package io.github.snaill.ast;
 
 import java.io.IOException; // For accept method
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 public class ArrayLiteral extends PrimaryExpression {
     // elements are already children via super(elements)
 
     public ArrayLiteral(List<Expression> elements) {
-        super(new ArrayList<Node>(elements)); // Pass elements to super constructor as List<Node>
+        super(new ArrayList<>(elements)); // Pass elements to super constructor as List<Node>
     }
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     @SuppressWarnings("unchecked")
@@ -44,18 +39,7 @@ public class ArrayLiteral extends PrimaryExpression {
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
         var elements = getElements();
         int size = elements.size();
-        String typeName = "i32";
-        if (!elements.isEmpty()) {
-            var first = elements.getFirst();
-            if (first instanceof NumberLiteral) typeName = "i32";
-            else if (first instanceof StringLiteral) typeName = "string";
-            else if (first instanceof BooleanLiteral) typeName = "i32";
-        }
-        byte typeId = switch (typeName) {
-            case "i32" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
-            case "string" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
-            default -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
-        };
+        byte typeId = getTypeId(elements);
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, size);
         out.write(typeId);
@@ -104,11 +88,27 @@ public class ArrayLiteral extends PrimaryExpression {
         }
     }
 
+    private static byte getTypeId(List<Expression> elements) {
+        String typeName = "i32";
+        if (!elements.isEmpty()) {
+            var first = elements.getFirst();
+            if (first instanceof NumberLiteral) typeName = "i32";
+            else if (first instanceof StringLiteral) typeName = "string";
+            else if (first instanceof BooleanLiteral) typeName = "i32";
+        }
+        byte typeId = switch (typeName) {
+            case "i32" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+            case "string" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
+            default -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+        };
+        return typeId;
+    }
+
     @Override
     public Type getType(Scope scope) throws io.github.snaill.exception.FailedCheckException {
         var elements = getElements();
         if (elements.isEmpty()) return new ArrayType(new PrimitiveType("i32"), new NumberLiteral(0));
-        Type elemType = elements.get(0).getType(scope);
+        Type elemType = elements.getFirst().getType(scope);
         for (Expression e : elements) {
             Type t = e.getType(scope);
             if (!t.equals(elemType)) {

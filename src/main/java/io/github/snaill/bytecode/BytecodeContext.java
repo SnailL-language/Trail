@@ -46,15 +46,15 @@ public class BytecodeContext {
 
     /**
      * Добавляет функцию в таблицу функций и возвращает ее индекс
+     *
      * @param func функция для добавления
-     * @return индекс функции в таблице
      */
-    public int addFunction(FunctionDeclaration func) {
+    public void addFunction(FunctionDeclaration func) {
         if (!functionIndices.containsKey(func.getName())) {
             functionTable.add(func);
             functionIndices.put(func.getName(), functionTable.size() - 1);
         }
-        return functionIndices.get(func.getName());
+        functionIndices.get(func.getName());
     }
 
     public void setLocalVarIndices(FunctionDeclaration func, Map<String, Integer> indices) {

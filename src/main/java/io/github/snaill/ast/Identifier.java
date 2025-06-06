@@ -3,6 +3,11 @@ package io.github.snaill.ast;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import io.github.snaill.exception.FailedCheckException;
+import io.github.snaill.bytecode.BytecodeConstants;
+import io.github.snaill.bytecode.BytecodeUtils;
+import io.github.snaill.result.CompilationError;
+import io.github.snaill.result.ErrorType;
 
 public class Identifier extends PrimaryExpression {
     final private String name;
@@ -14,11 +19,7 @@ public class Identifier extends PrimaryExpression {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     public String getName() {
@@ -27,7 +28,24 @@ public class Identifier extends PrimaryExpression {
 
     @Override
     public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        unused.removeIf(v -> v.getName().equals(name));
+        if (this.getEnclosingScope() == null) {
+            LOGGER.warn("DEBUG_UNUSED: Identifier '{}' (Hash: {}) has no enclosing scope during checkUnusedVariables. Source: {}", this.getName(), System.identityHashCode(this), this.getSourceInfo()); // Cannot resolve without a scope
+            return; // Cannot resolve without a scope
+        }
+        LOGGER.debug("DEBUG_UNUSED: Identifier '{}' checking unused. Current unused set: {}", name, unused);
+        VariableDeclaration resolvedDecl = this.getEnclosingScope().resolveVariable(this.name, this);
+        LOGGER.debug("DEBUG_UNUSED: Identifier '{}' resolved to: {}. (Hash: {})", name, resolvedDecl, resolvedDecl != null ? resolvedDecl.hashCode() : "null");
+
+        if (resolvedDecl != null) {
+            LOGGER.debug("DEBUG_UNUSED: Resolved variable for identifier '{}': {}. Removing from unused set.", name, resolvedDecl);
+            boolean removed = unused.remove(resolvedDecl);
+            LOGGER.debug("DEBUG_UNUSED: Identifier '{}' removal status: {}. Unused set after removal: {}", name, removed, unused);
+        } else {
+            LOGGER.warn("DEBUG_UNUSED: Identifier '{}' could not resolve variable declaration.", name);
+        }
+        // Identifiers typically don't have children that would declare/reference other variables,
+        // but calling super is good practice if the class hierarchy changes.
+        super.checkUnusedVariables(unused);
     }
 
     @Override
@@ -39,31 +57,31 @@ public class Identifier extends PrimaryExpression {
     }
 
     @Override
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, FailedCheckException {
         emitBytecode(out, context, null);
     }
 
     @Override
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, FailedCheckException {
         if (currentFunction != null) {
             int localIndex = context.getLocalVarIndex(currentFunction, getName());
             if (localIndex != -1) {
-                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_LOCAL);
-                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, localIndex);
+                out.write(BytecodeConstants.Opcode.PUSH_LOCAL);
+                BytecodeUtils.writeU16(out, localIndex);
                 return;
             }
         }
         int globalIndex = context.getGlobalVarIndex(getName());
         if (globalIndex != -1) {
-            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_GLOBAL);
-            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
+            out.write(BytecodeConstants.Opcode.PUSH_GLOBAL);
+            BytecodeUtils.writeU16(out, globalIndex);
         } else {
             String before = getSource() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), getName().length()) :
                 io.github.snaill.ast.SourceBuilder.toSourceCode(this);
-            throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
-                    io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
+            throw new FailedCheckException(
+                new CompilationError(
+                    ErrorType.UNKNOWN_VARIABLE,
                     before,
                     "Variable not found: " + getName(),
                     ""
@@ -73,7 +91,7 @@ public class Identifier extends PrimaryExpression {
     }
 
     @Override
-    public Type getType(Scope scope) throws io.github.snaill.exception.FailedCheckException {
+    public Type getType(Scope scope) throws FailedCheckException {
         // Записываем отладочное сообщение в файл
         try {
             java.io.PrintWriter debugLog = new java.io.PrintWriter(new java.io.FileWriter("debug_identifier_log.txt", true));
@@ -90,9 +108,9 @@ public class Identifier extends PrimaryExpression {
             String before = getSource() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), name.length()) :
                 io.github.snaill.ast.SourceBuilder.toSourceCode(this);
-            throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
-                    io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
+            throw new FailedCheckException(
+                new CompilationError(
+                    ErrorType.UNKNOWN_VARIABLE,
                     before,
                     "Unknown variable: " + name,
                     ""
@@ -102,13 +120,4 @@ public class Identifier extends PrimaryExpression {
         return decl.getType();
     }
 
-    // Вспомогательный метод для поиска statement-родителя
-    private Node findParentStatement(Node scope, Node target) {
-        for (Node child : scope.getChildren()) {
-            if (child == target) return scope;
-            Node found = findParentStatement(child, target);
-            if (found != null) return found;
-        }
-        return null;
-    }
 }

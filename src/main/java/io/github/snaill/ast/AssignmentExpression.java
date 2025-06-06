@@ -2,27 +2,21 @@ package io.github.snaill.ast;
 
 import java.io.IOException;
 import java.util.List;
-
-// import io.github.snaill.bytecode.BytecodeConstants;
-// import io.github.snaill.bytecode.BytecodeContext;
-// import io.github.snaill.bytecode.BytecodeUtils;
-// import java.io.ByteArrayOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents an assignment expression in the AST.
  */
 public class AssignmentExpression extends Expression {
+    private static final Logger logger = LoggerFactory.getLogger(AssignmentExpression.class);
     public AssignmentExpression(Expression left, Expression right) {
         super(List.of(left, right));
     }
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     public Expression getLeft() {
@@ -43,10 +37,10 @@ public class AssignmentExpression extends Expression {
         Expression right = getRight();
         right.emitBytecode(out, context, currentFunction);
         if (left instanceof Identifier id) {
-            System.err.println("Looking for variable: " + id.getName());
+            logger.debug("Looking for variable: {}", id.getName());
             if (currentFunction != null) {
                 int localIndex = context.getLocalVarIndex(currentFunction, id.getName());
-                System.err.println("Local index for " + id.getName() + ": " + localIndex);
+                logger.debug("Local index for {}: {}", id.getName(), localIndex);
                 if (localIndex != -1) {
                     out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
                     io.github.snaill.bytecode.BytecodeUtils.writeU16(out, localIndex);
@@ -54,7 +48,7 @@ public class AssignmentExpression extends Expression {
                 }
             }
             int globalIndex = context.getGlobalVarIndex(id.getName());
-            System.err.println("Global index for " + id.getName() + ": " + globalIndex);
+            logger.debug("Global index for {}: {}", id.getName(), globalIndex);
             if (globalIndex != -1) {
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_GLOBAL);
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);

@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class FailedCheckException extends Exception {
-    private List<CompilationError> errors = new ArrayList<>();
+    private final List<CompilationError> errors = new ArrayList<>();
 
     public FailedCheckException() { super(); }
 
@@ -22,7 +22,7 @@ public class FailedCheckException extends Exception {
      * @param errors список ошибок компиляции
      */
     public FailedCheckException(List<CompilationError> errors) {
-        super(errors != null && !errors.isEmpty() ? errors.get(0).toString() : "Ошибка проверки");
+        super(errors != null && !errors.isEmpty() ? errors.getFirst().toString() : "Ошибка проверки");
         if (errors != null) {
             this.errors.addAll(errors);
         }

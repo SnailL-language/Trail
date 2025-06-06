@@ -1,15 +1,8 @@
 package io.github.snaill.ast;
 
-import io.github.snaill.bytecode.BytecodeConstants;
-import io.github.snaill.bytecode.BytecodeContext;
-import io.github.snaill.bytecode.BytecodeUtils;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
 import io.github.snaill.exception.FailedCheckException;
-import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * Представляет объявление переменной в AST.
@@ -17,6 +10,7 @@ import java.util.Objects;
  */
 public class VariableDeclaration extends AbstractNode implements Statement {
     private final String name;
+    private Scope enclosingScope;
 
     public VariableDeclaration(String name, Type type, Expression value) {
         super(java.util.Arrays.asList(type, value));
@@ -25,11 +19,8 @@ public class VariableDeclaration extends AbstractNode implements Statement {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e); // Or a more specific unchecked exception
-        }
+        return visitor.visit(this);
+
     }
 
     public String getName() {
@@ -47,6 +38,14 @@ public class VariableDeclaration extends AbstractNode implements Statement {
     @Override
     public void checkUnusedVariables(Set<VariableDeclaration> unused) {
         // no-op: VariableDeclaration не должна удалять себя из unused
+    }
+
+    public Scope getEnclosingScope() {
+        return this.enclosingScope;
+    }
+
+    public void setEnclosingScope(Scope scope) {
+        this.enclosingScope = scope;
     }
 
     public Scope getParentScope() {
@@ -69,6 +68,7 @@ public class VariableDeclaration extends AbstractNode implements Statement {
 
     @Override
     public void check(Scope scope) throws FailedCheckException {
+        scope.addDeclaration(this); // Add this variable to the current scope
         Type declared = getType();
         Expression value = getValue();
         if (value != null) {

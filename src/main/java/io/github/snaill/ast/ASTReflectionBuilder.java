@@ -1,23 +1,18 @@
 package io.github.snaill.ast;
 
 import io.github.snaill.parser.SnailParser;
-import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import io.github.snaill.ast.SourceBuilder;
 
 public class ASTReflectionBuilder implements ASTBuilder {
 
     @Override
     public Node build(SnailParser.ProgramContext ctx) throws io.github.snaill.exception.FailedCheckException {
-        System.out.println("DEBUG: Starting AST build from ProgramContext");
         
         // Сначала создаем корневую область видимости с пустым списком statements
         List<Statement> statements = new ArrayList<>();
@@ -28,8 +23,11 @@ public class ASTReflectionBuilder implements ASTBuilder {
         while (i < ctx.getChildCount()) {
             ParseTree child = ctx.getChild(i);
             if (child instanceof SnailParser.VariableDeclarationContext varCtx) {
-                Statement var = (Statement) parseVariableDeclaration(varCtx, rootScope);
-                if (var != null) statements.add(var);
+                VariableDeclaration globalVar = parseVariableDeclaration(varCtx, rootScope);
+                if (globalVar != null) {
+                    rootScope.addDeclaration(globalVar); // Add to rootScope's symbol table
+                    statements.add(globalVar); // Add to AST children list for rootScope
+                }
                 i++;
             } else {
                 break;
@@ -48,9 +46,8 @@ public class ASTReflectionBuilder implements ASTBuilder {
         
         // Обновляем children в rootScope, хотя это уже должно быть сделано автоматически
         // Явно приводим List<Statement> к Collection<Node>
-        rootScope.setChildren(new ArrayList<Node>(statements));
+        rootScope.setChildren(new ArrayList<>(statements));
         
-        System.out.println("DEBUG: Completed AST build from ProgramContext");
         return rootScope;
     }
 
@@ -111,34 +108,18 @@ public class ASTReflectionBuilder implements ASTBuilder {
         );
     }
 
-    private Node parseContext(ParseTree ctx, Class<?> contextClass) {
-        if (ctx == null) {
-            return null;
-        }
-        String methodName = "parse" + contextClass.getSimpleName().replace("Context", "");
-        try {
-            Method method = this.getClass().getDeclaredMethod(methodName, contextClass);
-            return (Node) method.invoke(this, ctx);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException("No parse method for " + contextClass.getSimpleName(), e);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException("Failed to invoke parse method for " + contextClass.getSimpleName(), e);
-        }
-    }
-
-    private Node parseVariableDeclaration(SnailParser.VariableDeclarationContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        System.out.println("DEBUG: Processing variable declaration: " + ctx.IDENTIFIER().getText());
+    private VariableDeclaration parseVariableDeclaration(SnailParser.VariableDeclarationContext ctx, Scope parentScopeContext) throws io.github.snaill.exception.FailedCheckException {
         String name = ctx.IDENTIFIER().getText();
-        Type type = (Type) parseType(ctx.type());
-        Expression expr = (Expression) parseExpression(ctx.expression(), parent);
+        Type type = (Type) parseType(ctx.type(), parentScopeContext);
+        // Pass parentScopeContext for resolving expressions within the variable's own scope context
+        Expression expr = (Expression) parseExpression(ctx.expression(), parentScopeContext);
         VariableDeclaration varDecl = new VariableDeclaration(name, type, expr);
-        if (parent != null) {
-            List<Node> children = new ArrayList<>(parent.getChildren());
-            children.add(varDecl);
-            parent.setChildren(children);
-        }
-        if (ctx.IDENTIFIER() != null) {
+        // Setting the enclosing scope and adding to localDeclarations will be handled by the calling Scope's addDeclaration method.
+        // Source info is set here as it's directly related to the parsing context of the declaration itself.
+        if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null && ctx.start != null && ctx.start.getInputStream() != null) {
             varDecl.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), ctx.start.getInputStream().toString());
+        } else if (ctx.getStart() != null && ctx.start.getInputStream() != null) { // Fallback if IDENTIFIER symbol is null for some reason
+            varDecl.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.start.getInputStream().toString());
         }
         return varDecl;
     }
@@ -146,9 +127,23 @@ public class ASTReflectionBuilder implements ASTBuilder {
     private Node parseFuncDeclaration(SnailParser.FuncDeclarationContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
         String name = ctx.IDENTIFIER().getText();
         List<Parameter> params = ctx.paramList() != null ?
-                parseParamList(ctx.paramList()) : List.of();
-        Type returnType = ctx.type() != null ?
-                (Type) parseType(ctx.type()) : new PrimitiveType("void");
+                parseParamList(ctx.paramList(), parent) : List.of();
+        Type returnType;
+        if (ctx.type() != null) {
+            returnType = (Type) parseType(ctx.type(), parent); // 'parent' is the scope containing the function declaration
+        } else {
+            returnType = new PrimitiveType("void");
+            if (returnType instanceof AbstractNode rn) {
+                 rn.setEnclosingScope(parent); // Scope where 'void' is effectively used/declared
+                 // Set source info for the Type node itself, if available and makes sense
+                 // For a default void, it might point to the function signature or be omitted.
+                 if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) { // Use function name as anchor
+                    rn.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), parent.getSource());
+                 } else if (ctx.getStart() != null) {
+                    rn.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), parent.getSource());
+                 }
+            }
+        }
         // Тело функции — отдельный scope с доступом к глобальным переменным через родительскую область видимости
         // Параметры НЕ добавляем как VariableDeclaration, они обрабатываются в методе resolveVariable
         Scope funcScope = new Scope(new ArrayList<>(), parent, null);
@@ -158,21 +153,32 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return funcDecl;
     }
 
-    private List<Parameter> parseParamList(SnailParser.ParamListContext ctx) {
+    private List<Parameter> parseParamList(SnailParser.ParamListContext ctx, Scope containingScope) {
         return ctx.param().stream()
-                .map(param -> (Parameter) parseParam(param))
+                .map(param -> (Parameter) parseParam(param, containingScope))
                 .collect(Collectors.toList());
     }
 
-    private Node parseParam(SnailParser.ParamContext ctx) {
+    private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
         String name = ctx.IDENTIFIER().getText();
         Type type;
         try {
-            type = (Type) parseType(ctx.type());
+            type = (Type) parseType(ctx.type(), containingScope);
         } catch (io.github.snaill.exception.FailedCheckException e) {
             throw new RuntimeException(e);
         }
-        return new Parameter(name, type);
+        Parameter paramNode = new Parameter(name, type);
+        // The Parameter node itself (representing the variable 'name') lives in the function's body scope.
+        // However, its type ('type') is resolved in the 'containingScope' (scope of function declaration).
+        // The enclosing scope for the Parameter node (as a declaration) will be set when it's added to the FunctionDeclaration's scope.
+        // For now, ensure the Parameter node has source info.
+        if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) {
+            paramNode.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), containingScope.getSource());
+        } else if (ctx.getStart() != null) {
+            paramNode.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), containingScope.getSource());
+        }
+        // The 'type' node within Parameter already has its enclosingScope set by parseType.
+        return paramNode;
     }
 
     private Scope parseScope(SnailParser.ScopeContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
@@ -180,12 +186,41 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
 
     private Scope parseScope(SnailParser.ScopeContext ctx, Scope parent, FunctionDeclaration enclosingFunction) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) {
+            String errorSource = "Unknown location (ScopeContext was null)";
+            String problemLocation = "a code block";
+            if (enclosingFunction != null) {
+                problemLocation = "the body of function '" + enclosingFunction.getName() + "'";
+                if (enclosingFunction.getLine() != -1 && enclosingFunction.getSource() != null) {
+                     errorSource = "function '" + enclosingFunction.getName() + "' declared at line " + enclosingFunction.getLine() + " in " + enclosingFunction.getSource();
+                } else {
+                    errorSource = "function '" + enclosingFunction.getName() + "'";
+                }
+            } else if (parent != null && parent.getSource() != null && parent.getLine() != -1) {
+                 errorSource = "a scope starting near line " + parent.getLine() + " in " + parent.getSource();
+            }
+
+            throw new io.github.snaill.exception.FailedCheckException(
+                new io.github.snaill.result.CompilationError(
+                    io.github.snaill.result.ErrorType.SYNTAX_ERROR,
+                    errorSource,
+                    "Syntax error: Expected " + problemLocation + " (e.g., using '{...}') but it was missing or malformed.",
+                    "Ensure the block is correctly defined with '{' and '}' or check for syntax errors preventing its recognition."
+                ).toString()
+            );
+        }
         Scope currentScope = new Scope(new ArrayList<>(), parent, enclosingFunction);
         List<Node> children = new ArrayList<>();
         for (var stmtCtx : ctx.statement()) {
             Statement stmt;
             if (stmtCtx.variableDeclaration() != null) {
-                stmt = (Statement) parseVariableDeclaration(stmtCtx.variableDeclaration(), currentScope);
+                VariableDeclaration varDecl = parseVariableDeclaration(stmtCtx.variableDeclaration(), currentScope);
+                if (varDecl != null) {
+                    currentScope.addDeclaration(varDecl); // Add to current scope's symbol table
+                    stmt = varDecl;
+                } else {
+                    stmt = null; // Should not happen if parseVariableDeclaration throws on error
+                }
             } else if (stmtCtx.funcDeclaration() != null) {
                 throw new RuntimeException("Function declarations are not allowed inside blocks");
             } else {
@@ -196,41 +231,63 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 currentScope.setChildren(new ArrayList<>(children));
             }
         }
-        currentScope.setChildren(children);
         return currentScope;
     }
-
+        
     private Node parseForLoop(SnailParser.ForLoopContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        // Переменная цикла видна только внутри тела for
-        Scope forScope = new Scope(new ArrayList<>(), parent);
-        List<Node> children = new ArrayList<>();
-        VariableDeclaration declaration = (VariableDeclaration) parseVariableDeclaration(ctx.variableDeclaration(), forScope);
-        children.add(declaration);
-        if (ctx.scope() != null) {
-            for (var stmtCtx : ctx.scope().statement()) {
-                Statement stmt;
-                if (stmtCtx.variableDeclaration() != null) {
-                    stmt = (Statement) parseVariableDeclaration(stmtCtx.variableDeclaration(), forScope);
-                } else if (stmtCtx.funcDeclaration() != null) {
-                    throw new RuntimeException("Function declarations are not allowed inside blocks");
-                } else {
-                    stmt = (Statement) parseStatement(stmtCtx, forScope);
-                }
-                if (stmt != null) {
-                    children.add(stmt);
-                }
-            }
+        // Create a new scope for the for-loop itself. This scope will contain the loop variable.
+        Scope forScope = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
+
+        // Parse the initializer. The VariableDeclaration node is created with its initializer resolved in the PARENT scope.
+        VariableDeclaration loopVarDecl = (VariableDeclaration) parseVariableDeclaration(ctx.variableDeclaration(), parent);
+        if (loopVarDecl != null) {
+             // Add the loop variable declaration to the forScope, making it visible within the loop.
+             forScope.addDeclaration(loopVarDecl);
         }
-        forScope.setChildren(children);
+        // This is the initialization statement for the ForLoop node.
+
+        // Parse condition using the forScope (loop variable is visible here).
         Expression condition = (Expression) parseExpression(ctx.expression(0), forScope);
+
+        // Parse step using the forScope (loop variable is visible here).
         Expression step = (Expression) parseExpression(ctx.expression(1), forScope);
-        return new ForLoop(forScope, condition, step);
+
+        // Parse the body scope. Its parent is the forScope.
+        Scope body = parseScope(ctx.scope(), forScope);
+        
+        ForLoop forLoopNode = new ForLoop(loopVarDecl, condition, step, body);
+        if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
+            forLoopNode.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getStart().getInputStream().toString());
+        }
+        return forLoopNode;
     }
 
     private Node parseWhileLoop(SnailParser.WhileLoopContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        // Condition is resolved in the parent scope
         Expression condition = (Expression) parseExpression(ctx.expression(), parent);
-        Scope bodyScope = ctx.scope() != null ? parseScope(ctx.scope(), parent) : new Scope(new ArrayList<>(), parent);
-        return new WhileLoop(condition, bodyScope);
+        if (condition == null) {
+            String before = ctx.getStart() != null ?
+                io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length()) :
+                io.github.snaill.ast.SourceBuilder.toSourceCode(ctx);
+            throw new io.github.snaill.exception.FailedCheckException(
+                new io.github.snaill.result.CompilationError(
+                    io.github.snaill.result.ErrorType.UNKNOWN_TYPE,
+                    before,
+                    "Empty or invalid while condition",
+                    ""
+                ).toString()
+            );
+        }
+
+        // Create a new scope for the while loop's body
+        Scope whileBodyScopeContext = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
+        Scope body = parseScope(ctx.scope(), whileBodyScopeContext); // Body parsed in this new scope
+        
+        WhileLoop whileLoop = new WhileLoop(condition, body);
+        if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
+            whileLoop.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getStart().getInputStream().toString());
+        }
+        return whileLoop;
     }
 
     private Node parseIfCondition(SnailParser.IfConditionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
@@ -248,9 +305,12 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 ).toString()
             );
         }
-        Scope thenScope = ctx.scope(0) != null ? parseScope(ctx.scope(0), parent) : null;
-        if (thenScope == null) {
-            String before = ctx.getStart() != null ?
+
+        // Create a new scope for the 'then' branch
+        Scope thenScopeContext = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
+        Scope thenScope = ctx.scope(0) != null ? parseScope(ctx.scope(0), thenScopeContext) : new Scope(new ArrayList<>(), thenScopeContext, parent.getEnclosingFunction());
+        if (thenScope == null && ctx.scope(0) != null) { 
+             String before = ctx.getStart() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length()) :
                 io.github.snaill.ast.SourceBuilder.toSourceCode(ctx);
             throw new io.github.snaill.exception.FailedCheckException(
@@ -262,10 +322,12 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 ).toString()
             );
         }
+
         Scope elseScope = null;
-        if (ctx.scope().size() > 1) {
-            elseScope = ctx.scope(1) != null ? parseScope(ctx.scope(1), parent) : null;
-            if (elseScope == null) {
+        if (ctx.scope().size() > 1 && ctx.scope(1) != null) {
+            Scope elseScopeContext = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
+            elseScope = parseScope(ctx.scope(1), elseScopeContext);
+            if (elseScope == null) { 
                 String before = ctx.getStart() != null ?
                     io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length()) :
                     io.github.snaill.ast.SourceBuilder.toSourceCode(ctx);
@@ -279,7 +341,12 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 );
             }
         }
-        return new IfStatement(condition, thenScope, elseScope);
+        
+        IfStatement ifStmt = new IfStatement(condition, thenScope, elseScope);
+        if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
+            ifStmt.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getStart().getInputStream().toString());
+        }
+        return ifStmt;
     }
 
     private Node parseBreakStatement(SnailParser.BreakStatementContext ctx) {
@@ -326,30 +393,15 @@ public class ASTReflectionBuilder implements ASTBuilder {
 
     private Node parseAssigmentExpression(SnailParser.AssigmentExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
         Expression left;
-        if (ctx.identifier().variableIdentifier() != null) {
-            String name = ctx.identifier().variableIdentifier().IDENTIFIER().getText();
-            if (parent != null && parent.resolveVariable(name) == null) {
-                String before = ctx.getStart() != null ?
-                    io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), name.length()) :
-                    io.github.snaill.ast.SourceBuilder.toSourceCode(ctx);
-                throw new io.github.snaill.exception.FailedCheckException(
-                    new io.github.snaill.result.CompilationError(
-                        io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
-                        before,
-                        "Unknown variable: " + name,
-                        ""
-                    ).toString()
-                );
-            }
-            left = new Identifier(name);
-        } else if (ctx.identifier().arrayElement() != null) {
-            left = (Expression) parseArrayElement(ctx.identifier().arrayElement(), parent);
-        } else {
-            throw new RuntimeException("Invalid left-hand side of assignment");
-        }
+        // ctx.identifier() is the SnailParser.IdentifierContext.
+        // parseIdentifier can handle both variableIdentifier and arrayElement nested within IdentifierContext,
+        // and it correctly sets the enclosingScope on the created Identifier/ArrayElement node.
+        left = (Expression) parseIdentifier(ctx.identifier(), parent);
+
         String op = ctx.assigmentOperator.getText();
         Expression right = (Expression) parseExpression(ctx.expression(), parent);
         AssignmentExpression assign;
+
         if (op.equals("=")) {
             assign = new AssignmentExpression(left, right);
         } else {
@@ -360,10 +412,29 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 case "/=" -> "/";
                 default -> throw new RuntimeException("Unknown assignment operator: " + op);
             };
-            assign = new AssignmentExpression(left, new BinaryExpression(left, binOp, right));
+            // The 'left' expression is reused. It already has its enclosingScope set by parseIdentifier.
+            BinaryExpression compoundRhs = new BinaryExpression(left, binOp, right);
+            if (parent != null) {
+                compoundRhs.setEnclosingScope(parent); // Set scope for the new BinaryExpression node
+            }
+            // Attempt to set source info for the implicit binary operation
+            // Check if left node has valid source info (line != -1)
+            if (left.getLine() != -1 && left.getSource() != null) { 
+                compoundRhs.setSourceInfo(left.getLine(), left.getCharPosition(), left.getSource());
+            } else if (ctx.assigmentOperator != null && ctx.start != null && ctx.start.getInputStream() != null) { 
+                 compoundRhs.setSourceInfo(ctx.assigmentOperator.getLine(), ctx.assigmentOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
+            }
+            assign = new AssignmentExpression(left, compoundRhs);
         }
-        if (ctx.assigmentOperator != null) {
+
+        // Set source info for the AssignmentExpression node itself
+        if (ctx.assigmentOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
             assign.setSourceInfo(ctx.assigmentOperator.getLine(), ctx.assigmentOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
+        }
+        
+        // Set enclosing scope for the AssignmentExpression node
+        if (parent != null) {
+            assign.setEnclosingScope(parent);
         }
         return assign;
     }
@@ -387,8 +458,11 @@ public class ASTReflectionBuilder implements ASTBuilder {
         }
         if (left != null && right != null && op != null) {
             BinaryExpression bin = new BinaryExpression(left, op, right);
-            if (ctx.binaryOperator != null) {
+            if (ctx.binaryOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
                 bin.setSourceInfo(ctx.binaryOperator.getLine(), ctx.binaryOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
+            }
+            if (parent != null) {
+                bin.setEnclosingScope(parent);
             }
             return bin;
         }
@@ -401,7 +475,15 @@ public class ASTReflectionBuilder implements ASTBuilder {
         }
         String operator = ctx.unaryOperator.getText();
         Expression argument = (Expression) parseExpression(ctx.expression(), parent);
-        return new UnaryExpression(operator, argument);
+        UnaryExpression unaryExpr = new UnaryExpression(operator, argument);
+        if (parent != null) {
+            unaryExpr.setEnclosingScope(parent);
+        }
+        // Set source info for the UnaryExpression, typically from the operator
+        if (ctx.unaryOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
+            unaryExpr.setSourceInfo(ctx.unaryOperator.getLine(), ctx.unaryOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
+        }
+        return unaryExpr;
     }
 
     private Node parsePrimaryExpression(SnailParser.PrimaryExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
@@ -464,21 +546,20 @@ public class ASTReflectionBuilder implements ASTBuilder {
         );
     }
 
-    private Node parseNumberLiteral(SnailParser.NumberLiteralContext ctx) throws io.github.snaill.exception.FailedCheckException {
+    private Node parseNumberLiteral(SnailParser.NumberLiteralContext ctx) {
         return new NumberLiteral(Long.parseLong(ctx.NUMBER().getText()));
     }
 
-    private Node parseStringLiteral(SnailParser.StringLiteralContext ctx) throws io.github.snaill.exception.FailedCheckException {
+    private Node parseStringLiteral(SnailParser.StringLiteralContext ctx) {
         String text = ctx.STRING().getText();
         return new StringLiteral(text.substring(1, text.length() - 1));
     }
 
-    private Node parseBooleanLiteral(SnailParser.BooleanLiteralContext ctx) throws io.github.snaill.exception.FailedCheckException {
+    private Node parseBooleanLiteral(SnailParser.BooleanLiteralContext ctx) {
         return new BooleanLiteral(ctx.getText().equals("true"));
     }
 
     private Node parseIdentifier(SnailParser.IdentifierContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        System.out.println("DEBUG: Accessing identifier: " + ctx.getText());
         if (ctx.variableIdentifier() != null) {
             String name = ctx.variableIdentifier().IDENTIFIER().getText();
             if (parent != null && parent.resolveVariable(name) == null) {
@@ -495,6 +576,9 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 );
             }
             Identifier id = new Identifier(name);
+            if (parent != null) { // Set the enclosing scope
+                id.setEnclosingScope(parent);
+            }
             if (ctx.variableIdentifier().IDENTIFIER() != null) {
                 id.setSourceInfo(ctx.variableIdentifier().IDENTIFIER().getSymbol().getLine(), ctx.variableIdentifier().IDENTIFIER().getSymbol().getCharPositionInLine(), ctx.start.getInputStream().toString());
             }
@@ -516,6 +600,12 @@ public class ASTReflectionBuilder implements ASTBuilder {
 
     private Node parseArrayElement(SnailParser.ArrayElementContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
         Identifier identifier = new Identifier(ctx.IDENTIFIER().getText());
+        // Set source info and scope for the identifier part of the array element
+        if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) {
+            identifier.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), parent.getSource());
+        }
+        identifier.setEnclosingScope(parent);
+
         List<Expression> indices = new ArrayList<>();
         // Обрабатываем все индексы для многомерных массивов
         if (ctx.expression() != null) {
@@ -525,9 +615,9 @@ public class ASTReflectionBuilder implements ASTBuilder {
             }
         }
         ArrayElement arrElem = new ArrayElement(identifier, indices);
-        if (ctx.IDENTIFIER() != null) {
-            arrElem.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), ctx.start.getInputStream().toString());
-        }
+        // Set source info and scope for the entire array element expression
+        arrElem.setSourceInfo(ctx.start.getLine(), ctx.start.getCharPositionInLine(), parent.getSource());
+        arrElem.setEnclosingScope(parent);
         return arrElem;
     }
 
@@ -549,13 +639,16 @@ public class ASTReflectionBuilder implements ASTBuilder {
         List<Expression> args = ctx.argumentList() != null ?
                 parseArgumentList(ctx.argumentList(), parent) : List.of();
         FunctionCall call = new FunctionCall(name, args);
-        if (ctx.IDENTIFIER() != null) {
+        if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null && ctx.start != null && ctx.start.getInputStream() != null) {
             call.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), ctx.start.getInputStream().toString());
+        }
+        if (parent != null) {
+            call.setEnclosingScope(parent);
         }
         return call;
     }
 
-    private List<Expression> parseArgumentList(SnailParser.ArgumentListContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+    private List<Expression> parseArgumentList(SnailParser.ArgumentListContext ctx, Scope parent) {
         return ctx.expression().stream()
                 .map(expr -> {
                     try {
@@ -580,11 +673,11 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return new ArrayLiteral(elements);
     }
 
-    private Node parseType(SnailParser.TypeContext ctx) throws io.github.snaill.exception.FailedCheckException {
+    private Node parseType(SnailParser.TypeContext ctx, Scope currentScope) throws io.github.snaill.exception.FailedCheckException {
         if (ctx.primitiveType() != null) {
-            return parsePrimitiveType(ctx.primitiveType());
+            return parsePrimitiveType(ctx.primitiveType(), currentScope);
         } else if (ctx.arrayType() != null) {
-            return parseArrayType(ctx.arrayType());
+            return parseArrayType(ctx.arrayType(), currentScope);
         }
         throw new io.github.snaill.exception.FailedCheckException(
             new io.github.snaill.result.CompilationError(
@@ -598,13 +691,28 @@ public class ASTReflectionBuilder implements ASTBuilder {
         );
     }
 
-    private Node parseArrayType(SnailParser.ArrayTypeContext ctx) throws io.github.snaill.exception.FailedCheckException {
-        Type elementType = (Type) parseType(ctx.type());
+    private Node parseArrayType(SnailParser.ArrayTypeContext ctx, Scope currentScope) throws io.github.snaill.exception.FailedCheckException {
+        Type elementType = (Type) parseType(ctx.type(), currentScope);
         NumberLiteral size = new NumberLiteral(Long.parseLong(ctx.numberLiteral().getText()));
-        return new ArrayType(elementType, size);
+        // Set source info for NumberLiteral if it's an AbstractNode and needs it
+        if (size instanceof AbstractNode sn) {
+            sn.setSourceInfo(ctx.numberLiteral().start.getLine(), ctx.numberLiteral().start.getCharPositionInLine(), currentScope.getSource());
+            sn.setEnclosingScope(currentScope);
+        }
+        ArrayType at = new ArrayType(elementType, size);
+        at.setSourceInfo(ctx.start.getLine(), ctx.start.getCharPositionInLine(), currentScope.getSource());
+        at.setEnclosingScope(currentScope);
+        return at;
     }
 
-    private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx) throws io.github.snaill.exception.FailedCheckException {
-        return new PrimitiveType(ctx.getText());
+    private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx, Scope currentScope) {
+        // With the current grammar (primitiveType : 'i32' | 'usize' | 'void' | 'string' | 'bool'),
+        // IDENTIFIER is not an alternative, so ctx.IDENTIFIER() would not be available.
+        // This method will only create PrimitiveType nodes for the predefined keywords.
+        // For custom type support, the grammar rule 'primitiveType' or 'type' needs to include IDENTIFIER.
+        PrimitiveType pt = new PrimitiveType(ctx.getText());
+        pt.setSourceInfo(ctx.start.getLine(), ctx.start.getCharPositionInLine(), currentScope.getSource());
+        pt.setEnclosingScope(currentScope);
+        return pt;
     }
 }

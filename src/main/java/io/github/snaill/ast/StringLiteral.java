@@ -16,11 +16,7 @@ public class StringLiteral extends PrimaryExpression {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     public String getValue() {
@@ -36,11 +32,11 @@ public class StringLiteral extends PrimaryExpression {
     }
 
     @Override
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException {
         emitBytecode(out, context, null);
     }
 
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException {
         int constIndex = context.addConstant(getValue());
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, constIndex);

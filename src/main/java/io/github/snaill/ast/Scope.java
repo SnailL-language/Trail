@@ -6,23 +6,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.Objects;
 import java.util.Collection;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.github.snaill.result.CompilationError;
 import io.github.snaill.result.ErrorType;
 import io.github.snaill.result.Result;
+import io.github.snaill.result.Warning;
+import io.github.snaill.result.WarningType;
 
 /**
  * Представляет блок кода (scope) в AST.
  * Генерирует байткод для всех операторов в блоке.
  */
 public class Scope extends AbstractNode implements Statement /*, BytecodeEmittable */ {
+    private static final Logger logger = LoggerFactory.getLogger(Scope.class);
     private final Scope parent;
     private final FunctionDeclaration enclosingFunction;
-    private boolean wasDeadCodeReported = false;
+    private final List<VariableDeclaration> localDeclarations = new ArrayList<>();
 
     public Scope(List<Statement> children) {
         this(children, null, null);
@@ -42,20 +45,57 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
         return parent;
     }
 
+    public FunctionDeclaration getEnclosingFunction() {
+        return this.enclosingFunction;
+    }
+
+    /**
+     * Adds a variable declaration to this scope. 
+     * Checks for redeclaration within the same scope.
+     * @param decl The VariableDeclaration to add.
+     * @throws io.github.snaill.exception.FailedCheckException if the variable is already declared in this scope.
+     */
+    public void addDeclaration(VariableDeclaration decl) throws io.github.snaill.exception.FailedCheckException {
+        for (VariableDeclaration existingDecl : this.localDeclarations) {
+            if (existingDecl.getName().equals(decl.getName())) {
+                String before = decl.getSource() != null ?
+                    io.github.snaill.ast.SourceBuilder.toSourceLine(decl.getSource(), decl.getLine(), decl.getCharPosition(), decl.getName().length()) :
+                    io.github.snaill.ast.SourceBuilder.toSourceCode(decl);
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        io.github.snaill.result.ErrorType.REDECLARED_VARIABLE,
+                        before,
+                        "Variable '" + decl.getName() + "' is already declared in this scope.",
+                        "Previously declared at line " + existingDecl.getLine() 
+                    ).toString()
+                );
+            }
+        }
+        this.localDeclarations.add(decl);
+        decl.setEnclosingScope(this); // Ensure the declaration knows its scope
+    }
+
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e); // Or a more specific unchecked exception
-        }
+        return visitor.visit(this);
+
     }
 
     @Override
     public void setChildren(Collection<Node> children) {
-        // Приводим к List<Statement> и затем к Collection<Node>
-        List<Statement> stmts = children.stream().map(n -> (Statement) n).toList();
-        super.setChildren((Collection<Node>) (Collection<?>) stmts);
+        List<Statement> statements = new ArrayList<>(children.size());
+        for (Node n : children) {
+            if (n instanceof Statement) {
+                statements.add((Statement) n);
+            } else {
+                throw new IllegalArgumentException(
+                    "Scope children must be of type Statement. Found: " +
+                    (n != null ? n.getClass().getName() : "null")
+                );
+            }
+        }
+        // Safely pass to superclass by creating a new List<Node>
+        super.setChildren(new ArrayList<>(statements));
     }
 
     @Override
@@ -98,157 +138,241 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
 
     @Override
     public void check() throws io.github.snaill.exception.FailedCheckException {
-        boolean dead = false;
+        boolean currentSegmentIsDead = false;
         for (int i = 0; i < getChildren().size(); i++) {
-            Node child = getChildren().get(i);
-            if (dead) {
-                // Только для первого dead child
-                String before = io.github.snaill.ast.SourceBuilder.toSourceCode(child);
-                System.out.print("ERROR:" + before + ";");
-                if (child instanceof Scope s) {
-                    s.checkDeadCode(true);
-                } else if (child instanceof IfStatement ifs) {
-                    ifs.checkDeadCode(true);
-                } else {
-                    child.checkDeadCode();
+            Node childNode = getChildren().get(i);
+            if (currentSegmentIsDead) {
+                // This childNode is the first statement in a dead code segment within this scope.
+                // Report it if it hasn't been reported by another analysis pass (e.g., checkDeadCode).
+                if (childNode instanceof AbstractNode an && !an.wasDeadCodeReported) {
+                    String sourceCode = io.github.snaill.ast.SourceBuilder.toSourceCode(childNode);
+                    // Using System.out.print as per original behavior for this specific check method.
+                    // A more robust solution would use the CompilationError and Result system.
+                    // This specific print is for a different kind of dead code check than the one Trail.java handles.
+                    System.out.print("ERROR:" + sourceCode + ";"); 
+                    markSubtreeAsDeadCodeReported(childNode); // Mark this and its children as reported.
                 }
-                break; // После dead child не продолжаем обход и не вызываем check() для его детей
+                // After the first dead statement is found and reported by check(), stop further checks in this scope.
+                // The checkDeadCode() method (called from Trail.java) will handle more detailed dead code analysis and reporting via CompilationError.
+                break; 
             }
-            if (child instanceof ReturnStatement || child instanceof BreakStatement) {
-                dead = true;
-            } else if (child instanceof IfStatement ifs) {
-                boolean thenReturns = ifs.getBody() != null && endsWithReturnOrBreak(ifs.getBody());
-                boolean elseReturns = ifs.isHasElse() && ifs.getElseBody() != null && endsWithReturnOrBreak(ifs.getElseBody());
-                if (thenReturns && elseReturns) {
-                    dead = true;
-                } else {
-                    child.check();
+
+            // Check the child itself (will throw FailedCheckException if there's an error within it)
+            childNode.check();
+
+            // Determine if this childNode makes the rest of the current scope dead
+            if (childNode instanceof ReturnStatement || childNode instanceof BreakStatement) {
+                currentSegmentIsDead = true;
+            } else if (childNode instanceof IfStatement ifStmt) {
+                // An if-else makes the subsequent code dead if both branches end with return/break.
+                if (ifStmt.isHasElse() && 
+                    endsWithReturnOrBreak(ifStmt.getBody()) && 
+                    endsWithReturnOrBreak(ifStmt.getElseBody())) {
+                    currentSegmentIsDead = true;
                 }
-            } else if (child instanceof Scope s) {
-                child.check();
-            } else {
-                child.check();
+            } else if (childNode instanceof Scope subScope) {
+                // A sub-scope makes the subsequent code dead if it ends with return/break.
+                if (endsWithReturnOrBreak(subScope)) {
+                    currentSegmentIsDead = true;
+                }
             }
         }
-        // UNUSED только для root scope
-        if (parent == null) {
-            Set<FunctionDeclaration> unusedFns = new java.util.HashSet<>();
-            Set<VariableDeclaration> unusedVars = new java.util.HashSet<>();
-            boolean seenFunction = false;
+        // Unused symbol checking is now handled by getUnusedSymbolWarnings() and invoked from Trail.java
+    }
+
+    /**
+     * Collects warnings for unused global variables and functions.
+     * This method should typically be called on the root scope.
+     * @return A list of Warning objects for unused symbols.
+     */
+    public List<Warning> getUnusedSymbolWarnings() {
+        List<Warning> warnings = new ArrayList<>();
+        // Variables declared in *this* scope (includes globals if this is root scope)
+        // For function scopes, localDeclarations should also include parameters (to be fixed in ASTBuilder).
+        Set<VariableDeclaration> potentiallyUnusedLocals = new java.util.HashSet<>(this.localDeclarations);
+
+        System.out.println("FORCED_DEBUG_UNUSED: Scope " + this.hashCode() + " (Parent: " + (this.parent != null ? this.parent.hashCode() : "ROOT") + ") processing. Initial potentiallyUnusedLocals for this scope: " + potentiallyUnusedLocals.stream().map(vd -> vd.getName() + "(" + vd.hashCode() + ")").collect(java.util.stream.Collectors.toList()));
+
+        // Potentially unused global functions. This set is built by the root scope
+        // and passed down so FunctionCalls anywhere can mark them as used.
+        Set<FunctionDeclaration> potentiallyUnusedGlobalFunctions = new java.util.HashSet<>();
+        if (this.parent == null) { // If this is the root scope, collect global functions
             for (Node child : getChildren()) {
-                if (child instanceof FunctionDeclaration fn) {
-                    seenFunction = true;
-                    if (!fn.getName().equals("main")) unusedFns.add(fn);
-                } else if (child instanceof VariableDeclaration var) {
-                    if (!seenFunction) unusedVars.add(var);
+                if (child instanceof FunctionDeclaration fn && !fn.getName().equals("main")) {
+                    potentiallyUnusedGlobalFunctions.add(fn);
                 }
             }
-            markUsedInTree(this, unusedVars, unusedFns);
-            for (FunctionDeclaration fn : unusedFns) {
-                System.out.println(new io.github.snaill.result.Warning(io.github.snaill.result.WarningType.UNUSED, io.github.snaill.ast.SourceBuilder.toSourceCode(fn)));
+            logger.debug("DEBUG_UNUSED: Root scope collected potentiallyUnusedGlobalFunctions: {}", 
+                potentiallyUnusedGlobalFunctions.stream().map(fd -> fd.getName() + "(" + fd.hashCode() + ")").toList());
+        }
+
+        // Traverse children of *this* current scope to mark its locals (potentiallyUnusedLocals)
+        // and global functions (potentiallyUnusedGlobalFunctions, if this is root) as used.
+        // If this is not the root scope, potentiallyUnusedGlobalFunctions will be empty but passed along.
+        collectUsageInSubtree(this, potentiallyUnusedLocals, potentiallyUnusedGlobalFunctions);
+        
+        logger.debug("DEBUG_UNUSED: Scope {} after collectUsageInSubtree. Remaining potentiallyUnusedLocals: {}", 
+            this.hashCode(), 
+            potentiallyUnusedLocals.stream().map(vd -> vd.getName() + "(" + vd.hashCode() + ")").toList());
+        if (this.parent == null) {
+             logger.debug("DEBUG_UNUSED: Root scope after collectUsageInSubtree. Remaining potentiallyUnusedGlobalFunctions: {}", 
+                potentiallyUnusedGlobalFunctions.stream().map(fd -> fd.getName() + "(" + fd.hashCode() + ")").toList());
+        }
+
+        // Add warnings for unused local variables of *this* scope.
+        // If this is the root scope, these are global variables.
+        for (VariableDeclaration localVar : potentiallyUnusedLocals) {
+            warnings.add(new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(localVar)));
+            logger.debug("DEBUG_UNUSED: Scope {} reporting UNUSED VAR: {} (Hash: {}) Type: {}", 
+                this.hashCode(), localVar.getName(), localVar.hashCode(), (this.parent == null ? "Global" : "Local"));
+        }
+
+        // If this is the root scope, add warnings for any remaining unused global functions.
+        if (this.parent == null) {
+            for (FunctionDeclaration fn : potentiallyUnusedGlobalFunctions) {
+                warnings.add(new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(fn)));
+                 logger.debug("DEBUG_UNUSED: Root Scope reporting UNUSED FUNCTION: {} (Hash: {})", 
+                    fn.getName(), fn.hashCode());
             }
-            for (VariableDeclaration v : unusedVars) {
-                System.out.println(new io.github.snaill.result.Warning(io.github.snaill.result.WarningType.UNUSED, io.github.snaill.ast.SourceBuilder.toSourceCode(v)));
+        }
+
+        // Recursively collect warnings from child scopes that define their own locals.
+        for (Node childNode : getChildren()) {
+            if (childNode instanceof FunctionDeclaration) {
+                Scope functionBody = ((FunctionDeclaration) childNode).getBody();
+                if (functionBody != null) {
+                    // Pass down the global functions set for checking usage within the function body.
+                    // The function body will handle its own local variables.
+                    warnings.addAll(functionBody.getUnusedSymbolWarnings(potentiallyUnusedGlobalFunctions));
+                }
+            } else if (childNode instanceof Scope && childNode != this) { // General nested block
+                warnings.addAll(((Scope) childNode).getUnusedSymbolWarnings(potentiallyUnusedGlobalFunctions));
+            } else if (childNode instanceof IfStatement ifStmt) { 
+                 if (ifStmt.getBody() != null) warnings.addAll(ifStmt.getBody().getUnusedSymbolWarnings(potentiallyUnusedGlobalFunctions));
+                 if (ifStmt.getElseBody() != null) warnings.addAll(ifStmt.getElseBody().getUnusedSymbolWarnings(potentiallyUnusedGlobalFunctions));
+            }
+            // TODO: Add other control structures like WhileStatement, ForStatement if their bodies are Scopes
+            // and need to be processed for their own local unused variables.
+        }
+        return warnings;
+    }
+
+    // Overloaded version for recursive calls, carrying the global functions set.
+    private List<Warning> getUnusedSymbolWarnings(Set<FunctionDeclaration> globalFunctionsToTrack) {
+        List<Warning> warnings = new ArrayList<>();
+        Set<VariableDeclaration> potentiallyUnusedLocals = new java.util.HashSet<>(this.localDeclarations);
+        logger.debug("DEBUG_UNUSED: Scope {} (Parent: {}) recursive call. Initial potentiallyUnusedLocals for this scope: {}", 
+            this.hashCode(), (this.parent != null ? this.parent.hashCode() : "ERROR_SHOULD_HAVE_PARENT"), 
+            potentiallyUnusedLocals.stream().map(vd -> vd.getName() + "(" + vd.hashCode() + ")").toList());
+
+        // Use the passed-in set of global functions for usage marking.
+        collectUsageInSubtree(this, potentiallyUnusedLocals, globalFunctionsToTrack);
+
+        logger.debug("DEBUG_UNUSED: Scope {} after collectUsageInSubtree (recursive call). Remaining potentiallyUnusedLocals: {}", 
+            this.hashCode(), 
+            potentiallyUnusedLocals.stream().map(vd -> vd.getName() + "(" + vd.hashCode() + ")").toList());
+
+        for (VariableDeclaration localVar : potentiallyUnusedLocals) {
+            warnings.add(new Warning(WarningType.UNUSED, SourceBuilder.toSourceCode(localVar)));
+            logger.debug("DEBUG_UNUSED: Scope {} reporting UNUSED VAR: {} (Hash: {}) Type: Local (recursive call)", 
+                this.hashCode(), localVar.getName(), localVar.hashCode());
+        }
+
+        for (Node childNode : getChildren()) {
+            if (childNode instanceof FunctionDeclaration) {
+                Scope functionBody = ((FunctionDeclaration) childNode).getBody();
+                if (functionBody != null) {
+                    warnings.addAll(functionBody.getUnusedSymbolWarnings(globalFunctionsToTrack));
+                }
+            } else if (childNode instanceof Scope && childNode != this) {
+                warnings.addAll(((Scope) childNode).getUnusedSymbolWarnings(globalFunctionsToTrack));
+            } else if (childNode instanceof IfStatement ifStmt) {
+                 if (ifStmt.getBody() != null) warnings.addAll(ifStmt.getBody().getUnusedSymbolWarnings(globalFunctionsToTrack));
+                 if (ifStmt.getElseBody() != null) warnings.addAll(ifStmt.getElseBody().getUnusedSymbolWarnings(globalFunctionsToTrack));
+            }
+        }
+        return warnings;
+    }
+
+    // Traverses the direct children of `scopeNode` to mark usage of variables 
+    // in `activeUnusedVarsForScope` and functions in `activeUnusedGlobalFunctions`.
+    private void collectUsageInSubtree(Scope scopeNode, Set<VariableDeclaration> activeUnusedVarsForScope, Set<FunctionDeclaration> activeUnusedGlobalFunctions) {
+        for (Node child : scopeNode.getChildren()) { // Iterate over statements within this scope.
+            if (child != null) {
+                // Let the child statement and its descendants mark usage.
+                traverseForUsageMarking(child, activeUnusedVarsForScope, activeUnusedGlobalFunctions);
             }
         }
     }
 
-    // Рекурсивно обходит всё дерево и вызывает checkUnused* для всех узлов
-    private void markUsedInTree(Node node, Set<VariableDeclaration> unusedVars, Set<FunctionDeclaration> unusedFns) {
-        node.checkUnusedVariables(unusedVars);
-        if (node instanceof FunctionDeclaration fn && fn.getBody() != null) {
-            markUsedInTree(fn.getBody(), unusedVars, unusedFns);
-        } else {
-            node.checkUnusedFunctions(unusedFns);
-            for (Node child : node.getChildren()) {
-                if (child != null) markUsedInTree(child, unusedVars, unusedFns);
+    // Recursive helper for collectUsageInSubtree
+    private void traverseForUsageMarking(Node currentNode, Set<VariableDeclaration> activeUnusedVars, Set<FunctionDeclaration> activeUnusedFunctions) {
+        // The node itself (e.g., a VariableReference or FunctionCall) gets a chance to mark usage.
+        currentNode.checkUnusedVariables(activeUnusedVars);
+        currentNode.checkUnusedFunctions(activeUnusedFunctions);
+
+        // Recurse for children of currentNode.
+        // This ensures that expressions within statements, etc., are checked.
+        for (Node childNodeComponent : currentNode.getChildren()) {
+            if (childNodeComponent != null) {
+                 // If a child component is a FunctionDeclaration or a Scope, we do NOT recursively call 
+                 // getUnusedSymbolWarnings here. That's handled by the main loop in getUnusedSymbolWarnings.
+                 // We just want this subtree to mark usage against the *current* active sets.
+                 traverseForUsageMarking(childNodeComponent, activeUnusedVars, activeUnusedFunctions);
             }
         }
+    }
+
+    private void markSubtreeAsDeadCodeReported(Node node) {
+        if (node instanceof AbstractNode abstractNode) {
+            abstractNode.wasDeadCodeReported = true;
+        }
+        for (Node child : node.getChildren()) {
+            markSubtreeAsDeadCodeReported(child);
+        }
+    }
+
+    private boolean endsWithReturnOrBreak(Scope scope) {
+        if (scope == null || scope.getChildren().isEmpty()) {
+            return false;
+        }
+        List<Node> stmts = scope.getChildren();
+        Node lastEffectiveStatement = null;
+        // Iterate backwards to find the last actual statement
+        for (int i = stmts.size() - 1; i >= 0; i--) {
+            Node n = stmts.get(i);
+            // Skip empty scopes if they are considered non-effective
+            if (n instanceof Scope && ((Scope)n).getChildren().isEmpty()) {
+                continue;
+            }
+            if (n instanceof Statement) { 
+                 lastEffectiveStatement = n;
+                 break;
+            }
+        }
+
+        if (lastEffectiveStatement == null) return false; // No effective statements found
+
+        if (lastEffectiveStatement instanceof ReturnStatement || lastEffectiveStatement instanceof BreakStatement) {
+            return true;
+        }
+        // If the last statement is an IfStatement, it must have an else, and both branches must end with return/break
+        if (lastEffectiveStatement instanceof IfStatement ifs) {
+            return ifs.isHasElse() &&
+                   endsWithReturnOrBreak(ifs.getBody()) &&
+                   endsWithReturnOrBreak(ifs.getElseBody());
+        }
+        // If the last statement is a non-empty scope, recurse into it
+        if (lastEffectiveStatement instanceof Scope s && !s.getChildren().isEmpty()) {
+            return endsWithReturnOrBreak(s);
+        }
+        // Other statements (loops, assignments, etc.) don't inherently make the block end with return/break by themselves.
+        return false;
     }
 
     @Override
     public Node getParentNode() {
         return parent;
-    }
-
-    @Override
-    public List<Result> checkDeadCode() {
-        return checkDeadCode(false);
-    }
-
-    public List<Result> checkDeadCode(boolean insideDead) {
-        if (this instanceof AbstractNode an && an.wasDeadCodeReported) return new ArrayList<>();
-        if (insideDead) return new ArrayList<>(); // Не печатать DEAD_CODE для вложенных dead-блоков
-        List<Result> results = new ArrayList<>();
-        boolean dead = insideDead;
-        for (int i = 0; i < children.size(); i++) {
-            Node n = children.get(i);
-            if (dead) {
-                if (n instanceof AbstractNode an && an.wasDeadCodeReported) return results;
-                if (!insideDead) {
-                    String before = io.github.snaill.ast.SourceBuilder.toSourceCode(n);
-                    CompilationError err = new io.github.snaill.result.CompilationError(
-                        io.github.snaill.result.ErrorType.DEAD_CODE,
-                        before,
-                        "DEAD_CODE",
-                        ""
-                    );
-                    System.out.println(err);
-                    results.add(err);
-                    if (n instanceof AbstractNode an2) an2.wasDeadCodeReported = true;
-                    if (this instanceof AbstractNode anScope) {
-                        anScope.wasDeadCodeReported = true;
-                        markAllParentsDeadCodeReported(this);
-                    }
-                    markAllDeadCodeReported(n);
-                }
-                break; // break всегда после первого dead child
-            }
-            if (!dead) {
-                if (n instanceof ReturnStatement || n instanceof BreakStatement) {
-                    dead = true;
-                } else if (n instanceof IfStatement ifs) {
-                    boolean thenReturns = ifs.getBody() != null && endsWithReturnOrBreak(ifs.getBody());
-                    boolean elseReturns = ifs.isHasElse() && ifs.getElseBody() != null && endsWithReturnOrBreak(ifs.getElseBody());
-                    if (thenReturns && elseReturns) {
-                        dead = true;
-                    } else {
-                        results.addAll(ifs.checkDeadCode(false));
-                    }
-                } else if (n instanceof Scope s) {
-                    results.addAll(s.checkDeadCode(false));
-                } else {
-                    results.addAll(n.checkDeadCode());
-                }
-            }
-        }
-        return results;
-    }
-
-    private String toStatementWithSemicolon(Node n) {
-        if (n == null) return "";
-        String code = io.github.snaill.ast.SourceBuilder.toSourceCode(n);
-        code = code.trim();
-        if (!code.endsWith(";")) code += ";";
-        return code;
-    }
-
-    private boolean endsWithReturnOrBreak(Scope scope) {
-        List<Node> stmts = scope.getChildren();
-        for (int i = stmts.size() - 1; i >= 0; i--) {
-            Node n = stmts.get(i);
-            if (n instanceof ReturnStatement || n instanceof BreakStatement) return true;
-            if (n instanceof IfStatement ifs) {
-                boolean thenR = ifs.getBody() != null && endsWithReturnOrBreak(ifs.getBody());
-                boolean elseR = ifs.getElseBody() != null && endsWithReturnOrBreak(ifs.getElseBody());
-                if (thenR && elseR) return true;
-            }
-            if (n instanceof Scope s) {
-                if (endsWithReturnOrBreak(s)) return true;
-            }
-            if (!(n instanceof IfStatement)) break;
-        }
-        return false;
     }
 
     @Override
@@ -259,107 +383,125 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
         return false;
     }
 
-    public VariableDeclaration resolveVariable(String name) {
-        System.out.println("DEBUG: Resolving variable: " + name);
-        
-        // Проверяем параметры функции, если мы находимся в области видимости функции
-        if (enclosingFunction != null) {
-            for (Parameter param : enclosingFunction.getParameters()) {
-                if (param.getName().equals(name)) {
-                    System.out.println("DEBUG: Found parameter " + name + " in function " + enclosingFunction.getName());
-                    // Создаем временное объявление переменной на основе параметра
-                    return new VariableDeclaration(name, param.getType(), null);
+    @Override
+    public List<Result> checkDeadCode() {
+        List<Result> results = new ArrayList<>();
+        boolean currentSegmentIsDead = false;
+
+        for (Node childNode : getChildren()) {
+            if (!(childNode instanceof Statement stmt)) {
+                continue; 
+            }
+            AbstractNode abstractStmt = (stmt instanceof AbstractNode) ? (AbstractNode) stmt : null;
+
+            if (currentSegmentIsDead) {
+                if (abstractStmt != null && !abstractStmt.wasDeadCodeReported) {
+                    String beforeString = abstractStmt != null && abstractStmt.getSource() != null ? 
+                                          SourceBuilder.toSourceLine(abstractStmt.getSource(), abstractStmt.getLine(), abstractStmt.getCharPosition(), SourceBuilder.toSourceCode(abstractStmt).length()) :
+                                          SourceBuilder.toSourceCode(stmt);
+                    CompilationError err = new CompilationError(
+                        ErrorType.DEAD_CODE,
+                        beforeString,
+                        "Statement is unreachable.",
+                        ""
+                    );
+                    results.add(err);
+                    markSubtreeAsDeadCodeReported(abstractStmt); 
+                }
+            } else {
+                results.addAll(stmt.checkDeadCode());
+
+                if (stmt instanceof ReturnStatement || stmt instanceof BreakStatement) {
+                    currentSegmentIsDead = true;
+                } else if (stmt instanceof IfStatement ifStmt) {
+                    if (ifStmt.isHasElse() && 
+                        ifStmt.getBody() != null && endsWithReturnOrBreak(ifStmt.getBody()) && 
+                        ifStmt.getElseBody() != null && endsWithReturnOrBreak(ifStmt.getElseBody())) {
+                        currentSegmentIsDead = true;
+                    }
+                } else if (stmt instanceof Scope subScope) {
+                    if (endsWithReturnOrBreak(subScope)) {
+                        currentSegmentIsDead = true;
+                    }
                 }
             }
         }
-        
-        // Проверяем локальные переменные в текущей области видимости
-        for (Node child : children) {
-            if (child instanceof VariableDeclaration varDecl && varDecl.getName().equals(name)) {
-                System.out.println("DEBUG: Found variable " + name + " in current scope");
+        return results;
+    }
+
+    public VariableDeclaration resolveVariable(String name) {
+        return resolveVariable(name, null); // Call the more specific version with null context
+    }
+
+    /**
+     * Resolves a variable considering the context of resolution, e.g., to prevent self-reference in initializers.
+     * @param name The name of the variable to resolve.
+     * @param resolutionContext The AST Node from where the resolution is being requested.
+     * @return The VariableDeclaration if found, otherwise null.
+     */
+    public VariableDeclaration resolveVariable(String name, Node resolutionContext) {
+        logger.debug("DEBUG: Resolving variable: {} with context: {}", name, resolutionContext != null ? resolutionContext.getClass().getSimpleName() : "null");
+
+        // Check parameters if in a function scope
+        FunctionDeclaration func = getEnclosingFunction();
+        if (func != null) {
+            for (Parameter param : func.getParameters()) {
+                if (param.getName().equals(name)) {
+                    logger.debug("DEBUG: Found parameter {} in function {}", name, func.getName());
+                    // Create a temporary VariableDeclaration for the parameter
+                    VariableDeclaration paramVarDecl = new VariableDeclaration(param.getName(), param.getType(), null);
+                    // If Parameter has source location, and VariableDeclaration needs it set explicitly:
+                    if (param instanceof AbstractNode pn) {
+                        paramVarDecl.setSourceInfo(pn.getLine(), pn.getCharPosition(), pn.getSource()); // Corrected to setSourceInfo
+                    }
+                    return paramVarDecl;
+                }
+            }
+        }
+
+        // Check local variables in the current scope (this.localDeclarations)
+        for (VariableDeclaration varDecl : this.localDeclarations) {
+            if (varDecl.getName().equals(name)) {
+                logger.debug("DEBUG: Found variable {} in localDeclarations of current scope", name);
+                // Prevent resolving a variable in its own initializer if resolutionContext is that initializer.
+                // The resolutionContext is the Expression node being resolved.
+                // varDecl.getValue() is the initializer expression of the declaration.
+                if (resolutionContext != null && varDecl.getValue() == resolutionContext) {
+                     logger.debug("DEBUG: Attempt to resolve variable {} in its own initializer. Denied.", name);
+                     continue; // Skip this declaration, look in parent or for other declarations.
+                }
                 return varDecl;
             }
         }
-        
-        // Если не нашли, ищем в родительской области видимости
-        if (parent != null) {
-            System.out.println("DEBUG: Variable " + name + " not found in current scope, checking parent scope");
-            return parent.resolveVariable(name);
-        }
-        
-        System.out.println("DEBUG: Variable " + name + " not found in any scope");
-        return null;
-    }
 
-    public VariableDeclaration resolveVariable(String name, Node context) {
-        System.out.println("DEBUG: Resolving variable with context: " + name);
-        
-        // Проверяем параметры функции, если мы находимся в области видимости функции
-        if (enclosingFunction != null) {
-            for (Parameter param : enclosingFunction.getParameters()) {
-                if (param.getName().equals(name)) {
-                    System.out.println("DEBUG: Found parameter " + name + " in function " + enclosingFunction.getName());
-                    // Создаем временное объявление переменной на основе параметра
-                    return new VariableDeclaration(name, param.getType(), null);
+        // Recursively check parent scope
+        if (parent != null) {
+            return parent.resolveVariable(name, resolutionContext);
+        } else {
+            // This is the root scope, check its direct children for global variables
+            for (Node child : getChildren()) {
+                if (child instanceof VariableDeclaration globalVarDecl && globalVarDecl.getName().equals(name)) {
+                    logger.debug("DEBUG: Found global variable {} in root scope children", name);
+                    // Prevent resolving a variable in its own initializer (though less common for globals defined at top level)
+                    if (resolutionContext != null && globalVarDecl.getValue() == resolutionContext) {
+                        logger.debug("DEBUG: Attempt to resolve global variable {} in its own initializer. Denied.", name);
+                        continue; 
+                    }
+                    return globalVarDecl;
                 }
             }
         }
-        
-        // Сначала ищем VariableDeclaration
-        for (Node child : children) {
-            if (child instanceof VariableDeclaration vd && vd.getName().equals(name)) {
-                // Если context — выражение инициализации этой переменной, не разрешаем саму себя
-                if (context != null && vd.getValue() == context) {
-                    continue;
-                }
-                System.out.println("DEBUG: Found variable " + name + " in current scope");
-                return vd;
-            }
-        }
-        
-        // Если не нашли, ищем в родительской области видимости
-        if (parent != null) {
-            System.out.println("DEBUG: Variable " + name + " not found in current scope, checking parent scope");
-            return parent.resolveVariable(name, context);
-        }
-        
-        System.out.println("DEBUG: Variable " + name + " not found in any scope");
-        return null;
-    }
 
-    private FunctionDeclaration findEnclosingFunction() {
-        if (this.enclosingFunction != null) return this.enclosingFunction;
-        if (parent != null) return parent.findEnclosingFunction();
         return null;
     }
 
     public FunctionDeclaration resolveFunction(String name) {
-        for (Node child : children) {
-            if (child instanceof FunctionDeclaration f && f.getName().equals(name)) {
-                return f;
+        for (Node child : getChildren()) {
+            if (child instanceof FunctionDeclaration func && func.getName().equals(name)) {
+                return func;
             }
         }
-        return parent != null ? parent.resolveFunction(name) : null;
-    }
-
-    // Помечает всех AbstractNode в поддереве как wasDeadCodeReported
-    private void markAllDeadCodeReported(Node node) {
-        if (node instanceof AbstractNode an) {
-            an.wasDeadCodeReported = true;
-        }
-        for (Node child : node.getChildren()) {
-            if (child != null) markAllDeadCodeReported(child);
-        }
-    }
-
-    // Помечает всех родителей до Scope как wasDeadCodeReported
-    private void markAllParentsDeadCodeReported(Node node) {
-        Node parent = null;
-        if (node instanceof AbstractNode an) parent = an.getParentNode();
-        while (parent != null && parent instanceof AbstractNode anp) {
-            anp.wasDeadCodeReported = true;
-            if (parent instanceof Scope) break;
-            parent = anp.getParentNode();
-        }
+        if (parent != null) return parent.resolveFunction(name);
+        return null;
     }
 }

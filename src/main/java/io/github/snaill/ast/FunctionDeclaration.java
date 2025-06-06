@@ -1,15 +1,9 @@
 package io.github.snaill.ast;
 
-import io.github.snaill.bytecode.BytecodeConstants;
-import io.github.snaill.bytecode.BytecodeContext;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Представляет объявление функции в AST.
@@ -29,11 +23,8 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e); // Or a more specific unchecked exception
-        }
+        return visitor.visit(this);
+
     }
 
     public String getName() {

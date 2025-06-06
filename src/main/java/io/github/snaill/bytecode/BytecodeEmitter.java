@@ -7,17 +7,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Фасад для генерации байткода из AST.
  * Делегирует генерацию байткода самим узлам AST через emitBytecode.
  */
 public class BytecodeEmitter {
+    private static final Logger logger = LoggerFactory.getLogger(BytecodeEmitter.class);
     private final Scope program;
     private final BytecodeContext context;
-    private final Map<String, Integer> localVariables;
     private final Map<String, FunctionSignature> functionSignatures;
-    private final Map<String, Integer> localVariableCounts;
 
     /**
      * Исключение, выбрасываемое при ошибках генерации байткода
@@ -38,9 +39,7 @@ public class BytecodeEmitter {
     public BytecodeEmitter() {
         this.program = null;
         this.context = new BytecodeContext();
-        this.localVariables = new HashMap<>();
         this.functionSignatures = new HashMap<>();
-        this.localVariableCounts = new HashMap<>();
         registerBuiltInFunctions();
     }
     
@@ -54,9 +53,7 @@ public class BytecodeEmitter {
         this.context = new BytecodeContext();
         // Сохраняем глобальные выражения в контексте
         context.setGlobalStatements(program.getStatements());
-        this.localVariables = new HashMap<>();
         this.functionSignatures = new HashMap<>();
-        this.localVariableCounts = new HashMap<>();
         registerBuiltInFunctions();
     }
 
@@ -69,7 +66,7 @@ public class BytecodeEmitter {
      * 4. Таблица функций (включая байткод функций)
      * 5. Глобальный байткод (инициализация глобальных переменных)
      */
-    public byte[] emit() throws IOException, FailedCheckException {
+    public byte[] emit() {
         // Инициализируем контекст, регистрируем все глобальные переменные и функции
         initializeContext();
 
@@ -111,7 +108,7 @@ public class BytecodeEmitter {
     public void emitBytecode(io.github.snaill.ast.AST ast, String outputPath) throws BytecodeEmitterException {
         try {
             // Создаем новый экземпляр BytecodeEmitter с корневым скоупом из AST
-            BytecodeEmitter emitter = new BytecodeEmitter(ast.getRoot());
+            BytecodeEmitter emitter = new BytecodeEmitter(ast.root());
             
             // Генерируем байткод
             byte[] bytecode = emitter.emit();
@@ -119,11 +116,9 @@ public class BytecodeEmitter {
             // Записываем байткод в файл
             java.nio.file.Files.write(java.nio.file.Paths.get(outputPath), bytecode);
             
-            System.out.println("Байткод успешно сохранен в: " + outputPath + " (" + bytecode.length + " байт)");
+            logger.info("Байткод успешно сохранен в: {} ({} байт)", outputPath, bytecode.length);
         } catch (IOException e) {
             throw new BytecodeEmitterException("Ошибка записи байткода в файл: " + e.getMessage(), e);
-        } catch (FailedCheckException e) {
-            throw new BytecodeEmitterException("Ошибка проверки при генерации байткода: " + e.getMessage(), e);
         } catch (Exception e) {
             throw new BytecodeEmitterException("Неожиданная ошибка при генерации байткода: " + e.getMessage(), e);
         }
@@ -134,10 +129,10 @@ public class BytecodeEmitter {
      * Регистрирует все глобальные переменные, функции и константы в контексте.
      */
     private void initializeContext() {
-        System.err.println("Initializing bytecode context...");
+        logger.debug("Initializing bytecode context...");
 
         if (program == null) {
-            System.err.println("Warning: program scope is null, context initialization might be incomplete");
+            logger.warn("Program scope is null, context initialization might be incomplete");
             // Добавляем стандартные константы
             context.addConstant(0L);  // Для инициализации по умолчанию
             context.addConstant(1L);  // Для инкремента/декремента
@@ -147,7 +142,7 @@ public class BytecodeEmitter {
         // Сначала собираем все глобальные переменные
         for (Statement stmt : program.getStatements()) {
             if (stmt instanceof VariableDeclaration var) {
-                System.err.println("Registering global variable: " + var.getName());
+                logger.debug("Registering global variable: {}", var.getName());
                 context.addGlobalVariable(var.getName());
 
                 // Добавляем константы из инициализаторов глобальных переменных
@@ -158,7 +153,7 @@ public class BytecodeEmitter {
         // Затем регистрируем все функции и константы в них
         for (Statement stmt : program.getStatements()) {
             if (stmt instanceof FunctionDeclaration func) {
-                System.err.println("Registering function: " + func.getName() + " with " + func.getParameters().size() + " parameters");
+                logger.debug("Registering function: {} with {} parameters", func.getName(), func.getParameters().size());
                 context.addFunction(func);
 
                 // Добавляем константы из тела функции
@@ -175,40 +170,47 @@ public class BytecodeEmitter {
      * Рекурсивно добавляет все константы из выражения в контекст
      */
     private void addConstants(Expression expr) {
-        if (expr == null) return;
+        switch (expr) {
+            case null -> {
+                return;
+            }
+            case NumberLiteral number -> context.addConstant(number.getValue());
+            case StringLiteral string -> context.addConstant(string.getValue());
+            case BooleanLiteral bool ->
+                // В Snail булевы значения представлены как i32
+                    context.addConstant(bool.getValue() ? 1L : 0L);
+            case BinaryExpression binary -> {
+                addConstants(binary.getLeft());
+                addConstants(binary.getRight());
+            }
+            case UnaryExpression unary -> addConstants(unary.getArgument());
+            case ArrayLiteral array -> {
+                for (Expression element : array.getElements()) {
+                    addConstants(element);
+                }
+            }
+            case FunctionCall call -> {
+                for (Expression arg : call.getArguments()) {
+                    addConstants(arg);
+                }
+            }
+            case AssignmentExpression assignExpr -> {
+                // Обрабатываем правую часть присваивания
+                addConstants(assignExpr.getRight());
+                // Обрабатываем левую часть, если это, например, ArrayAccess с литералом в индексе
+                addConstants(assignExpr.getLeft());
+            }
+            case ArrayAccess arrayAccess ->  // Новый блок
+                // Обрабатываем выражение индекса
+                    addConstants(arrayAccess.getIndex());
 
-        if (expr instanceof NumberLiteral number) {
-            context.addConstant(number.getValue());
-        } else if (expr instanceof StringLiteral string) {
-            context.addConstant(string.getValue());
-        } else if (expr instanceof BooleanLiteral bool) {
-            // В Snail булевы значения представлены как i32
-            context.addConstant(bool.getValue() ? 1L : 0L);
-        } else if (expr instanceof BinaryExpression binary) {
-            addConstants(binary.getLeft());
-            addConstants(binary.getRight());
-        } else if (expr instanceof UnaryExpression unary) {
-            addConstants(unary.getArgument());
-        } else if (expr instanceof ArrayLiteral array) {
-            for (Expression element : array.getElements()) {
-                addConstants(element);
-            }
-        } else if (expr instanceof FunctionCall call) {
-            for (Expression arg : call.getArguments()) {
-                addConstants(arg);
-            }
-        } else if (expr instanceof AssignmentExpression assignExpr) { // Новый блок
-            // Обрабатываем правую часть присваивания
-            addConstants(assignExpr.getRight());
-            // Обрабатываем левую часть, если это, например, ArrayAccess с литералом в индексе
-            addConstants(assignExpr.getLeft());
-        } else if (expr instanceof ArrayAccess arrayAccess) { // Новый блок
-            // Обрабатываем выражение индекса
-            addConstants(arrayAccess.getIndex());
             // Также можно обработать выражение самого массива, если оно может быть литералом,
             // но обычно это идентификатор.
             // addConstants(arrayAccess.getArrayExpression());
+            default -> {
+            }
         }
+
     }
 
     /**
@@ -280,7 +282,7 @@ public class BytecodeEmitter {
      * Записывает секцию глобального байткода для инициализации переменных
      * @param out поток для записи байткода
      */
-    private void writeGlobalBytecode(ByteArrayOutputStream out) throws IOException, FailedCheckException {
+    private void writeGlobalBytecode(ByteArrayOutputStream out) throws IOException {
         ByteArrayOutputStream globalOut = new ByteArrayOutputStream();
         
         // Проверяем, что программа не null
@@ -334,7 +336,6 @@ public class BytecodeEmitter {
         int actualLength = code.length;
         
         // Отладочная информация о длине глобального кода
-        System.out.println("Действительная длина глобального кода: " + actualLength + " байт");
         
         // Корректно записываем длину как 4 байта (big-endian) для соответствия с форматом SnailVM
         out.write((actualLength >> 24) & 0xFF);
@@ -496,7 +497,7 @@ public class BytecodeEmitter {
         } else if (node instanceof io.github.snaill.ast.ArrayLiteral arrLit) {
             vars.add("__tmp_array_" + System.identityHashCode(arrLit));
         } else if (node instanceof ForLoop forLoop) {
-            collectLocalVariables((VariableDeclaration) forLoop.getBody().getChildren().get(0), vars);
+            collectLocalVariables((VariableDeclaration) forLoop.getBody().getChildren().getFirst(), vars);
             collectLocalVariables(forLoop.getBody(), vars);
         } else if (node instanceof IfStatement ifStmt) {
             collectLocalVariables(ifStmt.getBody(), vars);
@@ -541,49 +542,14 @@ public class BytecodeEmitter {
     private void registerBuiltInFunctions() {
         List<Parameter> params = new ArrayList<>();
         params.add(new Parameter("arg", new PrimitiveType("any")));
-        registerBuiltInFunction("println", new FunctionSignature("println", params, new PrimitiveType("void")));
+        registerBuiltInFunction(new FunctionSignature("println", params, new PrimitiveType("void")));
     }
 
-    private void registerBuiltInFunction(String name, FunctionSignature signature) {
-        functionSignatures.put(name, signature);
-    }
-
-    private int registerLocalVariable(String name, FunctionDeclaration currentFunction) {
-        if (currentFunction == null) {
-            throw new IllegalStateException("Cannot register local variable without a current function");
-        }
-        String key = currentFunction.getName() + ":" + name;
-        if (localVariables.containsKey(key)) {
-            throw new IllegalStateException("Local variable index already set for " + name + " in function " + currentFunction.getName());
-        }
-        int index = localVariableCounts.getOrDefault(currentFunction.getName(), 0);
-        localVariables.put(key, index);
-        localVariableCounts.put(currentFunction.getName(), index + 1);
-        return index;
+    private void registerBuiltInFunction(FunctionSignature signature) {
+        functionSignatures.put("println", signature);
     }
 
     // Временное определение класса FunctionSignature, если его нет в проекте
-    public static class FunctionSignature {
-        private final String name;
-        private final List<Parameter> parameters;
-        private final Type returnType;
-
-        public FunctionSignature(String name, List<Parameter> parameters, Type returnType) {
-            this.name = name;
-            this.parameters = parameters;
-            this.returnType = returnType;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public List<Parameter> getParameters() {
-            return parameters;
-        }
-
-        public Type getReturnType() {
-            return returnType;
-        }
+        public record FunctionSignature(String name, List<Parameter> parameters, Type returnType) {
     }
 }

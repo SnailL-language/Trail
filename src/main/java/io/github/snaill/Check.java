@@ -11,7 +11,7 @@ import java.util.List;
  * Класс для проверки типов и других статических проверок AST.
  */
 public class Check implements ASTVisitor<Void> {
-    private List<CompilationError> errors = new ArrayList<>();
+    private final List<CompilationError> errors = new ArrayList<>();
 
     /**
      * Проверяет AST на корректность типов и другие статические ошибки

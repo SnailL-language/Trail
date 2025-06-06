@@ -10,17 +10,13 @@ public class ArrayElement extends Expression {
     // dims are already children via super(dims)
 
     public ArrayElement(Expression identifier, List<Expression> dims) {
-        super(new ArrayList<Node>(dims)); // Pass dims to super constructor as List<Node>
+        super(new ArrayList<>(dims)); // Pass dims to super constructor as List<Node>
         this.identifier = identifier;
     }
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     public Expression getIdentifier() {

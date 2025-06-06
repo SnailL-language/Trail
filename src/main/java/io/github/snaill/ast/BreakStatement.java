@@ -13,11 +13,7 @@ public class BreakStatement extends AbstractNode implements Statement {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     @Override
@@ -29,11 +25,11 @@ public class BreakStatement extends AbstractNode implements Statement {
     }
 
     @Override
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context) throws java.io.IOException {
         emitBytecode(out, context, null);
     }
 
-    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException {
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP);
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Placeholder, будет обновлено позже
     }

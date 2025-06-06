@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.util.Objects;
 
 public class ArrayType extends Type {
     private final Type elementType;
@@ -34,11 +33,7 @@ public class ArrayType extends Type {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (java.io.IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     @Override

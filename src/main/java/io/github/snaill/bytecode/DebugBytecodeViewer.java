@@ -70,7 +70,7 @@ public class DebugBytecodeViewer {
     }
 
     private static class ConstantInfo {
-        public int typeId;
+        public final int typeId;
         public Object value;
 
         public ConstantInfo(int typeId, Object value) {
@@ -80,50 +80,29 @@ public class DebugBytecodeViewer {
 
         @Override
         public String toString() {
-            switch (typeId) {
-                case BytecodeConstants.TypeId.I32:
-                    return "i32: " + value;
-                case BytecodeConstants.TypeId.USIZE:
-                    return "usize: " + value;
-                case BytecodeConstants.TypeId.STRING:
-                    return "string(" + ((String)value).length() + "): \"" + value + "\"";
-                default:
-                    return "unknown(" + typeId + ")";
-            }
+            return switch (typeId) {
+                case BytecodeConstants.TypeId.I32 -> "i32: " + value;
+                case BytecodeConstants.TypeId.USIZE -> "usize: " + value;
+                case BytecodeConstants.TypeId.STRING -> "string(" + ((String) value).length() + "): \"" + value + "\"";
+                default -> "unknown(" + typeId + ")";
+            };
         }
     }
 
-    private static class FunctionInfo {
-        public final String name;
-        public final int paramCount;
-        public final int returnType;
-        public final int localVarCount;
-        public final int codeLength;
-        public final int codeOffset;
-        public final boolean isMain;
-
-        public FunctionInfo(String name, int paramCount, int returnType, int localVarCount,
-                            int codeLength, int codeOffset, boolean isMain) {
-            this.name = name;
-            this.paramCount = paramCount;
-            this.returnType = returnType;
-            this.localVarCount = localVarCount;
-            this.codeLength = codeLength;
-            this.codeOffset = codeOffset;
-            this.isMain = isMain;
-        }
+    private record FunctionInfo(String name, int paramCount, int returnType, int localVarCount, int codeLength,
+                                int codeOffset, boolean isMain) {
 
         @Override
-        public String toString() {
-            String mainMarker = isMain ? " [main]" : "";
-            return String.format("%s%s (params: %d, return: %s, locals: %d, code length: %d bytes, offset: 0x%08X)",
-                    name, mainMarker, paramCount, getTypeDescription(returnType), localVarCount, codeLength, codeOffset);
+            public String toString() {
+                String mainMarker = isMain ? " [main]" : "";
+                return String.format("%s%s (params: %d, return: %s, locals: %d, code length: %d bytes, offset: 0x%08X)",
+                        name, mainMarker, paramCount, getTypeDescription(returnType), localVarCount, codeLength, codeOffset);
+            }
         }
-    }
 
     private static class GlobalVarInfo {
-        String name;
-        byte typeId;
+        final String name;
+        final byte typeId;
         byte elemTypeId;
         int size;
 
@@ -136,9 +115,9 @@ public class DebugBytecodeViewer {
     }
 
     private static class IntrinsicInfo {
-        String name;
-        int paramCount;
-        int returnType;
+        final String name;
+        final int paramCount;
+        final int returnType;
 
         public IntrinsicInfo(String name, int paramCount, int returnType) {
             this.name = name;
@@ -184,7 +163,7 @@ public class DebugBytecodeViewer {
         pos = readGlobalCode(code, sb, pos, constants, globals, functions, intrinsics, mainFunctionIndex[0]);
 
         // Вывод статистики
-        appendBytecodeStatistics(sb, constants, functions, globals, pos, 2);
+        appendBytecodeStatistics(sb, constants, functions, globals, pos);
 
         return sb.toString();
     }
@@ -365,7 +344,7 @@ public class DebugBytecodeViewer {
                     boolean isMain = (i == mainFunctionIndex);
                     FunctionInfo funcInfo = new FunctionInfo(funcName, paramCount, returnType, localVarCount, codeLen, codeOffset, isMain);
                     functions.add(funcInfo);
-                    sb.append("  [FUNC] ").append(funcInfo.toString()).append("\n");
+                    sb.append("  [FUNC] ").append(funcInfo).append("\n");
                     if (codeLen > 0 && pos + codeLen <= code.length) {
                         // Теперь передаем актуальные списки констант и глобальных переменных
                         sb.append(dumpInstructions(code, pos, codeLen, "      ", constants, globals, functions));
@@ -415,7 +394,7 @@ public class DebugBytecodeViewer {
                     int returnType = getUnsignedByte(code[pos++]);
                     IntrinsicInfo intrinsicInfo = new IntrinsicInfo(intrinsicName, paramCount, returnType);
                     intrinsics.add(intrinsicInfo);
-                    sb.append("  [INTRINSIC] ").append(intrinsicInfo.toString()).append("\n");
+                    sb.append("  [INTRINSIC] ").append(intrinsicInfo).append("\n");
                 } else {
                     sb.append("  [INTRINSIC] ").append(intrinsicName).append(" : <неполные данные>\n");
                     pos = code.length;
@@ -541,16 +520,16 @@ public class DebugBytecodeViewer {
     // Метод appendGlobalValues был удален, так как его функциональность перенесена в метод readGlobalCode
 
     private static void appendBytecodeStatistics(StringBuilder sb, List<ConstantInfo> constants, List<FunctionInfo> functions,
-                                                 List<GlobalVarInfo> globals, int totalSize, int constantsSectionSize) {
+                                                 List<GlobalVarInfo> globals, int totalSize) {
         sb.append("\n=== BYTECODE STATISTICS ===\n");
         sb.append("  [Общий размер] ").append(totalSize).append(" байт (0x")
                 .append(Integer.toHexString(totalSize).toUpperCase()).append(")\n");
 
         int functionCodeSize = functions.stream().mapToInt(f -> f.codeLength).sum();
-        sb.append("  [Секции] Заголовок: 8 байт, Константы: ").append(constantsSectionSize)
+        sb.append("  [Секции] Заголовок: 8 байт, Константы: ").append(2)
                 .append(" байт (").append(constants.size()).append(" записей), Функции: ")
                 .append(functionCodeSize).append(" байт кода (").append(functions.size())
-                .append(" функций), Глобальный код: ").append(totalSize - constantsSectionSize - functionCodeSize - 8)
+                .append(" функций), Глобальный код: ").append(totalSize - 2 - functionCodeSize - 8)
                 .append(" байт\n");
         sb.append("  [Глобальные переменные] ").append(globals.size()).append(" переменных\n");
     }

@@ -1,10 +1,5 @@
 package io.github.snaill.ast;
 
-import io.github.snaill.bytecode.BytecodeConstants;
-import io.github.snaill.bytecode.BytecodeContext;
-import io.github.snaill.bytecode.BytecodeUtils;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -26,11 +21,7 @@ public class VariableReference extends Expression {
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (java.io.IOException e) {
-            throw new RuntimeException(e);
-        }
+        return visitor.visit(this);
     }
 
     @Override
@@ -56,20 +47,26 @@ public class VariableReference extends Expression {
             String before = getSource() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), getName().length()) :
                 io.github.snaill.ast.SourceBuilder.toSourceCode(this);
-            throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
+            io.github.snaill.result.CompilationError err = new io.github.snaill.result.CompilationError(
                     io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
                     before,
                     "Variable not found: " + getName(),
                     ""
-                ).toString()
-            );
+                );
+            throw new io.github.snaill.exception.FailedCheckException(java.util.List.of(err));
         }
     }
 
     @Override
     public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        unused.removeIf(v -> v.getName().equals(name));
+        Scope enclosingScope = getEnclosingScope();
+        if (enclosingScope != null) {
+            VariableDeclaration resolvedDecl = enclosingScope.resolveVariable(this.name);
+            if (resolvedDecl != null) {
+                unused.remove(resolvedDecl);
+            }
+        }
+        super.checkUnusedVariables(unused); // Process children, if any
     }
 
     @Override
@@ -87,14 +84,13 @@ public class VariableReference extends Expression {
             String before = getSource() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), name.length()) :
                 io.github.snaill.ast.SourceBuilder.toSourceCode(this);
-            throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
+            io.github.snaill.result.CompilationError err = new io.github.snaill.result.CompilationError(
                     io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
                     before,
                     "Unknown variable: " + name,
                     ""
-                ).toString()
-            );
+                );
+            throw new io.github.snaill.exception.FailedCheckException(java.util.List.of(err));
         }
         return decl.getType();
     }

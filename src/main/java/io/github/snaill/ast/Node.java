@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.result.Result;
@@ -50,6 +49,13 @@ public interface Node {
 
     void checkUnusedVariables(Set<VariableDeclaration> unused);
 
+    // Source Information Accessors
+    int getLine();
+    int getCharPosition();
+    String getSource();
+    String getSourceInfo(); // Typically a formatted string of line, char, and source name
+    void setSourceInfo(int line, int charPosition, String source);
+
     // void checkTypes();
 
     /**
@@ -66,7 +72,7 @@ public interface Node {
     default void check() throws FailedCheckException {
         List<Result> results = checkDeadCode();
         // Сначала печатаем только ошибки
-        results.stream().filter(r -> r instanceof io.github.snaill.result.CompilationError).forEach(r -> System.err.println(r));
+        results.stream().filter(r -> r instanceof io.github.snaill.result.CompilationError).forEach(System.err::println);
         // Всегда ищем и печатаем неиспользуемые
         Set<FunctionDeclaration> unusedFns = new java.util.HashSet<>();
         checkUnusedFunctions(unusedFns);

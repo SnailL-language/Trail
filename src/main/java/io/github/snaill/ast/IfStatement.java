@@ -2,8 +2,6 @@ package io.github.snaill.ast;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import io.github.snaill.result.CompilationError;
 import io.github.snaill.result.ErrorType;
@@ -25,11 +23,8 @@ public class IfStatement extends AbstractNode implements Statement /*, BytecodeE
 
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
-        try {
-            return visitor.visit(this);
-        } catch (IOException e) {
-            throw new RuntimeException(e); // Or a more specific unchecked exception
-        }
+        return visitor.visit(this);
+
     }
 
     public Expression getCondition() {
@@ -91,44 +86,117 @@ public class IfStatement extends AbstractNode implements Statement /*, BytecodeE
         }
     }
 
-    @Override
-    public List<Result> checkDeadCode() {
-        return checkDeadCode(false);
+    private boolean isAlwaysFalseCondition() {
+        Expression condition = getCondition();
+        if (condition instanceof BooleanLiteral) {
+            return !((BooleanLiteral) condition).getValue();
+        }
+        return false;
     }
 
-    public List<Result> checkDeadCode(boolean insideDead) {
-        if (this instanceof AbstractNode an && an.wasDeadCodeReported) return new ArrayList<>();
-        if (insideDead) return new ArrayList<>();
+    @Override
+    public List<Result> checkDeadCode() {
         List<Result> results = new ArrayList<>();
-        boolean dead = false;
-        // Проверяем then-блок
-        if (getBody() != null && !dead) {
-            results.addAll(getBody().checkDeadCode(insideDead));
+        AbstractNode thisNode = (this instanceof AbstractNode) ? (AbstractNode) this : null;
+
+        // If this whole IfStatement was marked as dead by its parent, do nothing.
+        if (thisNode != null && thisNode.wasDeadCodeReported) {
+            return results;
         }
-        // Проверяем else-блок
-        if (hasElse && getElseBody() != null && !dead) {
-            results.addAll(getElseBody().checkDeadCode(insideDead));
+
+        // Check condition for dead code (though less common for expressions)
+        if (getCondition() != null) {
+            results.addAll(getCondition().checkDeadCode());
         }
-        // Если then и else оба есть и оба завершаются return/break, то всё после if — dead code (Scope отвечает)
-        // Если условие всегда true, то весь else-блок — dead code
-        if (hasElse && getElseBody() != null && isAlwaysTrueCondition() && !insideDead) {
-            Scope elseScope = getElseBody();
-            if (elseScope instanceof AbstractNode an && an.wasDeadCodeReported) {
-                // Уже печатали DEAD_CODE для этого блока
-            } else {
-                String before = io.github.snaill.ast.SourceBuilder.toSourceCode(elseScope);
-                CompilationError err = new io.github.snaill.result.CompilationError(
-                    io.github.snaill.result.ErrorType.DEAD_CODE,
-                    before,
-                    "DEAD_CODE",
-                    ""
-                );
-                System.out.println(err);
-                results.add(err);
-                if (elseScope instanceof AbstractNode an2) an2.wasDeadCodeReported = true;
+
+        Scope thenBody = getBody();
+        Scope elseBody = getElseBody();
+
+        if (isAlwaysFalseCondition()) {
+            // Then branch is dead
+            if (thenBody != null) {
+                AbstractNode thenAbstractNode = (thenBody instanceof AbstractNode) ? (AbstractNode) thenBody : null;
+                if (thenAbstractNode != null && !thenAbstractNode.wasDeadCodeReported) {
+                    String beforeString = thenAbstractNode.getSource() != null ? 
+                                          SourceBuilder.toSourceLine(thenAbstractNode.getSource(), thenAbstractNode.getLine(), thenAbstractNode.getCharPosition(), SourceBuilder.toSourceCode(thenBody).length()) :
+                                          SourceBuilder.toSourceCode(thenBody);
+                    CompilationError err = new CompilationError(
+                        ErrorType.DEAD_CODE,
+                        beforeString,
+                        "Then branch is unreachable due to always-false condition.",
+                        ""
+                    );
+                    results.add(err);
+                    markSubtreeAsDeadCodeReported(thenBody);
+                } else if (thenAbstractNode == null && !thenBody.getChildren().isEmpty()) { // If thenBody is not an AbstractNode but has content, still report
+                     String beforeString = SourceBuilder.toSourceCode(thenBody);
+                     CompilationError err = new CompilationError(
+                        ErrorType.DEAD_CODE,
+                        beforeString,
+                        "Then branch is unreachable due to always-false condition.",
+                        ""
+                    );
+                    results.add(err);
+                    markSubtreeAsDeadCodeReported(thenBody); // Mark children as well
+                }
+            }
+            // Else branch is live (if it exists)
+            if (hasElse && elseBody != null) {
+                results.addAll(elseBody.checkDeadCode());
+            }
+        } else if (isAlwaysTrueCondition()) {
+            // Then branch is live
+            if (thenBody != null) {
+                results.addAll(thenBody.checkDeadCode());
+            }
+            // Else branch is dead (if it exists)
+            if (hasElse && elseBody != null) {
+                AbstractNode elseAbstractNode = (elseBody instanceof AbstractNode) ? (AbstractNode) elseBody : null;
+                if (elseAbstractNode != null && !elseAbstractNode.wasDeadCodeReported) {
+                    String beforeString = elseAbstractNode.getSource() != null ? 
+                                          SourceBuilder.toSourceLine(elseAbstractNode.getSource(), elseAbstractNode.getLine(), elseAbstractNode.getCharPosition(), SourceBuilder.toSourceCode(elseBody).length()) :
+                                          SourceBuilder.toSourceCode(elseBody);
+                    CompilationError err = new CompilationError(
+                        ErrorType.DEAD_CODE,
+                        beforeString,
+                        "Else branch is unreachable due to always-true condition.",
+                        ""
+                    );
+                    results.add(err);
+                    markSubtreeAsDeadCodeReported(elseBody);
+                } else if (elseAbstractNode == null && !elseBody.getChildren().isEmpty()) { // If elseBody is not an AbstractNode but has content, still report
+                     String beforeString = SourceBuilder.toSourceCode(elseBody);
+                     CompilationError err = new CompilationError(
+                        ErrorType.DEAD_CODE,
+                        beforeString,
+                        "Else branch is unreachable due to always-true condition.",
+                        ""
+                    );
+                    results.add(err);
+                    markSubtreeAsDeadCodeReported(elseBody); // Mark children as well
+                }
+            }
+        } else {
+            // Condition is not a constant, check both branches
+            if (thenBody != null) {
+                results.addAll(thenBody.checkDeadCode());
+            }
+            if (hasElse && elseBody != null) {
+                results.addAll(elseBody.checkDeadCode());
             }
         }
         return results;
+    }
+
+    // Helper to mark a node and its children as reported for dead code.
+    // This prevents duplicate messages if a parent scope also identifies this subtree as dead.
+    private void markSubtreeAsDeadCodeReported(Node node) {
+        if (node instanceof AbstractNode abstractNode) {
+            abstractNode.wasDeadCodeReported = true;
+        }
+        for (Node child : node.getChildren()) {
+            markSubtreeAsDeadCodeReported(child);
+        }
     }
 
     private boolean endsWithReturnOrBreak(Scope scope) {
