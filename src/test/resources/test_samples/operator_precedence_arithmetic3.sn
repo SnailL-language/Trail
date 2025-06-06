@@ -1,0 +1,4 @@
+fn main() -> i32 {
+    let result: i32 = 10 - 5 - 2;
+    return result;
+}

@@ -1,0 +1,30 @@
+// type_errors.sn
+
+fn takes_i32_returns_bool(p1: i32) -> bool {
+    if (p1 > 0) {
+        return true;
+    }
+    return false; 
+}
+
+fn main() -> i32 {
+    let a: i32 = 0;
+    let b: bool = false;
+    let s: string = "text";
+    let arr_i32: [i32; 2] = [1, 2];
+
+    // This line will cause a type error: assigning string to i32
+    a = "error_case_1_string_to_i32"; 
+
+    // Further examples of type errors (commented out):
+    // b = 123;                                 // Error: i32 to bool
+    // a = a + b;                               // Error: i32 + bool
+    // if (a) { a = 1; }                        // Error: i32 in if condition
+    // b = takes_i32_returns_bool(s);           // Error: string arg for i32 param
+    // let mixed_arr: [i32; 2] = [1, "error"];   // Error: mixed types in array literal
+    // a = arr_i32[s];                          // Error: string as array index
+    // b = (a == 10) && s;                      // Error: bool && string
+    // let c: i32 = "not_an_int";                // Error: string initializer for i32
+
+    return 0;
+}

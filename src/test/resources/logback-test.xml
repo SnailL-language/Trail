@@ -7,7 +7,7 @@
     </appender>
 
     <!-- Set io.github.snaill to WARN for tests -->
-    <logger name="io.github.snaill" level="WARN" additivity="false">
+    <logger name="io.github.snaill" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE_TEST" />
     </logger>
 

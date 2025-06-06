@@ -57,9 +57,8 @@ public class NumberLiteral extends PrimaryExpression {
 
     @Override
     public Type getType(Scope scope) {
-        if (value >= 0) {
-            return new PrimitiveType("usize");
-        }
+        // Default to i32 for now, as per common language conventions and test expectations.
+        // usize would typically be inferred for very large positive numbers or via explicit suffix/cast.
         return new PrimitiveType("i32");
     }
 

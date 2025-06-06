@@ -56,6 +56,12 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
      * @throws io.github.snaill.exception.FailedCheckException if the variable is already declared in this scope.
      */
     public void addDeclaration(VariableDeclaration decl) throws io.github.snaill.exception.FailedCheckException {
+        logger.debug("[SCOPE_ADD_DECL] Attempting to add var '{}' of type '{}' to scope@{} (Line: {}, Char: {}).", 
+            decl.getName(), 
+            (decl.getType() != null ? decl.getType().toString() : "<null_type>"), 
+            System.identityHashCode(this),
+            decl.getLine(),
+            decl.getCharPosition());
         for (VariableDeclaration existingDecl : this.localDeclarations) {
             if (existingDecl.getName().equals(decl.getName())) {
                 String before = decl.getSource() != null ?
@@ -72,6 +78,7 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
             }
         }
         this.localDeclarations.add(decl);
+        logger.debug("[SCOPE_ADD_DECL] Successfully added var '{}' to scope@{}. Total local decls: {}.", decl.getName(), System.identityHashCode(this), this.localDeclarations.size());
         decl.setEnclosingScope(this); // Ensure the declaration knows its scope
     }
 
@@ -440,19 +447,24 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
      * @return The VariableDeclaration if found, otherwise null.
      */
     public VariableDeclaration resolveVariable(String name, Node resolutionContext) {
-        logger.debug("DEBUG: Resolving variable: {} with context: {}", name, resolutionContext != null ? resolutionContext.getClass().getSimpleName() : "null");
+        logger.debug("[SCOPE_RESOLVE_VAR] Attempting to resolve var '{}' in scope@{} (Context: {}, Line: {}, Char: {}).", 
+            name, 
+            System.identityHashCode(this), 
+            (resolutionContext != null ? resolutionContext.getClass().getSimpleName() : "null_context"),
+            (resolutionContext != null ? resolutionContext.getLine() : -1),
+            (resolutionContext != null ? resolutionContext.getCharPosition() : -1));
 
         // Check parameters if in a function scope
         FunctionDeclaration func = getEnclosingFunction();
         if (func != null) {
             for (Parameter param : func.getParameters()) {
                 if (param.getName().equals(name)) {
-                    logger.debug("DEBUG: Found parameter {} in function {}", name, func.getName());
-                    // Create a temporary VariableDeclaration for the parameter
+                    logger.debug("[SCOPE_RESOLVE_VAR] Found parameter '{}' of type '{}' in function '{}' (scope@{}).", name, (param.getType() != null ? param.getType().toString() : "<null_type>"), func.getName(), System.identityHashCode(this));
+                    // Create a temporary VariableDeclaration for the parameter to match return type
+                    // This is a common pattern when parameters are not directly VariableDeclaration instances
                     VariableDeclaration paramVarDecl = new VariableDeclaration(param.getName(), param.getType(), null);
-                    // If Parameter has source location, and VariableDeclaration needs it set explicitly:
                     if (param instanceof AbstractNode pn) {
-                        paramVarDecl.setSourceInfo(pn.getLine(), pn.getCharPosition(), pn.getSource()); // Corrected to setSourceInfo
+                        paramVarDecl.setSourceInfo(pn.getLine(), pn.getCharPosition(), pn.getSource());
                     }
                     return paramVarDecl;
                 }
@@ -462,36 +474,41 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
         // Check local variables in the current scope (this.localDeclarations)
         for (VariableDeclaration varDecl : this.localDeclarations) {
             if (varDecl.getName().equals(name)) {
-                logger.debug("DEBUG: Found variable {} in localDeclarations of current scope", name);
+                logger.debug("[SCOPE_RESOLVE_VAR] Checking local decl '{}' against context '{}' (identity: {} vs {}).", varDecl.getName(), (resolutionContext != null ? resolutionContext.getClass().getSimpleName() : "null"), System.identityHashCode(varDecl), (resolutionContext != null ? System.identityHashCode(resolutionContext) : "null"));
                 // Prevent resolving a variable in its own initializer if resolutionContext is that initializer.
-                // The resolutionContext is the Expression node being resolved.
-                // varDecl.getValue() is the initializer expression of the declaration.
                 if (resolutionContext != null && varDecl.getValue() == resolutionContext) {
-                     logger.debug("DEBUG: Attempt to resolve variable {} in its own initializer. Denied.", name);
-                     continue; // Skip this declaration, look in parent or for other declarations.
+                     logger.debug("[SCOPE_RESOLVE_VAR] Attempt to resolve variable '{}' in its own initializer. Denied for this instance.", name);
+                     continue; // Skip this declaration, look for others or in parent.
                 }
+                logger.debug("[SCOPE_RESOLVE_VAR] Found local var '{}' of type '{}' in scope@{}.", name, (varDecl.getType() != null ? varDecl.getType().toString() : "<null_type>"), System.identityHashCode(this));
                 return varDecl;
             }
         }
 
         // Recursively check parent scope
         if (parent != null) {
-            return parent.resolveVariable(name, resolutionContext);
+            logger.debug("[SCOPE_RESOLVE_VAR] Var '{}' not found locally or as param in scope@{}. Trying parent scope@{}.", name, System.identityHashCode(this), System.identityHashCode(parent));
+            VariableDeclaration foundInParent = parent.resolveVariable(name, resolutionContext);
+            if (foundInParent != null) {
+                logger.debug("[SCOPE_RESOLVE_VAR] Found var '{}' in parent scope@{} (original request in scope@{}).", name, System.identityHashCode(parent), System.identityHashCode(this));
+            }
+            return foundInParent;
         } else {
-            // This is the root scope, check its direct children for global variables
-            for (Node child : getChildren()) {
+            // This is the root scope (parent is null), check its direct children for global variables
+            // This assumes global variables are VariableDeclaration nodes directly under the root Program/Scope node.
+            logger.debug("[SCOPE_RESOLVE_VAR] Var '{}' not found locally/param in scope@{} and no parent. Checking for globals.", name, System.identityHashCode(this));
+            for (Node child : getChildren()) { // getChildren() should provide top-level declarations if this is root
                 if (child instanceof VariableDeclaration globalVarDecl && globalVarDecl.getName().equals(name)) {
-                    logger.debug("DEBUG: Found global variable {} in root scope children", name);
-                    // Prevent resolving a variable in its own initializer (though less common for globals defined at top level)
+                    logger.debug("[SCOPE_RESOLVE_VAR] Found global variable '{}' of type '{}' in root scope@{}.", name, (globalVarDecl.getType() != null ? globalVarDecl.getType().toString() : "<null_type>"), System.identityHashCode(this));
                     if (resolutionContext != null && globalVarDecl.getValue() == resolutionContext) {
-                        logger.debug("DEBUG: Attempt to resolve global variable {} in its own initializer. Denied.", name);
+                        logger.debug("[SCOPE_RESOLVE_VAR] Attempt to resolve global variable '{}' in its own initializer. Denied.", name);
                         continue; 
                     }
                     return globalVarDecl;
                 }
             }
         }
-
+        logger.debug("[SCOPE_RESOLVE_VAR] Var '{}' not found in scope@{} or any ancestors/globals.", name, System.identityHashCode(this));
         return null;
     }
 

@@ -1,0 +1,4 @@
+fn main() -> bool {
+    let result: bool = 1 + 2 > 2 && 3 * 4 == 12;
+    return result;
+}

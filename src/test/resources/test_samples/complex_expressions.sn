@@ -1,0 +1,49 @@
+fn main() -> i32 {
+    let a: i32 = 10;
+    let b: i32 = 5;
+    let c: i32 = 2;
+    let d: i32 = 0;
+
+    d = a + b * c;
+    if (d != 20) { return 1; }
+
+    d = (a + b) * c;
+    if (d != 30) { return 2; }
+
+    d = -a + b;
+    if (d != -5) { return 3; }
+    d = -(-a);
+    if (d != 10) { return 4; }
+
+    let bool_t: bool = true;
+    let bool_f: bool = false;
+    let bool_res: bool = false;
+
+    bool_res = !(bool_t && bool_f);
+    if (bool_res != true) { return 5; }
+    bool_res = !bool_t && bool_f; 
+    if (bool_res != false) { return 6; }
+
+    bool_res = !(bool_f || bool_t);
+    if (bool_res != false) { return 7; }
+
+    d = ((a*c) - (b+c)) / c + 1;
+    if (d != 7) { return 8; }
+
+    if ( ( (a > b) && (b > c) ) || (c == 2) ) {
+    } else {
+        return 9;
+    }
+
+    if ( ( (a < b) || (b < c) ) && (c != 2) ) {
+        return 10;
+    }
+
+    // Added checks for !=, <, >=, <=
+    if (a != b) { } else { return 11; }
+    if (b < a) { } else { return 12; }
+    if (a >= b) { } else { return 13; }
+    if (b <= a) { } else { return 14; }
+
+    return 0;
+}

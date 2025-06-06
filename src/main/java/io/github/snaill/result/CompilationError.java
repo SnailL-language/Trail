@@ -31,4 +31,12 @@ public class CompilationError implements Result {
     public boolean isCritical() {
         return true;
     }
+
+    public ErrorType getType() {
+        return type;
+    }
+
+    public String getMessage() {
+        return error;
+    }
 }

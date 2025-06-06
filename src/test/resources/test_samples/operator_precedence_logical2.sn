@@ -1,0 +1,4 @@
+fn main() -> bool {
+    let result: bool = true || false && false;
+    return result;
+}

@@ -1,0 +1,14 @@
+// This is a full line comment
+let x: i32 = 10; // This is a comment at the end of a line
+/* This is a
+   multi-line
+   block comment */
+let y: i32 = /* inline block comment */ 20;
+//
+/* */ // Empty block comment
+// let z: i32 = 30; // Commented out code
+fn main() -> void {
+    // Another comment inside a function
+    /* And a block
+       comment too */
+}

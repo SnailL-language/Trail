@@ -1,0 +1,41 @@
+let global_i: i32 = 100;
+let global_u: usize = 200;
+let global_s: string = "hello global";
+let global_arr: [i32; 3] = [1, 2, 3];
+
+fn get_global_i() -> i32 {
+    return global_i;
+}
+
+fn set_global_i(val: i32) {
+    global_i = val;
+}
+
+fn get_global_arr_val(idx: usize) -> i32 {
+    return global_arr[idx];
+}
+
+fn main() -> i32 {
+    let local_i: i32 = global_i;
+    if (local_i != 100) { return 1; }
+
+    let local_u: usize = global_u;
+    if (local_u != 200) { return 2; }
+
+    let local_s: string = global_s;
+
+    let local_arr_val: i32 = global_arr[0];
+    if (local_arr_val != 1) { return 3; }
+
+    set_global_i(50);
+    let updated_global_i: i32 = get_global_i();
+    if (updated_global_i != 50) { return 4; }
+    
+    let arr_val_from_func: i32 = get_global_arr_val(1);
+    if (arr_val_from_func != 2) { return 5; }
+
+    global_arr[2] = 33;
+    if (global_arr[2] != 33) { return 6; }
+
+    return 0;
+}

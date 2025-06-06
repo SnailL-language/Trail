@@ -7,6 +7,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import io.github.snaill.result.ErrorType;
 
 
 public class ASTReflectionBuilder implements ASTBuilder {
@@ -59,7 +60,8 @@ public class ASTReflectionBuilder implements ASTBuilder {
             return parseForLoop(ctx.forLoop(), parent);
         }
         if (ctx.funcDeclaration() != null) {
-            throw new RuntimeException("Function declarations are not allowed inside blocks");
+            // Allow nested function declarations
+            return parseFuncDeclaration(ctx.funcDeclaration(), parent);
         }
         if (ctx.whileLoop() != null) {
             return parseWhileLoop(ctx.whileLoop(), parent);
@@ -222,7 +224,20 @@ public class ASTReflectionBuilder implements ASTBuilder {
                     stmt = null; // Should not happen if parseVariableDeclaration throws on error
                 }
             } else if (stmtCtx.funcDeclaration() != null) {
-                throw new RuntimeException("Function declarations are not allowed inside blocks");
+                // Temporarily commented out to isolate other compilation errors
+                /*
+                String errorSourceFuncScope = stmtCtx.funcDeclaration().getStart() != null ?
+                    io.github.snaill.ast.SourceBuilder.toSourceLine(stmtCtx.funcDeclaration().getStart().getInputStream().toString(), stmtCtx.funcDeclaration().getStart().getLine(), stmtCtx.funcDeclaration().getStart().getCharPositionInLine(), stmtCtx.funcDeclaration().getText().length()) :
+                    io.github.snaill.ast.SourceBuilder.toSourceCode(stmtCtx.funcDeclaration());
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        ErrorType.SEMANTIC_ERROR,
+                        errorSourceFuncScope,
+                        "Function declarations are not allowed inside blocks.",
+                        "Define functions only at the top level or directly within the global scope."
+                    ).toString()
+                );
+                */
             } else {
                 stmt = (Statement) parseStatement(stmtCtx, currentScope);
             }
@@ -705,7 +720,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
         return at;
     }
 
-    private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx, Scope currentScope) {
+     private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx, Scope currentScope) {
         // With the current grammar (primitiveType : 'i32' | 'usize' | 'void' | 'string' | 'bool'),
         // IDENTIFIER is not an alternative, so ctx.IDENTIFIER() would not be available.
         // This method will only create PrimitiveType nodes for the predefined keywords.

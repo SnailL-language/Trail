@@ -1,0 +1,18 @@
+fn main() -> i32 {
+    let u_val1: usize = 10;
+    let u_val2: usize = 0;
+    let u_val3: usize = 255;
+
+    let u_sum: usize = u_val1 + u_val2;
+    let u_another: usize = helper_func(u_val3, u_sum);
+
+    return 0; 
+}
+
+fn helper_func(param1: usize, param2: usize) -> usize {
+    let result: usize = param1 - param2;
+    if (result > 100) {
+        return result;
+    }
+    return param1;
+}

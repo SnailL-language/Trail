@@ -1,0 +1,8 @@
+fn do_nothing() {
+    return;
+}
+
+fn main() -> i32 {
+    do_nothing();
+    return 0;
+}

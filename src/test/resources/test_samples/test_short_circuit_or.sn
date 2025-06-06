@@ -1,0 +1,9 @@
+fn trigger_undesired_call_or() -> bool {
+    // This function's call in the expression should be skipped by short-circuiting.
+    return true;
+}
+
+fn main() -> i32 {
+    let x: bool = true || trigger_undesired_call_or();
+    return 0;
+}

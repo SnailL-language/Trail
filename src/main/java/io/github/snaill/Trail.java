@@ -204,15 +204,38 @@ public class Trail implements Callable<Integer> {
         SnailParser.ProgramContext tree = parser.program();
         logger.debug("Parsed program context for: {}", filename);
         final ASTBuilder builder = new ASTReflectionBuilder();
-        Node result = builder.build(tree); // Can throw FailedCheckException
-        logger.debug("Successfully built AST for: {}", filename);
-        if (result instanceof Scope) {
-            return new ASTImpl((Scope)result);
-        } else if (result instanceof AST) {
-            return (AST)result;
+        Node initialAstNode = builder.build(tree); // Can throw FailedCheckException for critical parsing/AST building errors
+        logger.debug("Successfully built initial AST structure for: {}", filename);
+
+        AST astNode;
+        if (initialAstNode instanceof Scope) {
+            astNode = new ASTImpl((Scope)initialAstNode);
+        } else if (initialAstNode instanceof AST) {
+            astNode = (AST)initialAstNode;
         } else {
-            throw new RuntimeException("Unexpected AST node type: " + result.getClass().getName());
+            logger.error("Unexpected AST node type after initial build: {}", initialAstNode.getClass().getName());
+            throw new RuntimeException("Unexpected AST node type: " + initialAstNode.getClass().getName());
         }
+
+        // Perform semantic checks
+        Check semanticChecker = new Check(); // Assuming Check is in the same package or imported
+        System.out.println("!!! TRAIL.BUILD (System.out): BEFORE semanticChecker.check() for file: " + filename + ", AST node: " + (astNode != null ? astNode.getClass().getSimpleName() : "null"));
+        logger.debug("Trail.build for {}: BEFORE semanticChecker.check() for AST node: {}", filename, (astNode != null ? astNode.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(astNode)) : "null"));
+        List<CompilationError> semanticErrors = semanticChecker.check(astNode);
+        logger.debug("Trail.build for {}: AFTER semanticChecker.check(). Errors found: {} {}", filename, (semanticErrors != null ? semanticErrors.size() : "null list"), (semanticErrors != null && !semanticErrors.isEmpty() ? "-> " + semanticErrors : ""));
+
+        if (!semanticErrors.isEmpty()) {
+            StringBuilder errorMessages = new StringBuilder("Semantic errors found during build process for file '" + filename + "':\n");
+            for (CompilationError error : semanticErrors) {
+                errorMessages.append("- ").append(error.toString()).append("\n");
+            }
+            logger.error(errorMessages.toString()); // Log the errors
+            logger.error("!!! Trail.build for {}: Preparing to throw FailedCheckException due to {} semantic errors. First error: {}", filename, semanticErrors.size(), semanticErrors.isEmpty() ? "N/A" : semanticErrors.get(0).toString());
+            throw new FailedCheckException(errorMessages.toString().trim()); // Throw if errors are present
+        }
+
+        logger.debug("Semantic checks passed for: {}", filename);
+        return astNode; // Return the fully checked AST
     }
 
     public static void main(String[] args) {
@@ -248,21 +271,19 @@ public class Trail implements Callable<Integer> {
             boolean hasErrors = false; // Flag to track if any errors occurred
             AST astNode = null; // Initialize astNode to null
 
-            // 1. Построение AST и Проверка типов (Semantic Checks)
+            // 1. Построение AST (включая семантические проверки)
             if (debug) {
-                logger.debug("Starting AST build and semantic check process for source: {}", sourceFile);
+                logger.debug("Starting AST build process (including semantic checks) for source: {}", sourceFile);
             }
-            Check semanticChecker = new Check();
             try {
-                astNode = build(sourceFile); // build now throws FailedCheckException or UncheckedIOException
+                astNode = build(sourceFile); // build now throws FailedCheckException for parsing or semantic errors, or UncheckedIOException
                 
-                // Only proceed to emitSource and semanticCheck if astNode was successfully built
-                // (build() would have thrown if astNode is effectively unusable)
+                // If build() completes without exception, AST is valid and semantic checks passed.
+                logger.info("AST build and semantic checks completed successfully.");
+
                 if (emitSource) {
                     System.out.println(SourceBuilder.toSourceCode(astNode));
                 }
-                semanticChecker.check(astNode.root()); // This can also throw FailedCheckException
-                logger.info("AST build and semantic checks completed successfully.");
                 
             } catch (FailedCheckException e) {
                 if (e.getErrors() != null) {

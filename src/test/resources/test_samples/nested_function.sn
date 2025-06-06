@@ -1,0 +1,13 @@
+fn outer_func(a: i32) -> i32 {
+    fn inner_func(b: i32) -> i32 {
+        return b * 2;
+    }
+    let result: i32 = inner_func(a + 5);
+    return result;
+}
+
+fn main() -> i32 {
+    let x: i32 = 10;
+    let y: i32 = outer_func(x); 
+    return y;
+}

@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import io.github.snaill.exception.FailedCheckException;
@@ -92,32 +91,54 @@ public class Identifier extends PrimaryExpression {
 
     @Override
     public Type getType(Scope scope) throws FailedCheckException {
-        // Записываем отладочное сообщение в файл
+    System.out.println("[IDENTIFIER_GETTYPE] Entry for: " + name);
+    try {
+        // Optional: Original debug log to file
         try {
             java.io.PrintWriter debugLog = new java.io.PrintWriter(new java.io.FileWriter("debug_identifier_log.txt", true));
-            debugLog.println("Looking for variable in check phase: " + name);
+            debugLog.println("[IDENTIFIER_GETTYPE] Looking for variable in check phase: " + name + " in scope: " + (scope != null ? System.identityHashCode(scope) : "null"));
             debugLog.close();
-        } catch (java.io.IOException e) {
-            // Игнорируем ошибку записи
+        } catch (java.io.IOException e) { /* ignore */ }
+
+        System.out.println("[IDENTIFIER_GETTYPE] DEBUG: Checking variable in getType: " + name);
+        if (scope == null) {
+            System.err.println("[IDENTIFIER_GETTYPE] ERROR: Scope is null in Identifier.getType for " + name + ". Source: " + this.getSourceInfo());
+            throw new FailedCheckException(new CompilationError(ErrorType.INTERNAL_ERROR, this.getSourceInfo(), "Scope is null for identifier " + name, "").toString());
         }
-        // Добавляем отладочный вывод в stderr
-        System.err.println("DEBUG: Checking variable in getType: " + name);
-        // Проверяем, не обращаемся ли к переменной в её собственной инициализации
+
+        System.out.println("[IDENTIFIER_GETTYPE] Before scope.resolveVariable for '" + name + "' in scope@" + (scope != null ? System.identityHashCode(scope) : "null"));
         VariableDeclaration decl = scope.resolveVariable(name, this);
+        System.out.println("[IDENTIFIER_GETTYPE] After scope.resolveVariable. Result (decl): " + (decl != null ? decl.toString() + " (typeNode: " + decl.getType() + ")" : "null"));
+
         if (decl == null) {
-            String before = getSource() != null ?
+            System.err.println("[IDENTIFIER_GETTYPE] ERROR: Variable not found in scope: " + name + " in scope@" + (scope != null ? System.identityHashCode(scope) : "null") + " during getType. Source: " + this.getSourceInfo());
+            String sourceContext = getSource() != null ?
                 io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), name.length()) :
                 io.github.snaill.ast.SourceBuilder.toSourceCode(this);
             throw new FailedCheckException(
                 new CompilationError(
                     ErrorType.UNKNOWN_VARIABLE,
-                    before,
-                    "Unknown variable: " + name,
-                    ""
+                    sourceContext, // Use the generated source context
+                    "Variable not found: " + name,
+                    "Ensure '" + name + "' is declared before use within the current scope."
                 ).toString()
             );
         }
-        return decl.getType();
+
+        System.out.println("[IDENTIFIER_GETTYPE] Before decl.getType() for decl: " + decl.getName());
+        Type resultType = decl.getType(); // This is VariableDeclaration.getType()
+        System.out.println("[IDENTIFIER_GETTYPE] After decl.getType(). Result: " + resultType);
+        return resultType;
+
+    } catch (FailedCheckException fce) {
+        System.err.println("[IDENTIFIER_GETTYPE] FailedCheckException in getType for '" + name + "': " + fce.getMessage());
+        throw fce; // Re-throw known exceptions
+    } catch (Exception e) {
+        System.err.println("[IDENTIFIER_GETTYPE] UNEXPECTED EXCEPTION in getType for '" + name + "': " + e.toString());
+        e.printStackTrace(System.err);
+        // Wrap in FailedCheckException to propagate as a compilation issue
+        throw new FailedCheckException(new CompilationError(ErrorType.INTERNAL_ERROR, this.getSourceInfo(), "Internal error resolving type for identifier '" + name + "': " + e.getMessage(), "").toString());
     }
+}
 
 }

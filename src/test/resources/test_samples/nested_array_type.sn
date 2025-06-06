@@ -1,0 +1,11 @@
+fn main() -> i32 {
+    let nested_arr: [[[i32; 1]; 2]; 1] = [[[0], [0]]];
+
+    nested_arr[0][0][0] = 10;
+    nested_arr[0][1][0] = 20;
+    
+    let val1: i32 = nested_arr[0][0][0];
+    let val2: i32 = nested_arr[0][1][0];
+
+    return val1 + val2; 
+}

@@ -1,0 +1,20 @@
+fn empty_fn_body() -> void {
+    // Empty body
+}
+
+fn main() -> void {
+    if (true) {
+        // Empty if block
+    } else {
+        // Empty else block
+    }
+
+    let i: i32 = 0;
+    while (i < 0) {
+        // Empty while loop
+    }
+
+    for (let j: i32 = 0; j < 0; j = j + 1) {
+        // Empty for loop
+    }
+}
