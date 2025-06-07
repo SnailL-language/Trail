@@ -97,17 +97,47 @@ public interface SnailVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitExpression(SnailParser.ExpressionContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SnailParser#assigmentExpression}.
+	 * Visit a parse tree produced by {@link SnailParser#assignmentExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitAssigmentExpression(SnailParser.AssigmentExpressionContext ctx);
+	T visitAssignmentExpression(SnailParser.AssignmentExpressionContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SnailParser#binaryExpression}.
+	 * Visit a parse tree produced by {@link SnailParser#logicalOrExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBinaryExpression(SnailParser.BinaryExpressionContext ctx);
+	T visitLogicalOrExpression(SnailParser.LogicalOrExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#logicalAndExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLogicalAndExpression(SnailParser.LogicalAndExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#equalityExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitEqualityExpression(SnailParser.EqualityExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#relationalExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRelationalExpression(SnailParser.RelationalExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#additiveExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAdditiveExpression(SnailParser.AdditiveExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SnailParser#multiplicativeExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMultiplicativeExpression(SnailParser.MultiplicativeExpressionContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SnailParser#unaryExpression}.
 	 * @param ctx the parse tree

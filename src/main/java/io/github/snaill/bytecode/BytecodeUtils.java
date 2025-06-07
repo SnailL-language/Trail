@@ -17,7 +17,7 @@ public class BytecodeUtils {
     }
 
     /**
-     * Записывает 16-битное беззнаковое целое число
+     * Writes a 16-bit unsigned integer to the output stream.
      */
     public static void writeU16(OutputStream out, int value) throws IOException {
         out.write((value >> 8) & 0xFF);
@@ -25,7 +25,7 @@ public class BytecodeUtils {
     }
 
     /**
-     * Записывает 32-битное целое число со знаком
+     * Writes a 32-bit signed integer to the output stream.
      */
     public static void writeI32(OutputStream out, int value) throws IOException {
         out.write((value >> 24) & 0xFF);
@@ -35,7 +35,7 @@ public class BytecodeUtils {
     }
 
     /**
-     * Записывает 64-битное число с плавающей точкой
+     * Writes a 64-bit floating point number to the output stream.
      */
     public static void writeF64(OutputStream out, double value) throws IOException {
         byte[] bytes = ByteBuffer.allocate(8).putDouble(value).array();
@@ -43,7 +43,7 @@ public class BytecodeUtils {
     }
 
     /**
-     * Записывает строку в формате UTF-8 с длиной
+     * Writes a string in UTF-8 format with length to the output stream.
      */
     public static void writeString(OutputStream out, String value) throws IOException {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
@@ -52,21 +52,21 @@ public class BytecodeUtils {
     }
 
     /**
-     * Читает 8-битное беззнаковое целое число
+     * Reads an 8-bit unsigned integer from the input stream.
      */
     public static int readU8(byte[] bytes, int offset) {
         return bytes[offset] & 0xFF;
     }
 
     /**
-     * Читает 16-битное беззнаковое целое число
+     * Reads a 16-bit unsigned integer from the input stream.
      */
     public static int readU16(byte[] bytes, int offset) {
         return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
     }
 
     /**
-     * Читает 32-битное целое число со знаком
+     * Reads a 32-bit signed integer from the input stream.
      */
     public static int readI32(byte[] bytes, int offset) {
         return ((bytes[offset] & 0xFF) << 24) |

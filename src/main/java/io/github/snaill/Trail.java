@@ -1,8 +1,5 @@
 package io.github.snaill;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.github.snaill.ast.*;
 import io.github.snaill.bytecode.BytecodeEmitter;
 import io.github.snaill.bytecode.BytecodeEmitter.BytecodeEmitterException;
@@ -10,39 +7,35 @@ import io.github.snaill.bytecode.DebugBytecodeViewer;
 import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.parser.SnailLexer;
 import io.github.snaill.parser.SnailParser;
+import io.github.snaill.result.CompilationError;
+import io.github.snaill.result.ErrorType;
+import io.github.snaill.result.Result;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
-
-import io.github.snaill.result.CompilationError;
-import io.github.snaill.result.ErrorType;
-import io.github.snaill.result.Result; // Retained for List<Result>
-import java.util.Objects;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 
 /**
  * Trail - компилятор для языка Snail.
  * Компилирует исходный код на языке Snail в байткод для SnailVM.
  */
 @Command(
-    name = "trail",
-    version = "1.0",
-    description = "Trail - компилятор для языка Snail",
-    mixinStandardHelpOptions = true,
-    requiredOptionMarker = '*'  // Маркер для обязательных опций в справке
+        name = "trail",
+        version = "1.0",
+        description = "Trail - компилятор для языка Snail",
+        mixinStandardHelpOptions = true,
+        requiredOptionMarker = '*'  // Маркер для обязательных опций в справке
 )
 public class Trail implements Callable<Integer> {
 
@@ -65,13 +58,13 @@ public class Trail implements Callable<Integer> {
      */
     @Option(names = "--debug-bytecode", description = "Вывести отладочную информацию о байткоде", paramLabel = "<bytecode-file>")
     private String debugBytecodeFile;
-    
+
     /**
      * Выходной файл для байткода
      */
     @Option(names = {"--emit-bytecode", "-o"}, description = "Записать байткод в указанный файл", paramLabel = "<output-file>")
     private String emitBytecodeFile;
-    
+
     /**
      * Включить отладочный вывод
      */
@@ -80,7 +73,7 @@ public class Trail implements Callable<Integer> {
 
     /**
      * Отладочный просмотр байткода
-     * 
+     *
      * @param bytecodeFile Путь к файлу байткода для просмотра
      * @return Код возврата (0 = успешно, 1 = ошибка)
      */
@@ -89,7 +82,7 @@ public class Trail implements Callable<Integer> {
             logger.info("Starting bytecode debug for file: {}", bytecodeFile);
             byte[] bytecode = Files.readAllBytes(Paths.get(bytecodeFile));
             String disassembly = DebugBytecodeViewer.disassemble(bytecode);
-            System.out.println(disassembly); // Используем System.out.println для вывода результатов дизассемблера
+            // System.out.println(disassembly); // Используем // System.out.println для вывода результатов дизассемблера
             return 0;
         } catch (Exception e) {
             logger.error("Error debugging bytecode: {}", e.getMessage());
@@ -106,84 +99,85 @@ public class Trail implements Callable<Integer> {
      * /**
      * Класс-адаптер для обертывания Scope в AST
      */
-        private record ASTImpl(Scope root) implements AST {
+    private record ASTImpl(Scope root) implements AST {
 
         @Override
-            public <T> T accept(ASTVisitor<T> visitor) {
-                return root.accept(visitor);
-            }
-
-        @Override
-            public Node getChild(int index) {
-                return root.getChild(index);
-            }
-
-        @Override
-            public int getChildCount() {
-                return root.getChildCount();
-            }
-
-        @Override
-            public void setChild(int index, Node child) {
-                root.setChild(index, child);
-            }
-
-        @Override
-            public List<Node> getChildren() {
-                return root.getChildren();
-            }
-
-        @Override
-            public void setChildren(Collection<Node> children) {
-                root.setChildren(children);
-            }
-
-            @Override
-            public int getLine() {
-                return root.getLine();
-            }
-
-            @Override
-            public int getCharPosition() {
-                return root.getCharPosition();
-            }
-
-            @Override
-            public String getSource() {
-                return root.getSource();
-            }
-
-            @Override
-            public String getSourceInfo() {
-                return root.getSourceInfo();
-            }
-
-            @Override
-            public void setSourceInfo(int line, int charPosition, String source) {
-                root.setSourceInfo(line, charPosition, source);
-            }
-
-        @Override
-            public List<Result> checkDeadCode() {
-                return root.checkDeadCode();
-            }
-
-        @Override
-            public void checkUnusedVariables(Set<VariableDeclaration> usedVariables) {
-                root.checkUnusedVariables(usedVariables);
-            }
-
-        @Override
-            public void checkUnusedFunctions(Set<FunctionDeclaration> usedFunctions) {
-                root.checkUnusedFunctions(usedFunctions);
-            }
+        public <T> T accept(ASTVisitor<T> visitor) {
+            return root.accept(visitor);
         }
-    
+
+        @Override
+        public Node getChild(int index) {
+            return root.getChild(index);
+        }
+
+        @Override
+        public int getChildCount() {
+            return root.getChildCount();
+        }
+
+        @Override
+        public void setChild(int index, Node child) {
+            root.setChild(index, child);
+        }
+
+        @Override
+        public List<Node> getChildren() {
+            return root.getChildren();
+        }
+
+        @Override
+        public void setChildren(Collection<Node> children) {
+            root.setChildren(children);
+        }
+
+        @Override
+        public int getLine() {
+            return root.getLine();
+        }
+
+        @Override
+        public int getCharPosition() {
+            return root.getCharPosition();
+        }
+
+        @Override
+        public String getSource() {
+            return root.getSource();
+        }
+
+        @Override
+        public String getSourceInfo() {
+            return root.getSourceInfo();
+        }
+
+        @Override
+        public void setSourceInfo(int line, int charPosition, String source) {
+            root.setSourceInfo(line, charPosition, source);
+        }
+
+        @Override
+        public List<Result> checkDeadCode() {
+            return root.checkDeadCode();
+        }
+
+        @Override
+        public void checkUnusedVariables(Set<VariableDeclaration> usedVariables) {
+            root.checkUnusedVariables(usedVariables);
+        }
+
+        @Override
+        public void checkUnusedFunctions(Set<FunctionDeclaration> unusedFunctions) {
+            root.checkUnusedFunctions(unusedFunctions);
+        }
+    }
+
+
     /**
-     * Строит AST из исходного файла
-     * 
+     * Собирает AST из исходного файла.
+     *
      * @param filename Путь к исходному файлу
-     * @return Построенное AST
+     * @return Собранное AST
      */
     public static AST build(String filename) throws FailedCheckException, UncheckedIOException {
         logger.debug("Starting build process for file: {}", filename);
@@ -193,8 +187,14 @@ public class Trail implements Callable<Integer> {
             stream = CharStreams.fromFileName(filename);
             logger.debug("Successfully read file: {}", filename);
         } catch (IOException e) {
-            logger.debug("Failed to read file: {}", filename);
-            throw new UncheckedIOException(e);
+            logger.error("Failed to read file {}: {}", filename, e.getMessage());
+            CompilationError error = new CompilationError(
+                    ErrorType.INTERNAL_ERROR,
+                    filename,
+                    "Cannot read source file: " + e.getMessage(),
+                    "Ensure the file exists and is readable."
+            );
+            throw new FailedCheckException(error.toString());
         }
         SnailParser parser = new SnailParser(
                 new CommonTokenStream(
@@ -209,9 +209,9 @@ public class Trail implements Callable<Integer> {
 
         AST astNode;
         if (initialAstNode instanceof Scope) {
-            astNode = new ASTImpl((Scope)initialAstNode);
+            astNode = new ASTImpl((Scope) initialAstNode);
         } else if (initialAstNode instanceof AST) {
-            astNode = (AST)initialAstNode;
+            astNode = (AST) initialAstNode;
         } else {
             logger.error("Unexpected AST node type after initial build: {}", initialAstNode.getClass().getName());
             throw new RuntimeException("Unexpected AST node type: " + initialAstNode.getClass().getName());
@@ -219,7 +219,6 @@ public class Trail implements Callable<Integer> {
 
         // Perform semantic checks
         Check semanticChecker = new Check(); // Assuming Check is in the same package or imported
-        System.out.println("!!! TRAIL.BUILD (System.out): BEFORE semanticChecker.check() for file: " + filename + ", AST node: " + (astNode != null ? astNode.getClass().getSimpleName() : "null"));
         logger.debug("Trail.build for {}: BEFORE semanticChecker.check() for AST node: {}", filename, (astNode != null ? astNode.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(astNode)) : "null"));
         List<CompilationError> semanticErrors = semanticChecker.check(astNode);
         logger.debug("Trail.build for {}: AFTER semanticChecker.check(). Errors found: {} {}", filename, (semanticErrors != null ? semanticErrors.size() : "null list"), (semanticErrors != null && !semanticErrors.isEmpty() ? "-> " + semanticErrors : ""));
@@ -242,111 +241,111 @@ public class Trail implements Callable<Integer> {
         int exitCode = new CommandLine(new Trail()).execute(args);
         System.exit(exitCode);
     }
-    
+
     /**
-     * Основной метод выполнения команды, реализующий интерфейс Callable.
-     * 
-     * @return Код возврата программы (0 = успешно, 1 = ошибка)
+     * Основной метод для компиляции и выполнения файла, реализующий интерфейс Callable.
+     *
+     * @return Код возврата программы (0 = успех, 1 = ошибка)
      */
     @Override
     public Integer call() {
         try {
             // Если указан файл для отладочного просмотра байткода
             if (debugBytecodeFile != null) {
-                // Для отладки байткода не требуется исходный файл
+                // Для отладочного просмотра байткода исходный файл не требуется
                 return debugBytecode(debugBytecodeFile);
             }
-            
-            // Начинаем отладочный вывод, если включен режим отладки
+
+            // Начать отладочный вывод, если включен режим отладки
             if (debug) {
                 logger.debug("Starting compiler with source file: {}", sourceFile);
             }
-            
+
             // Проверяем наличие исходного файла
             if (sourceFile == null) {
                 logger.error("Не указан исходный файл для компиляции");
                 return 1;
             }
 
-            boolean hasErrors = false; // Flag to track if any errors occurred
-            AST astNode = null; // Initialize astNode to null
+            boolean hasErrors = false; // Флаг для отслеживания возникновения ошибок
+            AST astNode = null; // Инициализировать astNode как null
 
             // 1. Построение AST (включая семантические проверки)
             if (debug) {
                 logger.debug("Starting AST build process (including semantic checks) for source: {}", sourceFile);
             }
             try {
-                astNode = build(sourceFile); // build now throws FailedCheckException for parsing or semantic errors, or UncheckedIOException
-                
-                // If build() completes without exception, AST is valid and semantic checks passed.
+                astNode = build(sourceFile); // build теперь выбрасывает FailedCheckException при ошибках парсинга или семантических ошибках, или UncheckedIOException
+
+                // Если build() завершается без исключений, AST валидно и семантические проверки пройдены.
                 logger.info("AST build and semantic checks completed successfully.");
 
                 if (emitSource) {
-                    System.out.println(SourceBuilder.toSourceCode(astNode));
+                    // System.out.println(SourceBuilder.toSourceCode(astNode));
                 }
-                
+
             } catch (FailedCheckException e) {
                 if (e.getErrors() != null) {
                     for (CompilationError error : e.getErrors()) {
                         System.err.println(error.toString()); // Print to System.err for test compatibility
                     }
                 } else {
-                    // Fallback if getErrors() is null, though our changes aim to prevent this
-                    System.err.println(e.getMessage()); 
+                    // Запасной вариант, если getErrors() возвращает null, хотя наши изменения нацелены на предотвращение этого
+                    System.err.println(e.getMessage());
                 }
                 hasErrors = true; // Errors occurred, astNode might be null or partially built
-            } catch (UncheckedIOException e) { // Catch specific IO exception from build()
+            } catch (UncheckedIOException e) { // Перехват специфичного IO исключения из build()
                 logger.error("Ошибка чтения файла: {} - {}", sourceFile, e.getMessage());
-                 System.err.println("File Read Error: " + e.getCause().getMessage()); // Print cause message for clarity
-                 if (debug) {
-                     e.printStackTrace();
-                 }
-                 return 1; // Exit early for IO errors
+                System.err.println("File Read Error: " + e.getCause().getMessage()); // Вывести сообщение о причине для ясности
+                if (debug) {
+                    e.printStackTrace();
+                }
+                return 1; // Завершить досрочно при ошибках ввода-вывода
             }
 
             // 2. Проверка мертвого кода (Dead Code Analysis)
-            if (astNode != null && !hasErrors) { // Check astNode and no prior errors
+            if (astNode != null && !hasErrors) { // Проверить astNode и отсутствие предыдущих ошибок
                 if (debug) {
                     logger.debug("Starting dead code analysis for source: {}", sourceFile);
                 }
                 List<Result> deadCodeResults = astNode.root().checkDeadCode();
-            if (deadCodeResults != null && !deadCodeResults.isEmpty()) {
-                boolean foundDeadCodeErrorThisPass = false;
-                for (Result deadCodeResult : deadCodeResults) {
-                    if (deadCodeResult instanceof CompilationError) {
-                        System.err.println(deadCodeResult); // Print errors to System.err
-                        foundDeadCodeErrorThisPass = true;
+                if (deadCodeResults != null && !deadCodeResults.isEmpty()) {
+                    boolean foundDeadCodeErrorThisPass = false;
+                    for (Result deadCodeResult : deadCodeResults) {
+                        if (deadCodeResult instanceof CompilationError) {
+                            System.err.println(deadCodeResult); // Print errors to System.err
+                            foundDeadCodeErrorThisPass = true;
+                        }
+                        // TODO: Обработать предупреждения из deadCodeResults, если применимо (вывести в System.out)
                     }
-                    // TODO: Handle Warnings from deadCodeResults if applicable (print to System.out)
+                    if (foundDeadCodeErrorThisPass) {
+                        hasErrors = true;
+                    }
                 }
-                if (foundDeadCodeErrorThisPass) {
-                    hasErrors = true;
-                }
-            }
-            } // Closes 'if (astNode != null && !hasErrors)' for Dead Code Analysis
+            } // Закрывает 'if (astNode != null && !hasErrors)' для анализа мертвого кода
 
             // 3. Проверка неиспользуемых переменных и функций (Unused Symbol Checks)
-            if (astNode != null && !hasErrors) { // Check astNode and no prior errors
+            if (astNode != null && !hasErrors) { // Проверить astNode и отсутствие предыдущих ошибок
                 if (debug) {
                     logger.debug("Starting unused symbol checks for source: {}", sourceFile);
                 }
                 List<io.github.snaill.result.Warning> unusedSymbolWarnings = astNode.root().getUnusedSymbolWarnings();
-            if (unusedSymbolWarnings != null && !unusedSymbolWarnings.isEmpty()) {
-                for (io.github.snaill.result.Warning warning : unusedSymbolWarnings) {
-                    System.out.println(warning.toString()); // Print warnings to System.out
+                if (unusedSymbolWarnings != null && !unusedSymbolWarnings.isEmpty()) {
+                    for (io.github.snaill.result.Warning warning : unusedSymbolWarnings) {
+                        // System.out.println(warning.toString()); // Вывести предупреждения в System.out
+                    }
+                    // Примечание: Предупреждения о неиспользуемых символах обычно не приводят к сбою компиляции (код выхода 1)
+                    // если не установлены специальные флаги компилятора. Текущие тесты ожидают код выхода 0, если присутствуют только предупреждения.
                 }
-                // Note: Unused symbol warnings typically do not cause the compilation to fail (exit code 1)
-                // unless specific compiler flags are set. Current tests expect exit code 0 if only warnings are present.
-            }
-            } // Closing brace for 'if (astNode != null && !hasErrors)' for unused symbol checks
+            } // Закрывающая скобка для 'if (astNode != null && !hasErrors)' для проверки неиспользуемых символов
 
             // Если были ошибки мертвого кода или семантические ошибки, выходим с кодом 1
             if (hasErrors) {
                 return 1;
             }
-            
+
             // Если ошибок не было, продолжаем генерацию байткода
-            // This check is already implicitly handled by 'if (hasErrors) { return 1; }' before this block
+            // Эта проверка уже неявно обрабатывается блоком 'if (hasErrors) { return 1; }' перед этим блоком
             String outputFile;
             if (emitBytecodeFile != null) {
                 outputFile = emitBytecodeFile;
@@ -354,40 +353,40 @@ public class Trail implements Callable<Integer> {
                 String baseName = sourceFile.replaceFirst("\\.[^.]+$", "");
                 outputFile = baseName + ".snb";
             }
-    
+
             // Генерируем байткод
             try {
-                // Ensure astNode is not null before attempting to use it for bytecode emission
+                // Убедитесь, что astNode не равен null перед попыткой его использования для генерации байткода
                 if (astNode == null) {
-                    // This case should ideally be caught by 'hasErrors' flag earlier,
-                    // but as a safeguard:
+                    // Этот случай в идеале должен быть перехвачен флагом 'hasErrors' ранее,
+                    // но в качестве меры предосторожности:
                     logger.error("AST node is null, cannot proceed to bytecode emission. This indicates an earlier error.");
                     return 1;
                 }
                 BytecodeEmitter emitter = new BytecodeEmitter();
-                // ASTImpl logic is handled within build() method, astNode should be AST (which ASTImpl implements)
+                // Логика ASTImpl обрабатывается в методе build(), astNode должен быть AST (который реализует ASTImpl)
                 emitter.emitBytecode(astNode, outputFile);
                 logger.info("Bytecode emission completed successfully to {}", outputFile);
                 return 0; // Успешное выполнение
             } catch (BytecodeEmitterException e) {
                 logger.error("Ошибка генерации байткода: {}", e.getMessage());
-                System.err.println("Bytecode Emitter Error: " + e.getMessage()); // For test visibility
+                System.err.println("Bytecode Emitter Error: " + e.getMessage()); // Для видимости в тестах
                 if (debug) {
                     e.printStackTrace();
                 }
                 return 1;
-            } catch (Exception e) { // This is now for truly unexpected errors during bytecode emission
+            } catch (Exception e) { // Это теперь для действительно непредвиденных ошибок во время генерации байткода
                 logger.error("Непредвиденная ошибка во время генерации байткода: {}", e.getMessage());
-                System.err.println("Unexpected Bytecode Generation Error: " + e.getMessage()); // For test visibility
+                System.err.println("Unexpected Bytecode Generation Error: " + e.getMessage()); // Для видимости в тестах
                 if (debug) {
                     e.printStackTrace();
                 }
                 return 1;
             }
-        }
-        catch (Exception e) { // This outermost catch handles truly unexpected errors not caught by more specific handlers above.
+        } catch (
+                Exception e) { // Этот внешний блок catch обрабатывает действительно непредвиденные ошибки, не перехваченные более специфичными обработчиками выше.
             logger.error("Общая ошибка компиляции: {}", e.getMessage());
-            System.err.println("Compiler Error: " + e.getMessage()); // For test visibility
+            System.err.println("Compiler Error: " + e.getMessage()); // Для видимости в тестах
             if (debug) {
                 e.printStackTrace();
             }
@@ -395,33 +394,40 @@ public class Trail implements Callable<Integer> {
         }
     }
 
+    /**
+     * Проверяет исходный код на синтаксические ошибки.
+     *
+     * @param sourceCode Исходный код для проверки.
+     * @param sourceName Имя источника (например, имя файла) для контекста ошибок.
+     * @return Список обнаруженных ошибок компиляции.
+     */
     public static List<CompilationError> check(String sourceCode, String sourceName) {
         logger.error("DEBUG: Starting check process for source: {}", sourceName);
         List<CompilationError> errors = new ArrayList<>();
         try {
             // Создаем поток из исходного кода
             CharStream charStream = CharStreams.fromString(sourceCode);
-            
+
             // Создаем лексер
             SnailLexer lexer = new SnailLexer(charStream);
             lexer.removeErrorListeners();
-            
+
             // Создаем парсер
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             SnailParser parser = new SnailParser(tokens);
             parser.removeErrorListeners();
-            
+
             // Анонимный класс для сбора ошибок
             class ErrorCollector extends org.antlr.v4.runtime.BaseErrorListener {
                 private final List<CompilationError> syntaxErrors = new ArrayList<>();
-                
+
                 @Override
-                public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> recognizer, 
-                                       Object offendingSymbol, 
-                                       int line, 
-                                       int charPositionInLine, 
-                                       String msg, 
-                                       org.antlr.v4.runtime.RecognitionException e) {
+                public void syntaxError(org.antlr.v4.runtime.Recognizer<?, ?> recognizer,
+                                        Object offendingSymbol,
+                                        int line,
+                                        int charPositionInLine,
+                                        String msg,
+                                        org.antlr.v4.runtime.RecognitionException e) {
                     // Создаем ошибку компиляции из синтаксической ошибки ANTLR
                     CompilationError error = new CompilationError(
                             ErrorType.UNKNOWN_TYPE, // Для синтаксических ошибок используем UNKNOWN_TYPE
@@ -431,30 +437,30 @@ public class Trail implements Callable<Integer> {
                     );
                     syntaxErrors.add(error);
                 }
-                
+
                 public List<CompilationError> getErrors() {
                     return syntaxErrors;
                 }
             }
-            
+
             // Создаем и добавляем слушатель ошибок
             ErrorCollector errorCollector = new ErrorCollector();
             lexer.addErrorListener(errorCollector);
             parser.addErrorListener(errorCollector);
-            
+
             // Парсим программу
             parser.program();
-            
+
             // Собираем ошибки
             errors.addAll(errorCollector.getErrors());
-            
+
         } catch (Exception e) {
             // Добавляем исключение как ошибку компиляции
             CompilationError error = new CompilationError(
-                ErrorType.UNKNOWN_TYPE, // Для общих ошибок парсинга используем UNKNOWN_TYPE
-                "<unknown>",
-                "Exception during parsing: " + e.getMessage(),
-                ""
+                    ErrorType.UNKNOWN_TYPE, // Для общих ошибок парсинга используем UNKNOWN_TYPE
+                    "<unknown>",
+                    "Exception during parsing: " + e.getMessage(),
+                    ""
             );
             errors.add(error);
             e.printStackTrace();

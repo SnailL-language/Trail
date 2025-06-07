@@ -1,0 +1,6 @@
+fn main() -> void {
+    let s_arr: [string; 2] = ["hello", "world"];
+    let b_arr: [bool; 3] = [true, false, true && false];
+    // println(s_arr[0]);
+    // println(b_arr[1]);
+}

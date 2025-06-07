@@ -1,0 +1,15 @@
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn get_val() -> i32 {
+    return 5;
+}
+
+fn main() -> void {
+    let x: i32 = 10;
+    let y: i32 = 20;
+    let arr: [i32; 1] = [100];
+    let result: i32 = add(x + y, add(get_val(), arr[0] * 2));
+    // println(result); // Expected: 30 + (5 + 200) = 235
+}

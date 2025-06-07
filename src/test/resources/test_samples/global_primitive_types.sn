@@ -1,0 +1,9 @@
+let g_i32: i32 = 10;
+let g_bool_true: bool = true;
+let g_bool_false: bool = false;
+let g_str: string = "hello snail";
+
+fn main() -> void {
+    // Тест на объявление глобальных переменных примитивных типов
+    // Функциональность будет проверяться в других тестах
+}

@@ -43,11 +43,11 @@ public class ArrayLiteral extends PrimaryExpression {
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, size);
         out.write(typeId);
-        // Сохраняем массив во временную переменную
+        // Store the array in a temporary variable
         String tmpName = "__tmp_array_" + System.identityHashCode(this);
         int tmpIdx;
         if (currentFunction != null) {
-            // Локальная временная переменная
+            // Local temporary variable
             tmpIdx = context.getLocalVarIndex(currentFunction, tmpName);
             if (tmpIdx < 0) {
                 throw new RuntimeException("Temporary local for array literal not found: " + tmpName);
@@ -63,11 +63,11 @@ public class ArrayLiteral extends PrimaryExpression {
                 elements.get(i).emitBytecode(out, context, currentFunction);
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.SET_ARRAY);
             }
-            // В конце вернуть массив на стек
+            // At the end, return the array to the stack
             out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_LOCAL);
             io.github.snaill.bytecode.BytecodeUtils.writeU16(out, tmpIdx);
         } else {
-            // Глобальная временная переменная (маловероятно, но для совместимости)
+            // Global temporary variable (unlikely, but for compatibility)
             tmpIdx = context.getGlobalVarIndex(tmpName);
             if (tmpIdx < 0) {
                 tmpIdx = context.addGlobalVariable(tmpName);

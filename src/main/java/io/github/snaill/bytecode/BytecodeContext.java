@@ -4,8 +4,8 @@ import io.github.snaill.ast.*;
 import java.util.*;
 
 /**
- * Контекст генерации байткода. Хранит таблицы констант, глобальных переменных, функций и локальных переменных.
- * Предоставляет методы для получения индексов и добавления новых элементов.
+ * Context for bytecode generation. Stores tables of constants, global variables, functions, and local variables.
+ * Provides methods for getting indices and adding new elements.
  */
 public class BytecodeContext {
     private final List<Object> constants = new ArrayList<>();
@@ -13,17 +13,17 @@ public class BytecodeContext {
     private final List<String> globalVariables = new ArrayList<>();
     private final Map<String, Integer> globalVarIndices = new HashMap<>();
     /**
-     * Список всех глобальных выражений и объявлений
+     * List of all global expressions and declarations
      */
     private List<Statement> globalStatements = new ArrayList<>();
     
     /**
-     * Таблица функций, содержащая все объявленные функции
+     * Function table containing all declared functions
      */
     private final List<FunctionDeclaration> functionTable = new ArrayList<>();
     
     /**
-     * Индексы функций в таблице функций, для быстрого доступа по имени
+     * Function indices in the function table, for fast access by name
      */
     private final Map<String, Integer> functionIndices = new HashMap<>();
     private final Map<FunctionDeclaration, Map<String, Integer>> localVarIndices = new HashMap<>();
@@ -45,9 +45,9 @@ public class BytecodeContext {
     }
 
     /**
-     * Добавляет функцию в таблицу функций и возвращает ее индекс
+     * Adds a function to the function table and returns its index
      *
-     * @param func функция для добавления
+     * @param func function to add
      */
     public void addFunction(FunctionDeclaration func) {
         if (!functionIndices.containsKey(func.getName())) {
@@ -83,24 +83,24 @@ public class BytecodeContext {
     }
 
     /**
-     * Добавляет глобальное выражение в список
-     * @param stmt глобальное выражение или объявление
+     * Adds a global expression to the list
+     * @param stmt global expression or declaration
      */
     public void addGlobalStatement(Statement stmt) {
         globalStatements.add(stmt);
     }
     
     /**
-     * Устанавливает список глобальных выражений
-     * @param statements список глобальных выражений
+     * Sets the list of global expressions
+     * @param statements list of global expressions
      */
     public void setGlobalStatements(List<Statement> statements) {
         this.globalStatements = new ArrayList<>(statements);
     }
     
     /**
-     * Получает список глобальных выражений
-     * @return список глобальных выражений
+     * Gets the list of global expressions
+     * @return list of global expressions
      */
     public List<Statement> getGlobalStatements() {
         return globalStatements;
@@ -109,8 +109,8 @@ public class BytecodeContext {
     public List<Object> getConstants() { return constants; }
     public List<String> getGlobalVariables() { return globalVariables; }
     /**
-     * Возвращает таблицу функций
-     * @return список функций
+     * Returns the function table
+     * @return list of functions
      */
     public List<FunctionDeclaration> getFunctions() { return functionTable; }
     public Map<String, Integer> getGlobalVarIndices() { return globalVarIndices; }

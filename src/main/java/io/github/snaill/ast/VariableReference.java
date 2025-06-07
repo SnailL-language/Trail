@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Представляет ссылку на переменную в AST.
- * Генерирует байткод для загрузки значения переменной.
+ * Represents a variable reference in the AST.
+ * Generates bytecode to load the value of a variable.
  */
 public class VariableReference extends Expression {
     private final String name;
@@ -95,7 +95,7 @@ public class VariableReference extends Expression {
         return decl.getType();
     }
 
-    // Вспомогательный метод для поиска statement-родителя
+    // Helper method to find the parent statement
     private Node findParentStatement(Node scope, Node target) {
         for (Node child : scope.getChildren()) {
             if (child == target) return scope;

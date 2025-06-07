@@ -1,0 +1,5 @@
+let g_my_global_var: i32 = 42;
+
+fn main() -> void {
+    // This is a program with a global variable declared before functions.
+}

@@ -91,7 +91,7 @@ public class Identifier extends PrimaryExpression {
 
     @Override
     public Type getType(Scope scope) throws FailedCheckException {
-    System.out.println("[IDENTIFIER_GETTYPE] Entry for: " + name);
+    // System.out.println("[IDENTIFIER_GETTYPE] Entry for: " + name);
     try {
         // Optional: Original debug log to file
         try {
@@ -100,15 +100,15 @@ public class Identifier extends PrimaryExpression {
             debugLog.close();
         } catch (java.io.IOException e) { /* ignore */ }
 
-        System.out.println("[IDENTIFIER_GETTYPE] DEBUG: Checking variable in getType: " + name);
+        // System.out.println("[IDENTIFIER_GETTYPE] DEBUG: Checking variable in getType: " + name);
         if (scope == null) {
             System.err.println("[IDENTIFIER_GETTYPE] ERROR: Scope is null in Identifier.getType for " + name + ". Source: " + this.getSourceInfo());
             throw new FailedCheckException(new CompilationError(ErrorType.INTERNAL_ERROR, this.getSourceInfo(), "Scope is null for identifier " + name, "").toString());
         }
 
-        System.out.println("[IDENTIFIER_GETTYPE] Before scope.resolveVariable for '" + name + "' in scope@" + (scope != null ? System.identityHashCode(scope) : "null"));
+        // System.out.println("[IDENTIFIER_GETTYPE] Before scope.resolveVariable for '" + name + "' in scope@" + (scope != null ? System.identityHashCode(scope) : "null"));
         VariableDeclaration decl = scope.resolveVariable(name, this);
-        System.out.println("[IDENTIFIER_GETTYPE] After scope.resolveVariable. Result (decl): " + (decl != null ? decl.toString() + " (typeNode: " + decl.getType() + ")" : "null"));
+        // System.out.println("[IDENTIFIER_GETTYPE] After scope.resolveVariable. Result (decl): " + (decl != null ? decl.toString() + " (typeNode: " + decl.getType() + ")" : "null"));
 
         if (decl == null) {
             System.err.println("[IDENTIFIER_GETTYPE] ERROR: Variable not found in scope: " + name + " in scope@" + (scope != null ? System.identityHashCode(scope) : "null") + " during getType. Source: " + this.getSourceInfo());
@@ -125,9 +125,9 @@ public class Identifier extends PrimaryExpression {
             );
         }
 
-        System.out.println("[IDENTIFIER_GETTYPE] Before decl.getType() for decl: " + decl.getName());
+        // System.out.println("[IDENTIFIER_GETTYPE] Before decl.getType() for decl: " + decl.getName());
         Type resultType = decl.getType(); // This is VariableDeclaration.getType()
-        System.out.println("[IDENTIFIER_GETTYPE] After decl.getType(). Result: " + resultType);
+        // System.out.println("[IDENTIFIER_GETTYPE] After decl.getType(). Result: " + resultType);
         return resultType;
 
     } catch (FailedCheckException fce) {

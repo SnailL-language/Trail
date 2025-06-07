@@ -3,12 +3,12 @@ package io.github.snaill.ast;
 import java.io.IOException;
 
 /**
- * Visitor interface for the Snail AST.
- * Defines visit methods for each concrete AST node type.
- * @param <T> The return type of the visit methods.
+ * Интерфейс посетителя для AST Snail.
+ * Определяет методы visit для каждого конкретного типа узла AST.
+ * @param <T> Тип возвращаемого значения методов visit.
  */
 public interface ASTVisitor<T> {
-    // T visit(ProgramNode node) throws IOException; // Root node will be a Scope
+    // T visit(ProgramNode node) throws IOException; // Корневым узлом будет Scope
     T visit(Scope scopeNode);
     T visit(FunctionDeclaration funcDeclNode);
     T visit(VariableDeclaration varDeclNode);
@@ -18,7 +18,7 @@ public interface ASTVisitor<T> {
     T visit(ForLoop forLoopNode);
     T visit(ReturnStatement retStmtNode);
     T visit(BreakStatement breakStmtNode);
-    T visit(AssignmentExpression assignmentExprNode); // Corrected typo
+    T visit(AssignmentExpression assignmentExprNode); // Исправлена опечатка
     T visit(BinaryExpression binExprNode);
     T visit(UnaryExpression unExprNode);
     T visit(FunctionCall funcCallNode);
@@ -33,5 +33,5 @@ public interface ASTVisitor<T> {
     T visit(ArrayAccess arrayAccessNode);
     T visit(PrimitiveType primitiveTypeNode);
     T visit(ArrayType arrayTypeNode);
-    // Add other visit methods as AST nodes are refactored/discovered
+    // Добавляйте другие методы visit по мере рефакторинга/обнаружения узлов AST
 } 

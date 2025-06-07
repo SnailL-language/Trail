@@ -18,7 +18,7 @@ public class DebugBytecodeViewer {
      */
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.out.println("Использование: java -cp target/classes io.github.snaill.bytecode.DebugBytecodeViewer <файл_байткода>");
+            // System.out.println("Использование: java -cp target/classes io.github.snaill.bytecode.DebugBytecodeViewer <файл_байткода>");
             return;
         }
         
@@ -26,9 +26,8 @@ public class DebugBytecodeViewer {
             java.nio.file.Path path = java.nio.file.Path.of(args[0]);
             byte[] bytecode = java.nio.file.Files.readAllBytes(path);
             String disassembly = disassemble(bytecode);
-            System.out.println(disassembly);
         } catch (Exception e) {
-            System.err.println("Ошибка при чтении или дизассемблировании байткода: " + e.getMessage());
+            System.err.println("Error reading or disassembling bytecode: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -93,12 +92,12 @@ public class DebugBytecodeViewer {
                                 int codeOffset, boolean isMain) {
 
         @Override
-            public String toString() {
-                String mainMarker = isMain ? " [main]" : "";
-                return String.format("%s%s (params: %d, return: %s, locals: %d, code length: %d bytes, offset: 0x%08X)",
-                        name, mainMarker, paramCount, getTypeDescription(returnType), localVarCount, codeLength, codeOffset);
-            }
+        public String toString() {
+            String mainMarker = isMain ? " [main]" : "";
+            return String.format("%s%s (params: %d, return: %s, locals: %d, code length: %d bytes, offset: 0x%08X)",
+                    name, mainMarker, paramCount, getTypeDescription(returnType), localVarCount, codeLength, codeOffset);
         }
+    }
 
     private static class GlobalVarInfo {
         final String name;
@@ -133,7 +132,7 @@ public class DebugBytecodeViewer {
 
     public static String disassemble(byte[] code) {
         if (code == null || code.length < 8) {
-            return "Некорректный байткод: слишком короткий";
+            return "Invalid bytecode: too short";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -143,26 +142,26 @@ public class DebugBytecodeViewer {
         List<IntrinsicInfo> intrinsics = new ArrayList<>();
         int pos = 0;
 
-        // Чтение заголовка
+        // Read header
         int[] mainFunctionIndex = new int[]{-1};
         pos = readHeader(code, sb, pos, mainFunctionIndex);
 
-        // Чтение констант
+        // Read constants
         pos = readConstants(code, sb, pos, constants, new int[]{2});
 
-        // Чтение глобальных переменных
+        // Read global variables
         pos = readGlobals(code, sb, pos, globals);
 
-        // Чтение функций
+        // Read functions
         pos = readFunctions(code, sb, pos, functions, mainFunctionIndex[0], constants, globals);
 
-        // Чтение таблицы встроенных функций
+        // Read intrinsic functions table
         pos = readIntrinsics(code, sb, pos, intrinsics);
 
-        // Чтение и анализ глобального байткода
+        // Read and analyze global bytecode
         pos = readGlobalCode(code, sb, pos, constants, globals, functions, intrinsics, mainFunctionIndex[0]);
 
-        // Вывод статистики
+        // Output statistics
         appendBytecodeStatistics(sb, constants, functions, globals, pos);
 
         return sb.toString();
@@ -183,7 +182,7 @@ public class DebugBytecodeViewer {
         sb.append("[HEADER] Main function index: ");
         int mainFuncIdx = getUnsignedShort(code, pos);
         if (mainFuncIdx == 0xFFFF) {
-            sb.append("-1 (main отсутствует)").append("\n");
+            sb.append("-1 (main is missing)").append("\n");
             mainFunctionIndex[0] = -1;
         } else {
             sb.append(mainFuncIdx).append("\n");
@@ -199,7 +198,7 @@ public class DebugBytecodeViewer {
         sb.append("[CONSTANTS] Count: ");
         int constCount = getUnsignedShort(code, pos);
         if (constCount < 0 || constCount > 10000) {
-            sb.append(constCount).append(" <возможно некорректное количество>\n");
+            sb.append(constCount).append(" (possibly incorrect count)\n");
         } else {
             sb.append(constCount).append("\n");
         }
@@ -207,7 +206,7 @@ public class DebugBytecodeViewer {
 
         for (int i = 0; i < constCount && pos < code.length; i++) {
             if (pos >= code.length) {
-                sb.append("  [CONST] <неполные данные>\n");
+                sb.append("  [CONST] <incomplete data>\n");
                 break;
             }
             int typeId = getUnsignedByte(code[pos++]);
@@ -225,7 +224,7 @@ public class DebugBytecodeViewer {
                     sectionSize[0] += 4;
                 } else {
                     sb.append("  [CONST] ").append(typeId == BytecodeConstants.TypeId.I32 ? "i32" : "usize")
-                            .append(": <неполные данные>\n");
+                            .append(": <incomplete data>\n");
                     pos = code.length;
                 }
             } else if (typeId == BytecodeConstants.TypeId.STRING) {
@@ -240,15 +239,15 @@ public class DebugBytecodeViewer {
                         pos += strLen;
                         sectionSize[0] += strLen;
                     } else {
-                        sb.append("  [CONST] string: <некорректная длина или неполные данные>\n");
+                        sb.append("  [CONST] string: <incorrect length or incomplete data>\n");
                         pos = code.length;
                     }
                 } else {
-                    sb.append("  [CONST] string: <неполные данные длины>\n");
+                    sb.append("  [CONST] string: <incomplete length data>\n");
                     pos = code.length;
                 }
             } else {
-                sb.append("  [CONST] неизвестный тип: ").append(typeId).append("\n");
+                sb.append("  [CONST] unknown type: ").append(typeId).append("\n");
             }
             constants.add(info);
         }
@@ -260,7 +259,7 @@ public class DebugBytecodeViewer {
         sb.append("[GLOBALS] Count: ");
         int globalCount = getUnsignedShort(code, pos);
         if (globalCount < 0 || globalCount > 1000) {
-            sb.append(globalCount).append(" <возможно некорректное количество>\n");
+            sb.append(globalCount).append(" (possibly incorrect count)\n");
         } else {
             sb.append(globalCount).append("\n");
         }
@@ -269,11 +268,11 @@ public class DebugBytecodeViewer {
         for (int i = 0; i < globalCount && pos < code.length; i++) {
             int nameLen = getUnsignedByte(code[pos++]);
             if (nameLen < 0 || nameLen > 255) {
-                sb.append("  [GLOBAL] <некорректная длина имени: ").append(nameLen).append(">\n");
+                sb.append("  [GLOBAL] <incorrect name length: ").append(nameLen).append(">\n");
                 break;
             }
             if (nameLen == 0) {
-                sb.append("  [GLOBAL] <пустое имя переменной>\n");
+                sb.append("  [GLOBAL] <empty variable name>\n");
                 continue;
             }
             if (pos + nameLen <= code.length) {
@@ -297,11 +296,11 @@ public class DebugBytecodeViewer {
                     }
                     globals.add(globalInfo);
                 } else {
-                    sb.append("  [GLOBAL] ").append(name).append(" : <неполные данные>\n");
+                    sb.append("  [GLOBAL] ").append(name).append(" : <incomplete data>\n");
                     pos = code.length;
                 }
             } else {
-                sb.append("  [GLOBAL] <неполное имя>\n");
+                sb.append("  [GLOBAL] <incomplete name>\n");
                 pos = code.length;
             }
         }
@@ -313,7 +312,7 @@ public class DebugBytecodeViewer {
         sb.append("[FUNCTIONS] Count: ");
         int funcCount = getUnsignedShort(code, pos);
         if (funcCount < 0 || funcCount > 10000) {
-            sb.append(funcCount).append(" <возможно некорректное количество>\n");
+            sb.append(funcCount).append(" (possibly incorrect count)\n");
         } else {
             sb.append(funcCount).append("\n");
         }
@@ -322,11 +321,11 @@ public class DebugBytecodeViewer {
         for (int i = 0; i < funcCount && pos < code.length; i++) {
             int nameLen = getUnsignedByte(code[pos++]);
             if (nameLen < 0 || nameLen > 255) {
-                sb.append("  [FUNC] <некорректная длина имени: ").append(nameLen).append(">\n");
+                sb.append("  [FUNC] <incorrect name length: ").append(nameLen).append(">\n");
                 break;
             }
             if (nameLen == 0) {
-                sb.append("  [FUNC] <пустое имя функции>\n");
+                sb.append("  [FUNC] <empty function name>\n");
                 continue;
             }
             if (pos + nameLen <= code.length) {
@@ -346,19 +345,19 @@ public class DebugBytecodeViewer {
                     functions.add(funcInfo);
                     sb.append("  [FUNC] ").append(funcInfo).append("\n");
                     if (codeLen > 0 && pos + codeLen <= code.length) {
-                        // Теперь передаем актуальные списки констант и глобальных переменных
+                        // Helper method to get a string from the constant pool and global variables
                         sb.append(dumpInstructions(code, pos, codeLen, "      ", constants, globals, functions));
                         pos += codeLen;
                     } else {
-                        sb.append("      <неполный код функции>\n");
+                        sb.append("      <incomplete function code>\n");
                         pos = code.length;
                     }
                 } else {
-                    sb.append("  [FUNC] ").append(funcName).append(" : <неполные метаданные>\n");
+                    sb.append("  [FUNC] ").append(funcName).append(" : <incomplete metadata>\n");
                     pos = code.length;
                 }
             } else {
-                sb.append("  [FUNC] <неполное имя>\n");
+                sb.append("  [FUNC] <incomplete name>\n");
                 pos = code.length;
             }
         }
@@ -370,7 +369,7 @@ public class DebugBytecodeViewer {
         sb.append("[INTRINSICS] Count: ");
         int intrinsicCount = getUnsignedShort(code, pos);
         if (intrinsicCount < 0 || intrinsicCount > 1000) {
-            sb.append(intrinsicCount).append(" <возможно некорректное количество>\n");
+            sb.append(intrinsicCount).append(" (possibly incorrect count)\n");
         } else {
             sb.append(intrinsicCount).append("\n");
         }
@@ -379,11 +378,11 @@ public class DebugBytecodeViewer {
         for (int i = 0; i < intrinsicCount && pos < code.length; i++) {
             int nameLen = getUnsignedByte(code[pos++]);
             if (nameLen < 0 || nameLen > 255) {
-                sb.append("  [INTRINSIC] <некорректная длина имени: ").append(nameLen).append(">\n");
+                sb.append("  [INTRINSIC] <incorrect name length: ").append(nameLen).append(">\n");
                 break;
             }
             if (nameLen == 0) {
-                sb.append("  [INTRINSIC] <пустое имя>\n");
+                sb.append("  [INTRINSIC] <empty name>\n");
                 continue;
             }
             if (pos + nameLen <= code.length) {
@@ -396,11 +395,11 @@ public class DebugBytecodeViewer {
                     intrinsics.add(intrinsicInfo);
                     sb.append("  [INTRINSIC] ").append(intrinsicInfo).append("\n");
                 } else {
-                    sb.append("  [INTRINSIC] ").append(intrinsicName).append(" : <неполные данные>\n");
+                    sb.append("  [INTRINSIC] ").append(intrinsicName).append(" : <incomplete data>\n");
                     pos = code.length;
                 }
             } else {
-                sb.append("  [INTRINSIC] <неполное имя>\n");
+                sb.append("  [INTRINSIC] <incomplete name>\n");
                 pos = code.length;
             }
         }
@@ -413,11 +412,11 @@ public class DebugBytecodeViewer {
         sb.append("\n=== GLOBAL CODE SECTION ===\n");
         sb.append("[GLOBAL CODE] Length: ");
         if (pos + 4 > code.length) {
-            sb.append("<неполная длина>\n");
+            sb.append("<incomplete length>\n");
             return code.length;
         }
         
-        // Читаем длину глобального кода (4 байта, big-endian)
+        // Read global code length (4 bytes, big-endian)
         long rawCodeLen = ((long)(code[pos] & 0xFF) << 24) | 
                 ((long)(code[pos + 1] & 0xFF) << 16) |
                 ((long)(code[pos + 2] & 0xFF) << 8) | 
@@ -425,18 +424,18 @@ public class DebugBytecodeViewer {
 
         pos += 4;
         
-        // Приводим к int для дальнейшего использования
+        // Convert to int for further use
         int globalCodeLen = (int)(rawCodeLen & 0x7FFFFFFF);
         
-        // Проверяем, что длина глобального кода имеет смысл
-        // Максимальный разумный размер для глобального кода - 1 МБ
+        // Check if global code length makes sense
+        // Maximum reasonable size for global code is 1 MB
         if (globalCodeLen < 0 || globalCodeLen > 1_000_000) {
-            sb.append(globalCodeLen).append(" (предупреждение: подозрительно большой размер, ограничен до 100KB)\n");
+            sb.append(globalCodeLen).append(" (warning: suspiciously large size, limited to 100KB)\n");
             
-            // Попробуем найти более разумную длину:
-            // Поищем байты, которые могут быть длиной глобального кода
+            // Try to find a more reasonable length:
+            // Look for bytes that might be the length of the global code
             int estimatedLen = 0;
-            // Проверим, может быть длина записана в разных позициях поблизости
+            // Check if the length is recorded in different positions nearby
             for (int offset = -8; offset <= 8; offset += 4) {
                 if (pos - 4 + offset >= 0 && pos - 4 + offset + 3 < code.length) {
                     int testLen = ((code[pos - 4 + offset] & 0xFF) << 24) | 
@@ -444,15 +443,16 @@ public class DebugBytecodeViewer {
                                 ((code[pos - 4 + offset + 2] & 0xFF) << 8) | 
                                 (code[pos - 4 + offset + 3] & 0xFF);
                     if (testLen > 0 && testLen < 1000) {
-                        System.out.println("Возможно, длина глобального кода на смещении " + offset + " от текущей позиции: " + testLen);
+                        // Assume this might be the length of the global code at offset " + offset + " from the current position: " + testLen);
                         estimatedLen = testLen;
                     }
                 }
             }
             
+            // If a suitable value is found, use it
             // Если нашли подходящее значение, используем его
             if (estimatedLen > 0) {
-                System.out.println("Используем оценочную длину глобального кода: " + estimatedLen);
+                // System.out.println("Используем оценочную длину глобального кода: " + estimatedLen);
                 globalCodeLen = estimatedLen;
             } else {
                 // Иначе ограничиваем до разумного размера

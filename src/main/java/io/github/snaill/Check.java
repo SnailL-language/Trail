@@ -4,6 +4,7 @@ import io.github.snaill.ast.*;
 import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.result.CompilationError;
 import io.github.snaill.result.ErrorType;
+import io.github.snaill.ast.VariableDeclaration; // Added import
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Класс для проверки типов и других статических проверок AST.
+ * Class for checking types and other static checks of the AST.
  */
 public class Check implements ASTVisitor<Void> {
     private static final Logger logger = LoggerFactory.getLogger(Check.class);
@@ -19,10 +20,10 @@ public class Check implements ASTVisitor<Void> {
     private final List<CompilationError> errors = new ArrayList<>();
 
     /**
-     * Проверяет AST на корректность типов и другие статические ошибки.
-     * Собирает ошибки в внутренний список.
-     * @param node корневой узел AST
-     * @return список найденных ошибок компиляции
+     * Checks the AST for type correctness and other static errors.
+     * Collects errors in the internal list.
+     * @param node the root node of the AST
+     * @return the list of found compilation errors
      */
     public List<CompilationError> check(Node node) {
         logger.debug("ENTERING Check.check() with node: {} | initial currentScope: {}", (node != null ? node.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(node)) + " " + node.getSourceInfo() : "null"), this.currentScope);
@@ -50,8 +51,8 @@ public class Check implements ASTVisitor<Void> {
     }
 
     /**
-     * Возвращает список найденных ошибок
-     * @return список ошибок
+     * Returns the list of found errors.
+     * @return the list of errors
      */
     public List<CompilationError> getErrors() {
         return errors;
@@ -59,10 +60,26 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(FunctionDeclaration node) {
-        // Проверяем тело функции
+        Scope previousScope = this.currentScope;
+        logger.debug("ENTERING FunctionDeclaration.visit for function '{}'. Old scope: {}. New scope (function body): {}", node.getName(), (previousScope != null ? previousScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(previousScope)) : "null"), (node.getBody() != null ? node.getBody().getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(node.getBody())) : "null"));
+
+        this.currentScope = node.getBody(); // The function's body is its scope
+
+        // Parameters are part of the function's scope (body) and should have been added during AST building.
+        // We can optionally visit them if Parameter.visit needs to do something specific.
+        if (node.getParameters() != null) {
+            for (Parameter param : node.getParameters()) {
+                param.accept(this); // Assuming Parameter.visit() is mostly a no-op or for specific checks
+            }
+        }
+
+        // Check the function body with the function's scope active
         if (node.getBody() != null) {
             node.getBody().accept(this);
         }
+
+        logger.debug("EXITING FunctionDeclaration.visit for function '{}'. Restoring old scope: {}", node.getName(), (previousScope != null ? previousScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(previousScope)) : "null"));
+        this.currentScope = previousScope; // Restore the outer scope
         return null;
     }
 
@@ -71,21 +88,17 @@ public class Check implements ASTVisitor<Void> {
         // Define the variable in the current scope first
         if (this.currentScope != null) {
             try {
-                System.out.println("[CHECK_VAR_DECL] Attempting to add declaration for '" + node.getName() + "' to scope: " + System.identityHashCode(this.currentScope));
                 this.currentScope.addDeclaration(node);
-                System.out.println("[CHECK_VAR_DECL] Successfully added declaration for '" + node.getName() + "' to scope: " + System.identityHashCode(this.currentScope));
             } catch (FailedCheckException e) {
-                System.err.println("[CHECK_VAR_DECL] FailedCheckException while adding declaration for '" + node.getName() + "': " + e.getMessage());
                 if (e.getErrors() != null) {
                     this.errors.addAll(e.getErrors());
                 } else {
                     this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), e.getMessage() != null ? e.getMessage() : "Failed to add variable declaration", ""));
                 }
                 // Potentially return early if declaration fails, as further checks might be invalid
-                 return null; 
+                return null; 
             }
         } else {
-            System.err.println("[CHECK_VAR_DECL] CRITICAL: currentScope is null when trying to declare variable '" + node.getName() + "'. This should not happen.");
             this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), "Compiler error: current scope not set for variable declaration.", ""));
             return null; // Cannot proceed without a scope
         }
@@ -101,8 +114,8 @@ public class Check implements ASTVisitor<Void> {
                     tempScope = ((AbstractNode)node).getEnclosingScope();
                 }
                 if (tempScope == null) {
-                     this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), "Cannot determine scope for variable '" + node.getName() + "' type checking.", ""));
-                     return null;
+                    this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), "Cannot determine scope for variable '" + node.getName() + "' type checking.", ""));
+                    return null;
                 }
                 Type actualType = value.getType(tempScope);
                 
@@ -135,7 +148,7 @@ public class Check implements ASTVisitor<Void> {
                 if (e.getErrors() != null) {
                     this.errors.addAll(e.getErrors());
                 } else {
-                     this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), e.getMessage() != null ? e.getMessage() : "Type resolution failed for variable '" + node.getName() + "'", ""));
+                    this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), e.getMessage() != null ? e.getMessage() : "Type resolution failed for variable '" + node.getName() + "'", ""));
                 }
             } catch (Exception e) {
                 this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), "Error resolving type for variable '" + node.getName() + "' initializer: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()), ""));
@@ -146,26 +159,14 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(AssignmentExpression node) {
-        System.out.println("[CHECK_ASSIGN_ENTRY] Entered visit(AssignmentExpression) for node: " + (node != null ? node.toString() + " " + node.getSourceInfo() : "null"));
         Expression left = node != null ? node.getLeft() : null;
         Expression right = node != null ? node.getRight() : null;
-        System.out.println("[CHECK_ASSIGN_ENTRY] Left child: " + (left != null ? left.getClass().getName() + " -> " + left.toString() : "null"));
-        System.out.println("[CHECK_ASSIGN_ENTRY] Right child: " + (right != null ? right.getClass().getName() + " -> " + right.toString() : "null"));
-        System.out.println("[CHECK_ASSIGN_ENTRY] this.currentScope: " + (this.currentScope != null ? this.currentScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(this.currentScope)) : "null"));
-        Expression leftExpr = node.getLeft();
-        Expression rightExpr = node.getRight();
 
-        if (leftExpr != null && rightExpr != null) {
-            System.out.println("[CHECK_ASSIGN_IF] Entered if (leftExpr != null && rightExpr != null) block.");
-            System.out.println("[CHECK_ASSIGN_IF] Before leftExpr.accept(this) for: " + leftExpr.getClass().getName() + ". Current scope: " + (this.currentScope != null ? System.identityHashCode(this.currentScope) : "null"));
-            leftExpr.accept(this);
-            System.out.println("[CHECK_ASSIGN_IF] After leftExpr.accept(this). Current scope: " + (this.currentScope != null ? System.identityHashCode(this.currentScope) : "null"));
-            System.out.println("[CHECK_ASSIGN_IF] Before rightExpr.accept(this) for: " + rightExpr.getClass().getName() + ". Current scope: " + (this.currentScope != null ? System.identityHashCode(this.currentScope) : "null"));
-            rightExpr.accept(this);
-            System.out.println("[CHECK_ASSIGN_IF] After rightExpr.accept(this). Current scope: " + (this.currentScope != null ? System.identityHashCode(this.currentScope) : "null"));
-            
+        if (left != null && right != null) {
+            left.accept(this);
+            right.accept(this);
+
             try {
-                System.out.println("[CHECK_ASSIGN_TRY] Entered try block.");
                 Scope tempScope = this.currentScope; // Prefer current visitor scope
                 if (tempScope == null && node instanceof AbstractNode) { // Fallback if currentScope is somehow null
                     tempScope = ((AbstractNode)node).getEnclosingScope();
@@ -174,22 +175,14 @@ public class Check implements ASTVisitor<Void> {
                     this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), "Cannot determine scope for assignment type checking.", ""));
                     return null;
                 }
-                System.out.println("[CHECK_ASSIGN_TRY] Before leftExpr.getType(tempScope) for: " + leftExpr.getClass().getName());
-                Type leftType = leftExpr.getType(tempScope);
-                System.out.println("[CHECK_ASSIGN_TRY] After leftExpr.getType(tempScope). Result: " + leftType);
-                System.out.println("[CHECK_ASSIGN_TRY] Before rightExpr.getType(tempScope) for: " + rightExpr.getClass().getName());
-                Type rightType = rightExpr.getType(tempScope);
-                System.out.println("[CHECK_ASSIGN_TRY] After rightExpr.getType(tempScope). Result: " + rightType);
-
-                System.out.println("[CHECK_ASSIGNMENT] Left Expression ('" + leftExpr + "', class: " + (leftExpr != null ? leftExpr.getClass().getSimpleName() : "null") + ") Type: " + leftType);
-                System.out.println("[CHECK_ASSIGNMENT] Right Expression ('" + rightExpr + "', class: " + (rightExpr != null ? rightExpr.getClass().getSimpleName() : "null") + ") Type: " + rightType);
-                System.out.println("[CHECK_ASSIGNMENT] Scope for getType: " + (tempScope != null ? tempScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(tempScope)) : "null"));
+                Type leftType = left.getType(tempScope);
+                Type rightType = right.getType(tempScope);
 
                 boolean typesCompatible = false;
                 if (leftType.equals(rightType)) {
                     typesCompatible = true;
                 } else if (leftType instanceof PrimitiveType dt && dt.getName().equals("usize") && 
-                           rightExpr instanceof NumberLiteral nl && nl.isNonNegative() && 
+                           right instanceof NumberLiteral nl && nl.isNonNegative() && 
                            rightType instanceof PrimitiveType at && at.getName().equals("i32")) {
                     typesCompatible = true;
                 } else if (leftType instanceof ArrayType ltArray && ltArray.getSize().getValue() == 0 &&
@@ -214,7 +207,7 @@ public class Check implements ASTVisitor<Void> {
                 if (e.getErrors() != null) {
                     this.errors.addAll(e.getErrors());
                 } else {
-                     this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), e.getMessage() != null ? e.getMessage() : "Type resolution failed during assignment", ""));
+                    this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), e.getMessage() != null ? e.getMessage() : "Type resolution failed during assignment", ""));
                 }
             } catch (Exception e) {
                 this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, (node.getSource() != null ? SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1) : "<source not available>"), "Error during assignment type checking: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()), ""));
@@ -239,7 +232,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(BinaryExpression node) {
-        // Проверяем левую и правую части выражения
+        // Check the left and right sides of the binary expression
         if (node.getLeft() != null) {
             node.getLeft().accept(this);
         }
@@ -251,7 +244,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(UnaryExpression node) {
-        // Проверяем аргумент унарного выражения
+        // Check the argument of the unary expression
         if (node.getArgument() != null) {
             node.getArgument().accept(this);
         }
@@ -260,7 +253,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(IfStatement node) {
-        // Проверяем условие и тела if и else
+        // Check the condition and bodies of the if and else branches
         if (node.getCondition() != null) {
             node.getCondition().accept(this);
         }
@@ -275,7 +268,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(WhileLoop node) {
-        // Проверяем условие и тело цикла
+        // Check the condition and body of the while loop
         if (node.getCondition() != null) {
             node.getCondition().accept(this);
         }
@@ -287,22 +280,34 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(ForLoop node) {
-        // Проверяем условие, шаг и тело цикла
-        if (node.getCondition() != null) {
-            node.getCondition().accept(this);
+        logger.debug("ENTERING ForLoop.visit for loop at {}:{}. Current scope: {}", node.getLine(), node.getCharPosition(), (this.currentScope != null ? this.currentScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(this.currentScope)) : "null"));
+        try {
+            // ForLoop.check() handles its own internal scope creation and checking of its components.
+            // It needs the current (enclosing) scope to establish its parent.
+            node.check(this.currentScope);
+        } catch (FailedCheckException e) {
+            if (e.getErrors() != null && !e.getErrors().isEmpty()) {
+                this.errors.addAll(e.getErrors());
+                for (CompilationError err : e.getErrors()) {
+                    logger.warn("Error from ForLoop.check() for loop at {}:{}: {}", node.getLine(), node.getCharPosition(), err.getMessage());
+                }
+            } else {
+                // Fallback if FailedCheckException has a general message but no structured errors
+                String errorMsg = "Error during for-loop checking at " + node.getLine() + ":" + node.getCharPosition() + ": " + e.getMessage();
+                this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), 1), errorMsg, ""));
+                logger.error(errorMsg, e);
+            }
         }
-        if (node.getStep() != null) {
-            node.getStep().accept(this);
-        }
-        if (node.getBody() != null) {
-            node.getBody().accept(this);
-        }
+        // Note: We don't need to manage currentScope here because ForLoop.check() uses the passed scope
+        // as a parent and manages its own internal scope. The Check visitor's currentScope remains unchanged
+        // by this call, which is correct as the ForLoop node itself doesn't define a new scope at the Check visitor's level.
+        logger.debug("EXITING ForLoop.visit for loop at {}:{}", node.getLine(), node.getCharPosition());
         return null;
     }
 
     @Override
     public Void visit(ReturnStatement node) {
-        // Проверяем возвращаемое выражение
+        // Check the type of the returned value
         if (node.getReturnable() != null) {
             node.getReturnable().accept(this);
         }
@@ -311,19 +316,19 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(BreakStatement node) {
-        // Для оператора break нет дополнительных проверок
+        // No additional checks for break statement
         return null;
     }
 
     @Override
     public Void visit(VariableReference node) {
-        // Базовая проверка ссылки на переменную
+        // Basic check for variable reference
         return null;
     }
 
     @Override
     public Void visit(FunctionCall node) {
-        // Проверяем все аргументы функции
+        // Check all arguments of the function call
         for (Expression arg : node.getArguments()) {
             if (arg != null) {
                 arg.accept(this);
@@ -334,7 +339,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(ArrayAccess node) {
-        // Проверяем массив и индекс
+        // Check the array and index
         if (node.getArray() != null) {
             node.getArray().accept(this);
         }
@@ -346,7 +351,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(ArrayAssignment node) {
-        // Проверяем массив, индекс и значение
+        // Check the array, index, and value
         if (node.getArray() != null) {
             node.getArray().accept(this);
         }
@@ -361,7 +366,7 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(ArrayLiteral node) {
-        // Проверяем все элементы массива
+        // Check all elements of the array
         for (Expression element : node.getElements()) {
             if (element != null) {
                 element.accept(this);
@@ -372,13 +377,35 @@ public class Check implements ASTVisitor<Void> {
 
     @Override
     public Void visit(Identifier node) {
-        // Базовая проверка идентификатора
+        // Simplified logging for scope details as getDeclarations() is not directly available for general logging here.
+        // Specific declarations can be inspected via localDeclarations if currentScope is an instance of Scope.
+        logger.debug("Visiting Identifier: '{}' in scope: {}", node.getName(), (this.currentScope != null ? this.currentScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(this.currentScope)) : "null"));
+        if (this.currentScope == null) {
+            String errorMsg = String.format("Compiler error: current scope not set when checking identifier '%s'.", node.getName());
+            this.errors.add(new CompilationError(ErrorType.INTERNAL_ERROR, SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), node.getName().length()), errorMsg, ""));
+            logger.error(errorMsg);
+            return null;
+        }
+
+        // Assuming Identifier node here refers to a variable. Function calls are handled by FunctionCall visitor.
+        VariableDeclaration decl = this.currentScope.resolveVariable(node.getName(), node);
+
+        if (decl == null) {
+            String errorMsg = String.format("Identifier '%s' (variable) not found in the current scope.", node.getName());
+            // Using UNKNOWN_VARIABLE instead of UNDECLARED_VARIABLE
+            this.errors.add(new CompilationError(ErrorType.UNKNOWN_VARIABLE, SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), node.getName().length()), errorMsg, ""));
+            // Simplified logging for scope details
+            logger.warn(errorMsg + " Scope: " + this.currentScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(this.currentScope)));
+        } else {
+            logger.debug("Identifier '{}' resolved to VariableDeclaration: {}", node.getName(), decl.getName());
+            // Further type checks or usage checks can be added here if needed
+        }
         return null;
     }
 
     @Override
     public Void visit(NumberLiteral node) {
-        // Числовые литералы не требуют проверки
+        // Проверка для числового литерала не требуется
         return null;
     }
 

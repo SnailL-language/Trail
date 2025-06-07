@@ -1,0 +1,8 @@
+fn main() -> void {
+    let arr_i32: [i32; 1] = [42];
+    let arr_bool: [bool; 1] = [true];
+    let arr_str: [string; 1] = ["hello"];
+    // println(arr_i32[0]);
+    // println(arr_bool[0]);
+    // println(arr_str[0]);
+}

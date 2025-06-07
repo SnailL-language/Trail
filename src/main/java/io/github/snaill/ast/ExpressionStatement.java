@@ -18,7 +18,7 @@ public class ExpressionStatement extends AbstractNode implements Statement {
     public <T> T accept(ASTVisitor<T> visitor) {
         // Можно добавить visit(ExpressionStatement), если нужно
         Expression expr = getExpression();
-        System.out.println("[EXPR_STMT_ACCEPT] Contained expression type: " + (expr != null ? expr.getClass().getName() : "null") + ", value: " + (expr != null ? expr.toString() : "null"));
+        // System.out.println("[EXPR_STMT_ACCEPT] Contained expression type: " + (expr != null ? expr.getClass().getName() : "null") + ", value: " + (expr != null ? expr.toString() : "null"));
         return expr.accept(visitor);
     }
 

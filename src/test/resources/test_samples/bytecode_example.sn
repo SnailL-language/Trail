@@ -37,7 +37,7 @@ fn main() {
     let flag: i32 = 0;
     if ((counter < 50) && (data[2] > 50)) {
         flag = 1;
-
+    }
 
     println(flag);
 }

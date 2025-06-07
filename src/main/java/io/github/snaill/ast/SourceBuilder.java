@@ -5,175 +5,272 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 
 public class SourceBuilder {
-    private static final String INDENT = "    "; // Or your preferred indentation string
+    private static final String INDENT = "    ";
     private static final String NEW_LINE = System.lineSeparator();
 
-    public static String toSourceCode(Node node) {
-        // Start with isRoot = true, indentLevel = 0 for the top-level call
-        return toSourceCode(node, true, 0);
+    // Operator Precedence: Higher value means higher precedence
+    private static int getBinaryOperatorPrecedence(String op) {
+        return switch (op) {
+            case "*", "/", "%": yield 6;
+            case "+", "-": yield 5; // Binary plus/minus
+            case "<", ">", "<=", ">=": yield 4;
+            case "==", "!=": yield 3;
+            case "&&": yield 2;
+            case "||": yield 1;
+            case "=": yield 0; // Assignment has very low precedence
+            default: yield 0; // For other non-binary ops or lowest precedence
+        };
     }
 
-    // Overload for internal calls that don't change isRoot or indentLevel from context
-    private static String toSourceCode(Node node, boolean isRootOrBlockItem, int indentLevel) {
+    private static int getUnaryOperatorPrecedence(String op) {
+        return switch (op) {
+            case "!", "-": // Logical NOT, Unary MINUS
+                yield 7; // Higher than multiplicative
+            default: yield 0;
+        };
+    }
+
+    private static boolean isLeftAssociative(String op) {
+        // Most binary operators are left-associative.
+        // Assignment operators (=, +=, -= etc.) are right-associative.
+        // Logical OR (||) and Logical AND (&&) are left-associative.
+        // Equality (==, !=) and Relational (<, >, <=, >=) are non-associative in some contexts but typically parse left-to-right.
+        // Additive (+, -) and Multiplicative (*, /, %) are left-associative.
+        switch (op) {
+            case "=":
+            case "+=":
+            case "-=":
+            case "*=":
+            case "/=":
+            case "%=":
+                return false; // Right-associative
+            default:
+                return true; // Assume left-associative for others
+        }
+    }
+
+    public static String toSourceCode(Node node) {
+        return toSourceCodeRecursive(node, true, 0, 0);
+    }
+
+    private static String toSourceCodeRecursive(Node node, boolean isRootOrBlockItem, int indentLevel, int parentPrecedence) {
         if (node == null) {
             return "";
         }
-        
-        String currentIndent = INDENT.repeat(indentLevel);
 
-        // Most expressions are inline and don't get their own indent prefix unless they are block items.
-        // The 'isRootOrBlockItem' flag helps distinguish. 'true' if it's a statement in a scope, 'false' for sub-expressions.
-        String prefix = isRootOrBlockItem ? currentIndent : ""; 
+        String currentIndent = INDENT.repeat(indentLevel);
+        String prefix = isRootOrBlockItem ? currentIndent : "";
 
         return switch (node) {
             case Scope scope -> {
                 StringBuilder sb = new StringBuilder();
-                if (!isRootOrBlockItem) { // If it's a nested scope like in an if/for/fn, it gets braces
-                    sb.append("{");
-                }
+                if (!isRootOrBlockItem) { sb.append("{"); }
                 for (Statement stmt : scope.getStatements()) {
                     sb.append(NEW_LINE);
-                    // Statements in a scope are block items, pass true and increment indent level
-                    sb.append(toSourceCode(stmt, true, isRootOrBlockItem ? indentLevel : indentLevel + 1)); 
+                    sb.append(toSourceCodeRecursive(stmt, true, isRootOrBlockItem ? indentLevel : indentLevel + 1, 0));
                 }
                 if (!scope.getStatements().isEmpty()) {
                     sb.append(NEW_LINE);
-                    // Indent the closing brace to the scope's own level
                     sb.append(INDENT.repeat(isRootOrBlockItem ? indentLevel : indentLevel + 1)); 
                 }
-                if (!isRootOrBlockItem) {
-                    sb.append("}");
-                }
+                if (!isRootOrBlockItem) { sb.append("}"); }
                 yield sb.toString();
             }
             case FunctionDeclaration func -> {
                 StringBuilder sb = new StringBuilder(prefix);
                 sb.append("fn ").append(func.getName()).append("(");
                 String params = func.getParameters().stream()
-                        .map(param -> toSourceCode(param, false, indentLevel)) // params are inline
+                        .map(param -> toSourceCodeRecursive(param, false, indentLevel, 0))
                         .collect(Collectors.joining(", "));
                 sb.append(params).append(")");
-                String returnTypeStr = toSourceCode(func.getReturnType(), false, indentLevel); // return type is inline
-                if (!returnTypeStr.equals("void")) {
+                Type actualReturnType = func.getReturnType();
+                String returnTypeStr = toSourceCodeRecursive(actualReturnType, false, indentLevel, 0);
+                if (!(actualReturnType instanceof PrimitiveType && "void".equals(((PrimitiveType) actualReturnType).getName()) && !func.isReturnTypeExplicit())) {
                     sb.append(" -> ").append(returnTypeStr);
                 }
-                // The function body (a Scope) is a block, pass false for isRootOrBlockItem (it's not a root program scope)
-                // and increment indentLevel for its contents.
-                sb.append(" ").append(toSourceCode(func.getBody(), false, indentLevel)); // Scope handles its own newlines and indent for content
+                sb.append(" ").append(toSourceCodeRecursive(func.getBody(), false, indentLevel, 0));
                 yield sb.toString();
             }
-            case Parameter param -> prefix + param.getName() + ": " + toSourceCode(param.getType(), false, indentLevel);
-            case VariableDeclaration var -> prefix + "let " + var.getName() +
-                    ": " + toSourceCode(var.getType(), false, indentLevel) +
-                    " = " + toSourceCode(var.getValue(), false, indentLevel) + ";";
-            case StringLiteral stringLiteral -> prefix + "\"" + stringLiteral.getValue() + "\"";
-            case NumberLiteral numberLiteral -> prefix + numberLiteral.getValue();
-            case BooleanLiteral booleanLiteral -> prefix + booleanLiteral.getValue();
-            case ArrayElement arrayElement -> {
-                StringBuilder sb = new StringBuilder(prefix + toSourceCode(arrayElement.getIdentifier(), false, indentLevel));
-                for (Expression dim : arrayElement.getDims()) {
-                    sb.append('[').append(toSourceCode(dim, false, indentLevel)).append(']');
+            case Parameter param -> prefix + param.getName() + ": " + toSourceCodeRecursive(param.getType(), false, indentLevel, 0);
+            case VariableDeclaration varDecl -> {
+                String typeStr = toSourceCodeRecursive(varDecl.getType(), false, indentLevel, 0);
+                String valueStr = "";
+                if (varDecl.getValue() != null) {
+                    valueStr = " = " + toSourceCodeRecursive(varDecl.getValue(), false, indentLevel, 0);
+                }
+                yield prefix + "let " + varDecl.getName() + ": " + typeStr + valueStr + ";";
+            }
+            case StringLiteral strLit -> prefix + "\"" + strLit.getValue() + "\"";
+            case NumberLiteral numLit -> prefix + numLit.getValue();
+            case BooleanLiteral boolLit -> prefix + boolLit.getValue();
+            case ArrayElement arrElem -> {
+                StringBuilder sb = new StringBuilder(prefix + toSourceCodeRecursive(arrElem.getIdentifier(), false, indentLevel, 0));
+                for (Expression dim : arrElem.getDims()) {
+                    sb.append('[').append(toSourceCodeRecursive(dim, false, indentLevel, 0)).append(']');
                 }
                 yield sb.toString();
             }
-            case Identifier identifier -> prefix + identifier.getName();
-            case PrimitiveType primitiveType -> prefix + primitiveType.getName();
-            case ArrayType arrayType -> prefix + "[" + toSourceCode(arrayType.getElementType(), false, indentLevel) +
-                    "; " + toSourceCode(arrayType.getSize(), false, indentLevel) + "]";
-            case BinaryExpression binExpr -> prefix + toSourceCode(binExpr.getLeft(), false, indentLevel) +
-                    " " + binExpr.getOperator() + " " +
-                    toSourceCode(binExpr.getRight(), false, indentLevel);
-            case UnaryExpression unExpr -> prefix + unExpr.getOperator() +
-                    toSourceCode(unExpr.getArgument(), false, indentLevel);
-            case ReturnStatement ret -> {
-                String returnable = toSourceCode(ret.getReturnable(), false, indentLevel);
-                yield prefix + "return" + (returnable.isEmpty() ? "" : " " + returnable) + ";";
+            case Identifier id -> prefix + id.getName();
+            case PrimitiveType primType -> prefix + primType.getName();
+            case ArrayType arrType -> prefix + "[" + toSourceCodeRecursive(arrType.getElementType(), false, indentLevel, 0) +
+                    "; " + toSourceCodeRecursive(arrType.getSize(), false, indentLevel, 0) + "]";
+            case BinaryExpression binExpr -> {
+                int currentPrecedence = getBinaryOperatorPrecedence(binExpr.getOperator());
+                String op = binExpr.getOperator();
+
+                String leftStr = toSourceCodeRecursive(binExpr.getLeft(), false, indentLevel, currentPrecedence);
+
+                int rightParentPrecedence = currentPrecedence;
+                if (isLeftAssociative(op)) {
+                    // For left-associative operators, if the right operand has precedence
+                    // equal to or lower than the current operator, it might need parentheses
+                    // if it's not a primary expression, to enforce left-to-right evaluation visually
+                    // or to override it if the AST structure demands (e.g. a - (b+c)).
+                    // If right child's precedence is strictly lower, it will be parenthesized by its own rule.
+                    // If right child's precedence is equal, we need to force parenthesizing it.
+                    // So, pass a slightly higher precedence to its recursive call.
+                    if (binExpr.getRight() instanceof BinaryExpression) {
+                        BinaryExpression rightBinExpr = (BinaryExpression) binExpr.getRight();
+                        if (getBinaryOperatorPrecedence(rightBinExpr.getOperator()) == currentPrecedence) {
+                            rightParentPrecedence = currentPrecedence + 1;
+                        }
+                    }
+                } else { // Right-associative operator
+                    // For right-associative operators, if the left operand has precedence
+                    // equal to currentPrecedence, it needs to be parenthesized.
+                    if (binExpr.getLeft() instanceof BinaryExpression) {
+                        BinaryExpression leftBinExpr = (BinaryExpression) binExpr.getLeft();
+                        if (getBinaryOperatorPrecedence(leftBinExpr.getOperator()) == currentPrecedence) {
+                            // Re-generate leftStr with higher parent precedence to force parens
+                            leftStr = toSourceCodeRecursive(binExpr.getLeft(), false, indentLevel, currentPrecedence + 1);
+                        }
+                    }
+                }
+
+                String rightStr = toSourceCodeRecursive(binExpr.getRight(), false, indentLevel, rightParentPrecedence);
+                
+                String content = leftStr + " " + op + " " + rightStr;
+
+                if (currentPrecedence < parentPrecedence) {
+                    content = "(" + content + ")";
+                } else if (currentPrecedence == parentPrecedence && parentPrecedence != 0) {
+                    // If current precedence is same as parent, and parent is not assignment (0) or root (0),
+                    // and this operator is different or associativity demands it.
+                    // This is to handle cases like (a+b)*c vs a+(b*c)
+                    // If parent op is left-associative, and this op is on the right and has same precedence, it needs parens.
+                    // This is covered by the rightParentPrecedence logic for the recursive call.
+                    // However, if the *parent* is right-associative, and this op is on the left with same precedence.
+                    // Example: a = (b = c). Here parent is '=', right child is (b=c).
+                    // When processing (b=c), its parentPrecedence is for outer '='.
+                    // This specific 'else if' might be too broad or redundant with the recursive call adjustments.
+                }
+                yield prefix + content;
+            }
+            case ParenthesizedExpression parenExpr -> {
+                // Parent precedence for inner expression should be low (e.g., 0) to prevent extra parens inside
+                String innerExprStr = toSourceCodeRecursive(parenExpr.getInnerExpression(), false, indentLevel, 0);
+                yield prefix + "(" + innerExprStr + ")";
+            }
+            case UnaryExpression unExpr -> {
+                int currentUnaryPrecedence = getUnaryOperatorPrecedence(unExpr.getOperator());
+                Expression argument = unExpr.getArgument();
+                String operator = unExpr.getOperator();
+
+                // Determine the precedence to pass to the argument's recursive call.
+                // Argument needs to be parenthesized if its own operator precedence is lower OR EQUAL
+                // (for unary-unary like -(-a) or unary-binary like -(a*b) where op prec might be close).
+                // Passing currentUnaryPrecedence ensures that if argument's precedence is < currentUnaryPrecedence, it's parenthesized.
+                // For -(-a): inner -a has precedence 7. Outer - has precedence 7. 7 < 7 is false. So inner -a is not parenthesized by default.
+                String argStr = toSourceCodeRecursive(argument, false, indentLevel, currentUnaryPrecedence);
+
+                // Specific fix for nested unary operators of the same kind, e.g., -(-a) or !(!b)
+                // If the argument is a UnaryExpression with the same operator, its string form (argStr)
+                // needs to be explicitly parenthesized because the recursive call might not have done it
+                // (as its precedence wasn't strictly less than the parentPrecedence it received).
+                if (argument instanceof UnaryExpression) {
+                    UnaryExpression argUnaryExpr = (UnaryExpression) argument;
+                    if (argUnaryExpr.getOperator().equals(operator)) {
+                        // argStr is like "-a" or "!b". We need "(-a)" or "(!b)".
+                        argStr = "(" + argStr + ")";
+                    }
+                }
+                // Also, if a unary operator is applied to a binary expression that is not naturally parenthesized by precedence,
+                // e.g. -(a+b). Here '+' (5) is lower than '-' (7). So (a+b) is correctly generated by recursive call.
+                // What about -(a*b)? '*' (6) is lower than '-' (7). So (a*b) is generated.
+                // This seems fine. The primary issue was unary-unary.
+
+                String content = operator + argStr;
+
+                // Parenthesize the whole current unary expression if its precedence is lower than its parent context's operator.
+                if (currentUnaryPrecedence < parentPrecedence) {
+                    content = "(" + content + ")";
+                }
+                yield prefix + content;
+            }
+            case ReturnStatement retStmt -> {
+                String valStr = toSourceCodeRecursive(retStmt.getReturnable(), false, indentLevel, 0);
+                yield prefix + "return" + (valStr.isEmpty() ? "" : " " + valStr) + ";";
             }
             case FunctionCall funcCall -> {
                 StringBuilder sb = new StringBuilder(prefix);
                 sb.append(funcCall.getName()).append("(");
                 String args = funcCall.getArguments().stream()
-                        .map(arg -> toSourceCode(arg, false, indentLevel))
+                        .map(arg -> toSourceCodeRecursive(arg, false, indentLevel, 0))
                         .collect(Collectors.joining(", "));
                 sb.append(args).append(")");
                 yield sb.toString();
             }
-            case ArrayLiteral arrayLiteral -> {
+            case ArrayLiteral arrLit -> {
                 StringBuilder sb = new StringBuilder(prefix);
                 sb.append("[");
-                String elements = arrayLiteral.getElements().stream()
-                        .map(elem -> toSourceCode(elem, false, indentLevel))
+                String elems = arrLit.getElements().stream()
+                        .map(elem -> toSourceCodeRecursive(elem, false, indentLevel, 0))
                         .collect(Collectors.joining(", "));
-                sb.append(elements).append("]");
+                sb.append(elems).append("]");
                 yield sb.toString();
             }
-            case WhileLoop whileLoop -> prefix + "while (" + toSourceCode(whileLoop.getCondition(), false, indentLevel) + ") " +
-                    toSourceCode(whileLoop.getBody(), false, indentLevel); // Scope handles its own newlines/indent
+            case WhileLoop whileLoop -> prefix + "while (" + toSourceCodeRecursive(whileLoop.getCondition(), false, indentLevel, 0) + ") " +
+                    toSourceCodeRecursive(whileLoop.getBody(), false, indentLevel, 0);
             case ForLoop forLoop -> {
-                StringBuilder partBuilder = new StringBuilder(prefix);
-                partBuilder.append("for(");
-                // Get the initializer statement directly from the ForLoop node
-                String initStr = toSourceCode(forLoop.getInitialization(), false, indentLevel); // inline, no extra indent
-                // Remove trailing semicolon if present, as it's part of the for-loop syntax not the statement itself here
-                if (initStr.endsWith(";")) {
-                    initStr = initStr.substring(0, initStr.length() - 1);
-                }
-                partBuilder.append(initStr).append("; ");
-                partBuilder.append(toSourceCode(forLoop.getCondition(), false, indentLevel)).append("; "); // inline
-                partBuilder.append(toSourceCode(forLoop.getStep(), false, indentLevel)); // inline
-                partBuilder.append(") ");
-                // The body (a Scope) is a block. Pass false for isRootOrBlockItem.
-                // The Scope case itself will handle indenting its statements relative to 'indentLevel'.
-                partBuilder.append(toSourceCode(forLoop.getBody(), false, indentLevel)); 
-                yield partBuilder.toString();
+                StringBuilder sb = new StringBuilder(prefix);
+                sb.append("for(");
+                String initStr = toSourceCodeRecursive(forLoop.getInitialization(), false, indentLevel, 0);
+                if (initStr.endsWith(";")) initStr = initStr.substring(0, initStr.length() - 1);
+                sb.append(initStr).append("; ");
+                sb.append(toSourceCodeRecursive(forLoop.getCondition(), false, indentLevel, 0)).append("; ");
+                String stepStr = toSourceCodeRecursive(forLoop.getStep(), false, indentLevel, 0);
+                 if (stepStr.endsWith(";")) stepStr = stepStr.substring(0, stepStr.length() - 1);
+                sb.append(stepStr).append(") ");
+                sb.append(toSourceCodeRecursive(forLoop.getBody(), false, indentLevel, 0));
+                yield sb.toString();
             }
             case IfStatement ifStmt -> {
                 StringBuilder sb = new StringBuilder(prefix);
-                sb.append("if (").append(toSourceCode(ifStmt.getCondition(), false, indentLevel)).append(") ");
-                sb.append(toSourceCode(ifStmt.getBody(), false, indentLevel)); // Scope handles its own newlines/indent
+                sb.append("if (").append(toSourceCodeRecursive(ifStmt.getCondition(), false, indentLevel, 0)).append(") ");
+                sb.append(toSourceCodeRecursive(ifStmt.getBody(), false, indentLevel, 0));
                 if (ifStmt.getElseBody() != null) {
-                    sb.append(NEW_LINE).append(currentIndent); // else on new line, same indent as if
+                    sb.append(NEW_LINE).append(currentIndent);
                     sb.append("else ");
-                    sb.append(toSourceCode(ifStmt.getElseBody(), false, indentLevel)); // Scope handles its own newlines/indent
+                    sb.append(toSourceCodeRecursive(ifStmt.getElseBody(), false, indentLevel, 0));
                 }
                 yield sb.toString();
             }
-            case @SuppressWarnings("unused") BreakStatement breakStatement -> prefix + "break;";
+            case BreakStatement breakStmt -> prefix + "break;";
             case AssignmentExpression assignExpr -> {
-                String op = "=";
                 Expression assignLeft = assignExpr.getLeft();
                 Expression assignRight = assignExpr.getRight();
-                String tempPrefix = isRootOrBlockItem ? currentIndent : ""; // Use currentIndent only if it's a statement
+                String tempPrefix = isRootOrBlockItem ? currentIndent : "";
 
-                if (assignRight instanceof BinaryExpression bin) {
-                    Expression binLeft = bin.getLeft();
-                    Expression binRightVal = bin.getRight();
-                    boolean sameVar = false;
-                    if (assignLeft instanceof Identifier assignId && binLeft instanceof Identifier binId && assignId.getName().equals(binId.getName())) {
-                        sameVar = true;
-                    } else if (assignLeft instanceof ArrayElement && binLeft instanceof ArrayElement && 
-                               toSourceCode(assignLeft, false, indentLevel).equals(toSourceCode(binLeft, false, indentLevel))) {
-                        sameVar = true;
-                    }
-
-                    if (sameVar) {
-                        String bop = bin.getOperator();
-                        if ("+".equals(bop) || "-".equals(bop) || "*".equals(bop) || "/".equals(bop)) {
-                            op = bop + "=";
-                            yield tempPrefix + toSourceCode(assignLeft, false, indentLevel) + " " + op + " " + toSourceCode(binRightVal, false, indentLevel);
-                        }
-                    }
-                }
-                yield tempPrefix + toSourceCode(assignLeft, false, indentLevel) + " = " + toSourceCode(assignRight, false, indentLevel);
+                String leftCode = toSourceCodeRecursive(assignLeft, false, indentLevel, 0); 
+                // Pass precedence of '=' for the right-hand side, as assignment is right-associative 
+                // and has the lowest precedence.
+                String rightCode = toSourceCodeRecursive(assignRight, false, indentLevel, getBinaryOperatorPrecedence("="));
+                
+                yield tempPrefix + leftCode + " " + assignExpr.getOperator() + " " + rightCode;
             }
-            case ExpressionStatement exprStmt -> // Expression statement itself applies indent, its expression is inline to it.
-                    prefix + toSourceCode(exprStmt.getExpression(), false, indentLevel) + ";";
-            case AST astNode -> // The AST node itself is a container (like ASTImpl which wraps the root Scope).
-                // Its source representation comes from its root element.
-                // Pass isRootOrBlockItem and indentLevel through, as they apply
-                // to how the AST's content (the root scope) should be rendered.
-                    toSourceCode(astNode.root(), isRootOrBlockItem, indentLevel);
-            default -> prefix + "// Неизвестный узел: " + node.getClass().getSimpleName();
+            case ExpressionStatement exprStmt -> prefix + toSourceCodeRecursive(exprStmt.getExpression(), false, indentLevel, 0) + ";";
+            case AST ast -> toSourceCodeRecursive(ast.root(), isRootOrBlockItem, indentLevel, 0);
+            default -> prefix + "// Unknown node: " + node.getClass().getSimpleName();
         };
     }
 
@@ -189,10 +286,9 @@ public class SourceBuilder {
         return String.format("[line %d:%d - %d:%d] %s", startLine, startChar, stopLine, stopChar, text);
     }
 
-    // Возвращает исходную строку и строку-указатель с ^ под ошибкой
     public static String toSourceLine(String source, int line, int charPosition, int length) {
         if (source == null || line < 1) return "";
-        String[] lines = source.split("\r?\n");
+        String[] lines = source.split("\\R"); // Use \R for any Unicode linebreak sequence
         if (line > lines.length) return "";
         String codeLine = lines[line - 1];
         StringBuilder pointer = new StringBuilder();

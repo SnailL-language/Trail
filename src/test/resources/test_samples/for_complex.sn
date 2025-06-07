@@ -1,0 +1,15 @@
+fn get_limit() -> i32 {
+    return 5;
+}
+
+fn get_step() -> i32 {
+    return 2;
+}
+
+fn main() -> void {
+    let sum: i32 = 0;
+    for (let i: i32 = 1 - 1; i < get_limit() * 2 && true; i = i + get_step()) {
+        sum = sum + i;
+    }
+    // println(sum); // i = 0, 2, 4, 6, 8. sum = 0+2+4+6+8 = 20
+}

@@ -74,26 +74,58 @@ returnStatement
 
 // === Выражения ===
 expression
-    : assigmentExpression
-    | binaryExpression
-    | unaryExpression
-    | primaryExpression
-    | '(' expression ')'
+    : assignmentExpression
     ;
 
-assigmentExpression : identifier assigmentOperator=('='| '+=' | '-=' | '*=' | '/=') expression;
+// Level 1: Assignment (right-associative)
+assignmentExpression
+    : identifier assigmentOperator=('='| '+=' | '-=' | '*=' | '/=') assignmentExpression
+    | logicalOrExpression
+    ;
 
-binaryExpression : (primaryExpression | '(' expression ')') binaryOperator=('||' | '&&' | '==' | '!=' | '>' | '<' | '>=' | '<=' | '+' | '-' | '*' | '/') expression;
+// Level 2: Logical OR (left-associative)
+logicalOrExpression
+    : logicalAndExpression ( '||' logicalAndExpression )*
+    ;
 
-unaryExpression : unaryOperator=('-' | '!') expression;
+// Level 3: Logical AND (left-associative)
+logicalAndExpression
+    : equalityExpression ( '&&' equalityExpression )*
+    ;
 
-// Основные выражения
+// Level 4: Equality (left-associative)
+equalityExpression
+    : relationalExpression ( ( '==' | '!=' ) relationalExpression )*
+    ;
+
+// Level 5: Relational (left-associative)
+relationalExpression
+    : additiveExpression ( ( '>' | '<' | '>=' | '<=' ) additiveExpression )*
+    ;
+
+// Level 6: Additive (left-associative)
+additiveExpression
+    : multiplicativeExpression ( ( '+' | '-' ) multiplicativeExpression )*
+    ;
+
+// Level 7: Multiplicative (left-associative)
+multiplicativeExpression
+    : unaryExpression ( ( '*' | '/' ) unaryExpression )*
+    ;
+
+// Level 8: Unary (prefix, right-associative)
+unaryExpression
+    : unaryOperator=('-' | '!') unaryExpression
+    | primaryExpression
+    ;
+
+// Level 9: Primary expressions
 primaryExpression
     : literal
-    | identifier
-    | arrayElement
+    | identifier             // Covers variableIdentifier and arrayElement
     | functionCall
     | arrayLiteral
+    | '(' expression ')'     // Parenthesized expression, restarts precedence
     ;
 
 // Литералы

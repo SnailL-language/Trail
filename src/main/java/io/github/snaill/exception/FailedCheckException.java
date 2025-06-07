@@ -18,19 +18,19 @@ public class FailedCheckException extends Exception {
     public FailedCheckException(String message, Throwable cause) { super(message, cause); }
     
     /**
-     * Создает исключение с указанным списком ошибок компиляции
-     * @param errors список ошибок компиляции
+     * Creates an exception with the specified list of compilation errors
+     * @param errors list of compilation errors
      */
     public FailedCheckException(List<CompilationError> errors) {
-        super(errors != null && !errors.isEmpty() ? errors.getFirst().toString() : "Ошибка проверки");
+        super(errors != null && !errors.isEmpty() ? errors.getFirst().toString() : "Check failed");
         if (errors != null) {
             this.errors.addAll(errors);
         }
     }
     
     /**
-     * Возвращает список ошибок компиляции
-     * @return список ошибок компиляции
+     * Returns the list of compilation errors
+     * @return list of compilation errors
      */
     public List<CompilationError> getErrors() {
         return Collections.unmodifiableList(errors);

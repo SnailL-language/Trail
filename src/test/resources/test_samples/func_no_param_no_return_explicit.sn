@@ -1,0 +1,13 @@
+fn do_nothing() -> void {
+    let x: i32 = 10;
+    // No return statement
+}
+
+fn also_do_nothing() {
+    // Implicit void return, no params
+}
+
+fn main() -> void {
+    do_nothing();
+    also_do_nothing();
+}

@@ -62,7 +62,7 @@ public class ArrayElement extends Expression {
 
     @Override
     public void checkUnusedVariables(Set<VariableDeclaration> unused) {
-        // Использование массива — это использование идентификатора
+        // Using an array means using its identifier
         if (identifier instanceof Identifier id) {
             unused.removeIf(v -> v.getName().equals(id.getName()));
         } else if (identifier != null) {
@@ -75,20 +75,41 @@ public class ArrayElement extends Expression {
 
     @Override
     public Type getType(Scope scope) throws io.github.snaill.exception.FailedCheckException {
-        Type arrType = identifier.getType(scope);
-        if (!(arrType instanceof ArrayType at)) {
-            String before = getSource() != null ?
-                io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), toString().length()) :
-                io.github.snaill.ast.SourceBuilder.toSourceCode(this);
-            throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
-                    io.github.snaill.result.ErrorType.NOT_AN_ARRAY,
-                    before,
-                    "Not an array: " + identifier,
-                    ""
-                ).toString()
-            );
+        Type currentType = identifier.getType(scope);
+        List<Expression> dims = getDims();
+
+        for (int i = 0; i < dims.size(); i++) {
+            Expression dimExpr = dims.get(i);
+            if (!(currentType instanceof ArrayType arrayType)) {
+                String before = getSource() != null ?
+                    io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), toString().length()) :
+                    io.github.snaill.ast.SourceBuilder.toSourceCode(this);
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        io.github.snaill.result.ErrorType.NOT_AN_ARRAY,
+                        before,
+                        "Expression '" + identifier + "' is not an array or indexed too deeply at dimension " + (i + 1) + ". Expected array, got " + currentType,
+                        ""
+                    ).toString()
+                );
+            }
+
+            Type indexType = dimExpr.getType(scope);
+            if (!(indexType instanceof PrimitiveType pt) || (!pt.getName().equals("usize") && !pt.getName().equals("i32"))) {
+                String before = dimExpr.getSource() != null ?
+                    io.github.snaill.ast.SourceBuilder.toSourceLine(dimExpr.getSource(), dimExpr.getLine(), dimExpr.getCharPosition(), dimExpr.toString().length()) :
+                    io.github.snaill.ast.SourceBuilder.toSourceCode(dimExpr);
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        io.github.snaill.result.ErrorType.TYPE_MISMATCH,
+                        before,
+                        "Array index for dimension " + (i + 1) + " must be of type usize or i32, got " + indexType,
+                        ""
+                    ).toString()
+                );
+            }
+            currentType = arrayType.getElementType();
         }
-        return at.getElementType();
+        return currentType;
     }
 }

@@ -6,19 +6,21 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Представляет объявление функции в AST.
- * Генерирует байткод для функции и её тела.
+ * Represents a function declaration in the AST.
+ * Generates bytecode for the function and its body.
  */
 public class FunctionDeclaration extends AbstractNode implements Statement /*, BytecodeEmittable */ {
     private final String name;
     private final List<Parameter> parameters;
     private final Type returnType;
+    private final boolean isReturnTypeExplicit;
 
-    public FunctionDeclaration(String name, List<Parameter> parameters, Type returnType, Scope body) {
+    public FunctionDeclaration(String name, List<Parameter> parameters, Type returnType, Scope body, boolean isReturnTypeExplicit) {
         super(List.of(body));
         this.name = name;
         this.parameters = parameters;
         this.returnType = returnType;
+        this.isReturnTypeExplicit = isReturnTypeExplicit;
     }
 
     @Override
@@ -43,9 +45,13 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
         return (Scope) children.getFirst();
     }
 
+    public boolean isReturnTypeExplicit() {
+        return isReturnTypeExplicit;
+    }
+
     @Override
     public void checkUnusedFunctions(Set<FunctionDeclaration> unused) {
-        // no-op: FunctionDeclaration не должна удалять себя из unused
+        // no-op: FunctionDeclaration should not remove itself from unused
     }
 
     @Override
@@ -54,6 +60,7 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
             return name.equals(other.name)
                 && parameters.equals(other.parameters)
                 && returnType.equals(other.returnType)
+                && isReturnTypeExplicit == other.isReturnTypeExplicit
                 && super.equals(other);
         }
         return false;
@@ -61,7 +68,7 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, returnType, parameters);
+        return Objects.hash(name, returnType, parameters, isReturnTypeExplicit);
     }
 
     @Override
@@ -70,35 +77,35 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
     }
 
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
-        // Регистрируем функцию в контексте
+        // Register the function in the context
         context.addFunction(this);
         
-        // Сохраняем аргументы со стека в локальные переменные
-        // Параметры имеют индексы 0..N-1, где N - количество параметров
-        // При вызове функции аргументы уже находятся на стеке, в порядке слева направо
-        // Сохраняем их в обратном порядке (последний аргумент вверху стека)
+        // Store arguments from the stack into local variables
+        // Parameters have indices 0..N-1, where N is the number of parameters
+        // When a function is called, arguments are already on the stack, in left-to-right order
+        // Store them in reverse order (last argument is at the top of the stack)
         if (this.parameters != null && !this.parameters.isEmpty()) {
             int paramCount = this.parameters.size();
-            // Аргументы на стеке идут в обратном порядке (последний аргумент вверху стека)
-            // Поэтому мы сохраняем их в локальные переменные начиная с последнего индекса
+            // Arguments on the stack are in reverse order (last argument at the top of the stack)
+            // So we store them in local variables starting from the last index
             for (int i = paramCount - 1; i >= 0; i--) {
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, i);
             }
         }
         
-        // Генерируем байткод тела функции
+        // Generate bytecode for the function body
         getBody().emitBytecode(out, context, this);
         
-        // Добавляем инструкцию возврата, если её нет
+        // Add a return instruction if it's not present
         if (!hasReturnStatement(getBody())) {
             out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
-            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Предполагается, что 0 - это индекс константы для null
+            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Assumes 0 is the constant index for null
             out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.RET);
         }
     }
 
-    // Вспомогательный метод для проверки наличия оператора return
+    // Helper method to check for the presence of a return statement
     private boolean hasReturnStatement(Scope scope) {
         for (Node node : scope.getChildren()) {
             if (node instanceof ReturnStatement) {
@@ -132,11 +139,11 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
                 }
             }
         }
-        // UNUSED warnings должны идти в System.out
+        // UNUSED warnings should go to System.out (now commented out)
         super.check();
     }
 
-    // Добавляем метод для сбора локальных переменных
+    // Add a method to collect local variables
     private void collectLocalVariables(Node node, java.util.Set<String> localVars, boolean isGlobalScope) {
         if (node instanceof VariableDeclaration varDecl) {
             if (!isGlobalScope) {

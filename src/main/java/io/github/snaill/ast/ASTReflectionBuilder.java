@@ -1,5 +1,7 @@
 package io.github.snaill.ast;
 
+// Type is in the same package (io.github.snaill.ast), no import needed.
+// SourceInfo.java was not found, so its import is removed.
 import io.github.snaill.parser.SnailParser;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -8,47 +10,125 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import io.github.snaill.result.ErrorType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-
+/**
+ * Создает абстрактное синтаксическое дерево (AST) из разобранной программы Snail.
+ */
 public class ASTReflectionBuilder implements ASTBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(ASTReflectionBuilder.class);
 
     @Override
     public Node build(SnailParser.ProgramContext ctx) throws io.github.snaill.exception.FailedCheckException {
-        
-        // Сначала создаем корневую область видимости с пустым списком statements
         List<Statement> statements = new ArrayList<>();
         Scope rootScope = new Scope(statements, null);
-        
-        // Собираем все глобальные переменные (до первой функции)
+
         int i = 0;
+        // Обрабатываем глобальные переменные (перед первой функцией)
         while (i < ctx.getChildCount()) {
             ParseTree child = ctx.getChild(i);
             if (child instanceof SnailParser.VariableDeclarationContext varCtx) {
                 VariableDeclaration globalVar = parseVariableDeclaration(varCtx, rootScope);
                 if (globalVar != null) {
-                    rootScope.addDeclaration(globalVar); // Add to rootScope's symbol table
-                    statements.add(globalVar); // Add to AST children list for rootScope
+                    rootScope.addDeclaration(globalVar);
+                    statements.add(globalVar);
                 }
                 i++;
-            } else {
+            } else if (child instanceof SnailParser.FuncDeclarationContext) { // Если началась функция, прекращаем искать переменные
                 break;
+            } else if (child instanceof TerminalNode && ((TerminalNode) child).getSymbol().getType() == SnailParser.EOF) {
+                 break; // Достигли конца файла раньше, чем нашли функции
+            } else {
+                // Неожиданный элемент на верхнем уровне перед функциями
+                 String errorSource = child.getText();
+                 if (child instanceof org.antlr.v4.runtime.ParserRuleContext prc && prc.getStart() != null && prc.getStart().getInputStream() != null) {
+                     errorSource = SourceBuilder.toSourceLine(prc.getStart().getInputStream().toString(), prc.getStart().getLine(), prc.getStart().getCharPositionInLine(), prc.getText().length());
+                 }
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        ErrorType.SYNTAX_ERROR,
+                        errorSource,
+                        "Unexpected token at global scope. Expected variable or function declaration.",
+                        "Ensure all global variable declarations are before any function declarations."
+                    ).toString()
+                );
             }
         }
-        
-        // Затем все функции (минимум одна по грамматике)
+
+        // Проверяем, есть ли вообще функции
+        boolean hasFunctions = false;
+        for (int j = i; j < ctx.getChildCount(); j++) {
+            if (ctx.getChild(j) instanceof SnailParser.FuncDeclarationContext) {
+                hasFunctions = true;
+                break;
+            }
+            if (ctx.getChild(j) instanceof TerminalNode && ((TerminalNode) ctx.getChild(j)).getSymbol().getType() == SnailParser.EOF) {
+                break; // Дошли до EOF, функций нет
+            }
+        }
+
+        if (!hasFunctions) {
+            String errorSource = "program";
+            if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
+                errorSource = SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length());
+            }
+             throw new io.github.snaill.exception.FailedCheckException(
+                new io.github.snaill.result.CompilationError(
+                    ErrorType.SYNTAX_ERROR,
+                    errorSource,
+                    "No function declarations found. A Snail program must contain at least one function.",
+                    "Define at least one function, e.g., 'fn main() -> void {}'."
+                ).toString()
+            );
+        }
+
+        // Затем обрабатываем функции
         for (; i < ctx.getChildCount(); i++) {
             ParseTree child = ctx.getChild(i);
             if (child instanceof SnailParser.FuncDeclarationContext funcCtx) {
-                // Передаем rootScope как родительскую область видимости
                 Statement func = (Statement) parseFuncDeclaration(funcCtx, rootScope);
                 if (func != null) statements.add(func);
+            } else if (child instanceof TerminalNode && ((TerminalNode) child).getSymbol().getType() == SnailParser.EOF) {
+                break; // Достигли конца файла
+            } else {
+                // Если после функций идет что-то, кроме EOF
+                String errorSource = child.getText();
+                 if (child instanceof org.antlr.v4.runtime.ParserRuleContext prc && prc.getStart() != null && prc.getStart().getInputStream() != null) {
+                     errorSource = SourceBuilder.toSourceLine(prc.getStart().getInputStream().toString(), prc.getStart().getLine(), prc.getStart().getCharPositionInLine(), prc.getText().length());
+                 }
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        ErrorType.SYNTAX_ERROR,
+                        errorSource,
+                        "Unexpected token after function declarations. Expected EOF.",
+                        "Ensure all global variable declarations are before function declarations, and no statements follow the last function declaration."
+                    ).toString()
+                );
             }
         }
         
-        // Обновляем children в rootScope, хотя это уже должно быть сделано автоматически
-        // Явно приводим List<Statement> к Collection<Node>
+        // Проверка, что последний обработанный или следующий элемент - это EOF
+        if (i >= ctx.getChildCount() || !(ctx.getChild(i) instanceof TerminalNode && ((TerminalNode) ctx.getChild(i)).getSymbol().getType() == SnailParser.EOF)) {
+            ParseTree problematicChild = (i < ctx.getChildCount()) ? ctx.getChild(i) : (ctx.getChildCount() > 0 ? ctx.getChild(ctx.getChildCount() -1) : ctx) ;
+            String errorSource = problematicChild.getText();
+            if (problematicChild instanceof org.antlr.v4.runtime.ParserRuleContext prc && prc.getStart() != null && prc.getStart().getInputStream() != null) {
+                 errorSource = SourceBuilder.toSourceLine(prc.getStart().getInputStream().toString(), prc.getStart().getLine(), prc.getStart().getCharPositionInLine(), prc.getText().length());
+            } else if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
+                 errorSource = SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length());
+            }
+            throw new io.github.snaill.exception.FailedCheckException(
+                new io.github.snaill.result.CompilationError(
+                    ErrorType.SYNTAX_ERROR,
+                    errorSource,
+                    "Program must end with EOF after all declarations.",
+                    "Remove any trailing tokens after the last function declaration."
+                ).toString()
+            );
+        }
+
         rootScope.setChildren(new ArrayList<>(statements));
-        
         return rootScope;
     }
 
@@ -60,7 +140,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
             return parseForLoop(ctx.forLoop(), parent);
         }
         if (ctx.funcDeclaration() != null) {
-            // Allow nested function declarations
+            // Разрешаем вложенные объявления функций
             return parseFuncDeclaration(ctx.funcDeclaration(), parent);
         }
         if (ctx.whileLoop() != null) {
@@ -96,7 +176,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
             }
             return stmt;
         }
-        // Если statement нераспознан — выбрасываем ошибку
+        // Если оператор не распознан — выбрасываем ошибку
         String before = ctx.getStart() != null ?
             io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length()) :
             io.github.snaill.ast.SourceBuilder.toSourceCode(ctx);
@@ -113,55 +193,129 @@ public class ASTReflectionBuilder implements ASTBuilder {
     private VariableDeclaration parseVariableDeclaration(SnailParser.VariableDeclarationContext ctx, Scope parentScopeContext) throws io.github.snaill.exception.FailedCheckException {
         String name = ctx.IDENTIFIER().getText();
         Type type = (Type) parseType(ctx.type(), parentScopeContext);
-        // Pass parentScopeContext for resolving expressions within the variable's own scope context
+        // Передаем parentScopeContext для разрешения выражений в контексте собственной области видимости переменной
         Expression expr = (Expression) parseExpression(ctx.expression(), parentScopeContext);
         VariableDeclaration varDecl = new VariableDeclaration(name, type, expr);
-        // Setting the enclosing scope and adding to localDeclarations will be handled by the calling Scope's addDeclaration method.
-        // Source info is set here as it's directly related to the parsing context of the declaration itself.
+        // Установка окружающей области видимости и добавление в localDeclarations будет обработано методом addDeclaration вызывающей области видимости.
+        // Информация об источнике устанавливается здесь, так как она напрямую связана с контекстом парсинга самого объявления.
         if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null && ctx.start != null && ctx.start.getInputStream() != null) {
             varDecl.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), ctx.start.getInputStream().toString());
-        } else if (ctx.getStart() != null && ctx.start.getInputStream() != null) { // Fallback if IDENTIFIER symbol is null for some reason
+        } else if (ctx.getStart() != null && ctx.start.getInputStream() != null) { // Запасной вариант, если символ IDENTIFIER по какой-то причине равен null
             varDecl.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.start.getInputStream().toString());
         }
         return varDecl;
     }
 
     private Node parseFuncDeclaration(SnailParser.FuncDeclarationContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx.IDENTIFIER() == null) {
+            String errorSource = "function declaration";
+            if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
+                errorSource = SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length());
+            }
+            throw new io.github.snaill.exception.FailedCheckException(
+                new io.github.snaill.result.CompilationError(
+                    ErrorType.SYNTAX_ERROR,
+                    errorSource,
+                    "Function declaration is missing an identifier.",
+                    "Provide a name for the function, e.g., 'fn myFunction() ...'."
+                ).toString()
+            );
+        }
         String name = ctx.IDENTIFIER().getText();
+        // Parameters are parsed first, they need the 'parent' scope for their own type resolution if complex types were allowed for params.
         List<Parameter> params = ctx.paramList() != null ?
                 parseParamList(ctx.paramList(), parent) : List.of();
+
         Type returnType;
         if (ctx.type() != null) {
-            returnType = (Type) parseType(ctx.type(), parent); // 'parent' is the scope containing the function declaration
+            returnType = (Type) parseType(ctx.type(), parent); // Return type is resolved in the parent scope of the function.
         } else {
             returnType = new PrimitiveType("void");
             if (returnType instanceof AbstractNode rn) {
-                 rn.setEnclosingScope(parent); // Scope where 'void' is effectively used/declared
-                 // Set source info for the Type node itself, if available and makes sense
-                 // For a default void, it might point to the function signature or be omitted.
-                 if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) { // Use function name as anchor
+                 rn.setEnclosingScope(parent); 
+                 if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) {
                     rn.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), parent.getSource());
                  } else if (ctx.getStart() != null) {
                     rn.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), parent.getSource());
                  }
             }
         }
-        // Тело функции — отдельный scope с доступом к глобальным переменным через родительскую область видимости
-        // Параметры НЕ добавляем как VariableDeclaration, они обрабатываются в методе resolveVariable
-        Scope funcScope = new Scope(new ArrayList<>(), parent, null);
-        FunctionDeclaration funcDecl = new FunctionDeclaration(name, params, returnType, funcScope);
-        Scope body = parseScope(ctx.scope(), funcScope, funcDecl);
-        funcScope.setChildren(body.getChildren());
+
+        // Create the function's body scope. This scope's parent is the scope where the function is declared.
+        Scope funcBodyScope = new Scope(new ArrayList<>(), parent, null); // Enclosing function for this scope will be set by funcDecl.
+        boolean explicitReturn = ctx.type() != null;
+        
+        FunctionDeclaration funcDecl = new FunctionDeclaration(name, params, returnType, funcBodyScope, explicitReturn);
+        funcBodyScope.setEnclosingFunctionContext(funcDecl); // Link the scope to its function declaration.
+        funcDecl.setEnclosingScope(parent); // The function declaration itself resides in the parent scope.
+
+        // Add parameters as VariableDeclarations to the function's body scope
+        if (params != null) {
+            for (Parameter param : params) {
+                VariableDeclaration paramVarDecl = new VariableDeclaration(param.getName(), param.getType(), null /* no initial value for param */);
+                if (param instanceof AbstractNode paramAbstractNode) { // Use pattern variable
+                    paramVarDecl.setSourceInfo(paramAbstractNode.getLine(), paramAbstractNode.getCharPosition(), paramAbstractNode.getSource());
+                }
+                paramVarDecl.setEnclosingScope(funcBodyScope); // Parameter's scope is the function body
+                try {
+                    funcBodyScope.addDeclaration(paramVarDecl);
+                    logger.debug("Added parameter '{}' as VariableDeclaration to scope of function '{}'", param.getName(), name);
+                } catch (io.github.snaill.exception.FailedCheckException e) {
+                    logger.error("Failed to add parameter '{}' as VariableDeclaration to scope of function '{}'", param.getName(), name, e);
+                    // Convert to a more specific error or add to a list of errors to be reported later.
+                    // For now, rethrow as a RuntimeException to make it visible during development.
+                    throw new RuntimeException("Failed to add parameter '" + param.getName() + "' to function scope: " + e.getMessage(), e);
+                }
+            }
+        }
+
+        // Now parse the function body statements. These statements will be added to funcBodyScope.
+        // Pass funcDecl so statements within the body know their enclosing function (e.g., for 'return' statements).
+        Scope parsedBodyStatementsContainer = parseScope(ctx.scope(), funcBodyScope, funcDecl); 
+        funcBodyScope.setChildren(parsedBodyStatementsContainer.getChildren()); // Populate funcBodyScope with actual statements.
+
+        // Set source information for the FunctionDeclaration node itself
+        if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null && parent != null && parent.getSource() != null) {
+            funcDecl.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), parent.getSource());
+        } else if (ctx.getStart() != null && parent != null && parent.getSource() != null) {
+            funcDecl.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), parent.getSource());
+        }
+
+        logger.debug("Parsed function '{}' with {} parameters. Body scope ID: {}. Parent scope ID: {}", 
+            name, 
+            (params != null ? params.size() : 0), 
+            System.identityHashCode(funcBodyScope),
+            (parent != null ? System.identityHashCode(parent) : "null")
+        );
+
         return funcDecl;
     }
 
-    private List<Parameter> parseParamList(SnailParser.ParamListContext ctx, Scope containingScope) {
-        return ctx.param().stream()
-                .map(param -> (Parameter) parseParam(param, containingScope))
-                .collect(Collectors.toList());
+    private List<Parameter> parseParamList(SnailParser.ParamListContext ctx, Scope parentScope) throws io.github.snaill.exception.FailedCheckException {
+    List<Parameter> parameters = new ArrayList<>();
+    if (ctx != null && ctx.param() != null) {
+        for (SnailParser.ParamContext paramCtx : ctx.param()) {
+            Node paramNode = parseParam(paramCtx, parentScope);
+            if (paramNode instanceof Parameter) {
+                parameters.add((Parameter) paramNode);
+            } else {
+                // This case should ideally not happen if parseParam is correct
+                String errorSource = SourceBuilder.toSourceLine(paramCtx.getStart().getInputStream().toString(), paramCtx.getStart().getLine(), paramCtx.getStart().getCharPositionInLine(), paramCtx.getText().length());
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        ErrorType.INTERNAL_ERROR,
+                        errorSource,
+                        "Expected a Parameter node but got " + (paramNode != null ? paramNode.getClass().getSimpleName() : "null") + ".",
+                        "Please check the grammar and AST builder logic for parameter parsing."
+                    ).toString()
+                );
+            }
+        }
     }
+    return parameters;
+}
 
-    private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
+private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
         String name = ctx.IDENTIFIER().getText();
         Type type;
         try {
@@ -170,16 +324,16 @@ public class ASTReflectionBuilder implements ASTBuilder {
             throw new RuntimeException(e);
         }
         Parameter paramNode = new Parameter(name, type);
-        // The Parameter node itself (representing the variable 'name') lives in the function's body scope.
-        // However, its type ('type') is resolved in the 'containingScope' (scope of function declaration).
-        // The enclosing scope for the Parameter node (as a declaration) will be set when it's added to the FunctionDeclaration's scope.
-        // For now, ensure the Parameter node has source info.
+        // Сам узел Parameter (представляющий переменную 'name') находится в области видимости тела функции.
+        // Однако его тип ('type') разрешается в 'containingScope' (область видимости объявления функции).
+        // Окружающая область видимости для узла Parameter (как объявления) будет установлена при его добавлении в область видимости FunctionDeclaration.
+        // Пока что убедимся, что узел Parameter имеет информацию об источнике.
         if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) {
             paramNode.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), containingScope.getSource());
         } else if (ctx.getStart() != null) {
             paramNode.setSourceInfo(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), containingScope.getSource());
         }
-        // The 'type' node within Parameter already has its enclosingScope set by parseType.
+        // Узел 'type' внутри Parameter уже имеет установленную окружающую область видимости благодаря parseType.
         return paramNode;
     }
 
@@ -221,11 +375,9 @@ public class ASTReflectionBuilder implements ASTBuilder {
                     currentScope.addDeclaration(varDecl); // Add to current scope's symbol table
                     stmt = varDecl;
                 } else {
-                    stmt = null; // Should not happen if parseVariableDeclaration throws on error
+                    stmt = null; // Не должно произойти, если parseVariableDeclaration выбрасывает ошибку при ошибке
                 }
             } else if (stmtCtx.funcDeclaration() != null) {
-                // Temporarily commented out to isolate other compilation errors
-                /*
                 String errorSourceFuncScope = stmtCtx.funcDeclaration().getStart() != null ?
                     io.github.snaill.ast.SourceBuilder.toSourceLine(stmtCtx.funcDeclaration().getStart().getInputStream().toString(), stmtCtx.funcDeclaration().getStart().getLine(), stmtCtx.funcDeclaration().getStart().getCharPositionInLine(), stmtCtx.funcDeclaration().getText().length()) :
                     io.github.snaill.ast.SourceBuilder.toSourceCode(stmtCtx.funcDeclaration());
@@ -237,7 +389,6 @@ public class ASTReflectionBuilder implements ASTBuilder {
                         "Define functions only at the top level or directly within the global scope."
                     ).toString()
                 );
-                */
             } else {
                 stmt = (Statement) parseStatement(stmtCtx, currentScope);
             }
@@ -250,24 +401,24 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
         
     private Node parseForLoop(SnailParser.ForLoopContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        // Create a new scope for the for-loop itself. This scope will contain the loop variable.
+        // Создаем новую область видимости для самого цикла for. Эта область будет содержать переменную цикла.
         Scope forScope = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
 
-        // Parse the initializer. The VariableDeclaration node is created with its initializer resolved in the PARENT scope.
+        // Разбираем инициализатор. Узел VariableDeclaration создается с его инициализатором, разрешенным в РОДИТЕЛЬСКОЙ области видимости.
         VariableDeclaration loopVarDecl = (VariableDeclaration) parseVariableDeclaration(ctx.variableDeclaration(), parent);
         if (loopVarDecl != null) {
-             // Add the loop variable declaration to the forScope, making it visible within the loop.
+             // Добавляем объявление переменной цикла в forScope, делая ее видимой внутри цикла.
              forScope.addDeclaration(loopVarDecl);
         }
-        // This is the initialization statement for the ForLoop node.
+        // Это оператор инициализации для узла ForLoop.
 
-        // Parse condition using the forScope (loop variable is visible here).
+        // Разбираем условие, используя forScope (переменная цикла здесь видима).
         Expression condition = (Expression) parseExpression(ctx.expression(0), forScope);
 
-        // Parse step using the forScope (loop variable is visible here).
+        // Разбираем шаг, используя forScope (переменная цикла здесь видима).
         Expression step = (Expression) parseExpression(ctx.expression(1), forScope);
 
-        // Parse the body scope. Its parent is the forScope.
+        // Разбираем область видимости тела. Ее родитель - forScope.
         Scope body = parseScope(ctx.scope(), forScope);
         
         ForLoop forLoopNode = new ForLoop(loopVarDecl, condition, step, body);
@@ -278,7 +429,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
 
     private Node parseWhileLoop(SnailParser.WhileLoopContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        // Condition is resolved in the parent scope
+        // Условие разрешается в родительской области видимости
         Expression condition = (Expression) parseExpression(ctx.expression(), parent);
         if (condition == null) {
             String before = ctx.getStart() != null ?
@@ -294,9 +445,9 @@ public class ASTReflectionBuilder implements ASTBuilder {
             );
         }
 
-        // Create a new scope for the while loop's body
+        // Создаем новую область видимости для тела цикла while
         Scope whileBodyScopeContext = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
-        Scope body = parseScope(ctx.scope(), whileBodyScopeContext); // Body parsed in this new scope
+        Scope body = parseScope(ctx.scope(), whileBodyScopeContext); // Тело разбирается в этой новой области видимости
         
         WhileLoop whileLoop = new WhileLoop(condition, body);
         if (ctx.getStart() != null && ctx.getStart().getInputStream() != null) {
@@ -321,7 +472,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
             );
         }
 
-        // Create a new scope for the 'then' branch
+        // Создаем новую область видимости для ветви 'then'
         Scope thenScopeContext = new Scope(new ArrayList<>(), parent, parent.getEnclosingFunction());
         Scope thenScope = ctx.scope(0) != null ? parseScope(ctx.scope(0), thenScopeContext) : new Scope(new ArrayList<>(), thenScopeContext, parent.getEnclosingFunction());
         if (thenScope == null && ctx.scope(0) != null) { 
@@ -381,134 +532,182 @@ public class ASTReflectionBuilder implements ASTBuilder {
         if (ctx == null) {
             return null;
         }
-        if (ctx.assigmentExpression() != null) {
-            return parseAssigmentExpression(ctx.assigmentExpression(), parent);
+        // The new grammar structure: expression -> assignmentExpression
+        return parseAssignmentExpression(ctx.assignmentExpression(), parent);
+    }
+
+    // Level 1: Assignment (right-associative)
+    private Node parseAssignmentExpression(SnailParser.AssignmentExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+
+        // Check if this context represents an assignment (identifier op expression) or falls through to logicalOrExpression
+        if (ctx.assigmentOperator != null) { // Grammar: identifier assigmentOperator=('='|...) assignmentExpression
+            Expression left = (Expression) parseIdentifier(ctx.identifier(), parent);
+            String op = ctx.assigmentOperator.getText(); // Corrected: access token directly
+            // For right-associativity, the RHS is also an assignmentExpression
+            Expression right = (Expression) parseAssignmentExpression(ctx.assignmentExpression(), parent); // Grammar ensures this is the RHS assignmentExpression
+            
+            AssignmentExpression assign = new AssignmentExpression(left, op, right);
+            if (ctx.assigmentOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
+                assign.setSourceInfo(ctx.assigmentOperator.getLine(), ctx.assigmentOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
+            }
+            if (parent != null) {
+                assign.setEnclosingScope(parent);
+            }
+            return assign;
+        } else { // Grammar: | logicalOrExpression
+            return parseLogicalOrExpression(ctx.logicalOrExpression(), parent);
         }
-        if (ctx.binaryExpression() != null) {
-            return parseBinaryExpression(ctx.binaryExpression(), parent);
+    }
+
+    // Level 2: Logical OR (left-associative)
+    private Node parseLogicalOrExpression(SnailParser.LogicalOrExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+        Expression left = (Expression) parseLogicalAndExpression(ctx.logicalAndExpression(0), parent);
+        for (int i = 1; i < ctx.logicalAndExpression().size(); i++) {
+            String op = ctx.getChild(i * 2 - 1).getText(); // Operator is between expressions: logicalAndExpression OP logicalAndExpression
+            Expression right = (Expression) parseLogicalAndExpression(ctx.logicalAndExpression(i), parent);
+            BinaryExpression binExpr = new BinaryExpression(left, op, right);
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
+                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            }
+            if (parent != null) {
+                binExpr.setEnclosingScope(parent);
+            }
+            left = binExpr;
         }
-        if (ctx.unaryExpression() != null) {
-            return parseUnaryExpression(ctx.unaryExpression(), parent);
+        return left;
+    }
+
+    // Level 3: Logical AND (left-associative)
+    private Node parseLogicalAndExpression(SnailParser.LogicalAndExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+        Expression left = (Expression) parseEqualityExpression(ctx.equalityExpression(0), parent);
+        for (int i = 1; i < ctx.equalityExpression().size(); i++) {
+            String op = ctx.getChild(i * 2 - 1).getText(); 
+            Expression right = (Expression) parseEqualityExpression(ctx.equalityExpression(i), parent);
+            BinaryExpression binExpr = new BinaryExpression(left, op, right);
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
+                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            }
+            if (parent != null) {
+                binExpr.setEnclosingScope(parent);
+            }
+            left = binExpr;
         }
-        if (ctx.primaryExpression() != null) {
+        return left;
+    }
+
+    // Level 4: Equality (left-associative)
+    private Node parseEqualityExpression(SnailParser.EqualityExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+        Expression left = (Expression) parseRelationalExpression(ctx.relationalExpression(0), parent);
+        for (int i = 1; i < ctx.relationalExpression().size(); i++) {
+            String op = ctx.getChild(i * 2 - 1).getText(); 
+            Expression right = (Expression) parseRelationalExpression(ctx.relationalExpression(i), parent);
+            BinaryExpression binExpr = new BinaryExpression(left, op, right);
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
+                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            }
+            if (parent != null) {
+                binExpr.setEnclosingScope(parent);
+            }
+            left = binExpr;
+        }
+        return left;
+    }
+
+    // Level 5: Relational (left-associative)
+    private Node parseRelationalExpression(SnailParser.RelationalExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+        Expression left = (Expression) parseAdditiveExpression(ctx.additiveExpression(0), parent);
+        for (int i = 1; i < ctx.additiveExpression().size(); i++) {
+            String op = ctx.getChild(i * 2 - 1).getText(); 
+            Expression right = (Expression) parseAdditiveExpression(ctx.additiveExpression(i), parent);
+            BinaryExpression binExpr = new BinaryExpression(left, op, right);
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
+                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            }
+            if (parent != null) {
+                binExpr.setEnclosingScope(parent);
+            }
+            left = binExpr;
+        }
+        return left;
+    }
+
+    // Level 6: Additive (left-associative)
+    private Node parseAdditiveExpression(SnailParser.AdditiveExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+        Expression left = (Expression) parseMultiplicativeExpression(ctx.multiplicativeExpression(0), parent);
+        for (int i = 1; i < ctx.multiplicativeExpression().size(); i++) {
+            String op = ctx.getChild(i * 2 - 1).getText(); 
+            Expression right = (Expression) parseMultiplicativeExpression(ctx.multiplicativeExpression(i), parent);
+            BinaryExpression binExpr = new BinaryExpression(left, op, right);
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
+                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            }
+            if (parent != null) {
+                binExpr.setEnclosingScope(parent);
+            }
+            left = binExpr;
+        }
+        return left;
+    }
+
+    // Level 7: Multiplicative (left-associative)
+    private Node parseMultiplicativeExpression(SnailParser.MultiplicativeExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+        Expression left = (Expression) parseUnaryExpression(ctx.unaryExpression(0), parent);
+        for (int i = 1; i < ctx.unaryExpression().size(); i++) {
+            String op = ctx.getChild(i * 2 - 1).getText(); 
+            Expression right = (Expression) parseUnaryExpression(ctx.unaryExpression(i), parent);
+            BinaryExpression binExpr = new BinaryExpression(left, op, right);
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
+                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            }
+            if (parent != null) {
+                binExpr.setEnclosingScope(parent);
+            }
+            left = binExpr;
+        }
+        return left;
+    }
+
+    // Level 8: Unary (prefix, right-associative)
+    private Node parseUnaryExpression(SnailParser.UnaryExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+        if (ctx == null) return null;
+
+        if (ctx.unaryOperator != null) { // Grammar: unaryOperator=('-'|'!') unaryExpression
+            String operator = ctx.unaryOperator.getText();
+            Expression argument = (Expression) parseUnaryExpression(ctx.unaryExpression(), parent); // Recursive call
+            UnaryExpression unaryExpr = new UnaryExpression(operator, argument);
+            if (parent != null) {
+                unaryExpr.setEnclosingScope(parent);
+            }
+            if (ctx.unaryOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
+                unaryExpr.setSourceInfo(ctx.unaryOperator.getLine(), ctx.unaryOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
+            }
+            return unaryExpr;
+        } else { // Grammar: | primaryExpression
             return parsePrimaryExpression(ctx.primaryExpression(), parent);
         }
-        // Попытка разобрать как бинарное выражение, если есть два подвыражения и оператор
-        if (ctx.getChildCount() == 3 && ctx.getChild(1) instanceof TerminalNode) {
-            Expression left = (Expression) parseExpression((SnailParser.ExpressionContext) ctx.getChild(0), parent);
-            String op = ctx.getChild(1).getText();
-            Expression right = (Expression) parseExpression((SnailParser.ExpressionContext) ctx.getChild(2), parent);
-            return new BinaryExpression(left, op, right);
-        }
-        if (ctx.getChildCount() == 3 && ctx.getChild(0).getText().equals("(") && ctx.getChild(2).getText().equals(")")) {
-            return parseExpression(ctx.expression(), parent);
-        }
-        return null;
     }
 
-    private Node parseAssigmentExpression(SnailParser.AssigmentExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        Expression left;
-        // ctx.identifier() is the SnailParser.IdentifierContext.
-        // parseIdentifier can handle both variableIdentifier and arrayElement nested within IdentifierContext,
-        // and it correctly sets the enclosingScope on the created Identifier/ArrayElement node.
-        left = (Expression) parseIdentifier(ctx.identifier(), parent);
-
-        String op = ctx.assigmentOperator.getText();
-        Expression right = (Expression) parseExpression(ctx.expression(), parent);
-        AssignmentExpression assign;
-
-        if (op.equals("=")) {
-            assign = new AssignmentExpression(left, right);
-        } else {
-            String binOp = switch (op) {
-                case "+=" -> "+";
-                case "-=" -> "-";
-                case "*=" -> "*";
-                case "/=" -> "/";
-                default -> throw new RuntimeException("Unknown assignment operator: " + op);
-            };
-            // The 'left' expression is reused. It already has its enclosingScope set by parseIdentifier.
-            BinaryExpression compoundRhs = new BinaryExpression(left, binOp, right);
-            if (parent != null) {
-                compoundRhs.setEnclosingScope(parent); // Set scope for the new BinaryExpression node
-            }
-            // Attempt to set source info for the implicit binary operation
-            // Check if left node has valid source info (line != -1)
-            if (left.getLine() != -1 && left.getSource() != null) { 
-                compoundRhs.setSourceInfo(left.getLine(), left.getCharPosition(), left.getSource());
-            } else if (ctx.assigmentOperator != null && ctx.start != null && ctx.start.getInputStream() != null) { 
-                 compoundRhs.setSourceInfo(ctx.assigmentOperator.getLine(), ctx.assigmentOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
-            }
-            assign = new AssignmentExpression(left, compoundRhs);
-        }
-
-        // Set source info for the AssignmentExpression node itself
-        if (ctx.assigmentOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
-            assign.setSourceInfo(ctx.assigmentOperator.getLine(), ctx.assigmentOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
-        }
-        
-        // Set enclosing scope for the AssignmentExpression node
-        if (parent != null) {
-            assign.setEnclosingScope(parent);
-        }
-        return assign;
-    }
-
-    private Node parseBinaryExpression(SnailParser.BinaryExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        if (ctx == null) {
-            return null;
-        }
-        // ANTLR может вложить primaryExpression, но чаще всего есть expression(0) и expression(1)
-        Expression left = null;
-        Expression right = null;
-        String op = null;
-        if (ctx.expression().size() == 2) {
-            left = (Expression) parseExpression(ctx.expression(0), parent);
-            right = (Expression) parseExpression(ctx.expression(1), parent);
-            op = ctx.binaryOperator != null ? ctx.binaryOperator.getText() : ctx.getChild(1).getText();
-        } else if (ctx.primaryExpression() != null && ctx.expression().size() == 1) {
-            left = (Expression) parsePrimaryExpression(ctx.primaryExpression(), parent);
-            right = (Expression) parseExpression(ctx.expression(0), parent);
-            op = ctx.binaryOperator != null ? ctx.binaryOperator.getText() : ctx.getChild(1).getText();
-        }
-        if (left != null && right != null && op != null) {
-            BinaryExpression bin = new BinaryExpression(left, op, right);
-            if (ctx.binaryOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
-                bin.setSourceInfo(ctx.binaryOperator.getLine(), ctx.binaryOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
-            }
-            if (parent != null) {
-                bin.setEnclosingScope(parent);
-            }
-            return bin;
-        }
-        return null;
-    }
-
-    private Node parseUnaryExpression(SnailParser.UnaryExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        if (ctx == null || ctx.expression() == null) {
-            return null;
-        }
-        String operator = ctx.unaryOperator.getText();
-        Expression argument = (Expression) parseExpression(ctx.expression(), parent);
-        UnaryExpression unaryExpr = new UnaryExpression(operator, argument);
-        if (parent != null) {
-            unaryExpr.setEnclosingScope(parent);
-        }
-        // Set source info for the UnaryExpression, typically from the operator
-        if (ctx.unaryOperator != null && ctx.start != null && ctx.start.getInputStream() != null) {
-            unaryExpr.setSourceInfo(ctx.unaryOperator.getLine(), ctx.unaryOperator.getCharPositionInLine(), ctx.start.getInputStream().toString());
-        }
-        return unaryExpr;
-    }
-
+    // Level 9: Primary expressions
     private Node parsePrimaryExpression(SnailParser.PrimaryExpressionContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
         if (ctx == null) {
-            String before = "^";
-            throw new io.github.snaill.exception.FailedCheckException(
+             throw new io.github.snaill.exception.FailedCheckException(
                 new io.github.snaill.result.CompilationError(
                     io.github.snaill.result.ErrorType.UNKNOWN_TYPE,
-                    before,
-                    "Empty expression",
+                    "^", // Placeholder for source info
+                    "Empty primary expression",
                     ""
                 ).toString()
             );
@@ -517,29 +716,47 @@ public class ASTReflectionBuilder implements ASTBuilder {
             return parseLiteral(ctx.literal());
         }
         if (ctx.identifier() != null) {
+            // parseIdentifier handles both simple identifiers and array accesses via SnailParser.IdentifierContext
             return parseIdentifier(ctx.identifier(), parent);
         }
-        if (ctx.arrayElement() != null) {
-            return parseArrayElement(ctx.arrayElement(), parent);
+        if (ctx.expression() != null) { // LPAREN expression RPAREN
+            Node innerExpr = parseExpression(ctx.expression(), parent);
+            if (innerExpr instanceof Expression) {
+                return new ParenthesizedExpression((Expression) innerExpr);
+            } else {
+                // This case should ideally not happen if parseExpression always returns an Expression
+                // or if the grammar ensures expression() results in an AST Expression node.
+                // Handle error: perhaps throw an exception or return an error node.
+                String location = "Line " + ctx.getStart().getLine() + ":" + ctx.getStart().getCharPositionInLine();
+                throw new io.github.snaill.exception.FailedCheckException(
+                    new io.github.snaill.result.CompilationError(
+                        io.github.snaill.result.ErrorType.SYNTAX_ERROR,
+                        location, // 'before' string
+                        "Parenthesized expression did not yield an Expression node",
+                        "" // 'after' string, can be empty or provide more context if needed
+                    ).toString()
+                );
+            }
         }
         if (ctx.functionCall() != null) {
             return parseFunctionCall(ctx.functionCall(), parent);
         }
-        if (ctx.arrayLiteral() != null) {
+        if (ctx.arrayLiteral() != null) { // ADDED THIS BLOCK
             return parseArrayLiteral(ctx.arrayLiteral(), parent);
         }
-        String before = ctx.getStart() != null ?
-            io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length()) :
-            io.github.snaill.ast.SourceBuilder.toSourceCode(ctx);
+        // If none of the above, it's an unhandled case or a grammar/parser issue.
+        String locationUnhandled = "Line " + ctx.getStart().getLine() + ":" + ctx.getStart().getCharPositionInLine();
         throw new io.github.snaill.exception.FailedCheckException(
             new io.github.snaill.result.CompilationError(
-                io.github.snaill.result.ErrorType.UNKNOWN_TYPE,
-                before,
-                "Unknown or empty primary expression",
-                ""
+                io.github.snaill.result.ErrorType.SYNTAX_ERROR,
+                locationUnhandled, // 'before' string
+                "Unknown or unhandled primary expression type: " + ctx.getText(),
+                "" // 'after' string
             ).toString()
         );
     }
+
+
 
     private Node parseLiteral(SnailParser.LiteralContext ctx) throws io.github.snaill.exception.FailedCheckException {
         if (ctx.numberLiteral() != null) {
@@ -591,7 +808,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
                 );
             }
             Identifier id = new Identifier(name);
-            if (parent != null) { // Set the enclosing scope
+            if (parent != null) { // Устанавливаем окружающую область видимости
                 id.setEnclosingScope(parent);
             }
             if (ctx.variableIdentifier().IDENTIFIER() != null) {
@@ -614,42 +831,26 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
 
     private Node parseArrayElement(SnailParser.ArrayElementContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        Identifier identifier = new Identifier(ctx.IDENTIFIER().getText());
-        // Set source info and scope for the identifier part of the array element
+        Identifier identifierNode = new Identifier(ctx.IDENTIFIER().getText());
         if (ctx.IDENTIFIER() != null && ctx.IDENTIFIER().getSymbol() != null) {
-            identifier.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), parent.getSource());
+            identifierNode.setSourceInfo(ctx.IDENTIFIER().getSymbol().getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine(), parent.getSource());
         }
-        identifier.setEnclosingScope(parent);
+        identifierNode.setEnclosingScope(parent);
 
         List<Expression> indices = new ArrayList<>();
-        // Обрабатываем все индексы для многомерных массивов
         if (ctx.expression() != null) {
-            List<SnailParser.ExpressionContext> expressions = ctx.expression();
-            for (SnailParser.ExpressionContext expr : expressions) {
-                indices.add((Expression) parseExpression(expr, parent));
+            for (SnailParser.ExpressionContext exprCtx : ctx.expression()) {
+                indices.add((Expression) parseExpression(exprCtx, parent));
             }
         }
-        ArrayElement arrElem = new ArrayElement(identifier, indices);
-        // Set source info and scope for the entire array element expression
-        arrElem.setSourceInfo(ctx.start.getLine(), ctx.start.getCharPositionInLine(), parent.getSource());
-        arrElem.setEnclosingScope(parent);
-        return arrElem;
+
+        ArrayElement arrayElementNode = new ArrayElement(identifierNode, indices);
+        arrayElementNode.setSourceInfo(ctx.start.getLine(), ctx.start.getCharPositionInLine(), parent.getSource());
+        arrayElementNode.setEnclosingScope(parent);
+        return arrayElementNode;
     }
 
     private Node parseFunctionCall(SnailParser.FunctionCallContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
-        if (ctx == null || ctx.IDENTIFIER() == null) {
-            String before = ctx != null && ctx.getStart() != null ?
-                io.github.snaill.ast.SourceBuilder.toSourceLine(ctx.getStart().getInputStream().toString(), ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine(), ctx.getText().length()) :
-                "^";
-            throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
-                    io.github.snaill.result.ErrorType.UNKNOWN_TYPE,
-                    before,
-                    "Empty function call expression",
-                    ""
-                ).toString()
-            );
-        }
         String name = ctx.IDENTIFIER().getText();
         List<Expression> args = ctx.argumentList() != null ?
                 parseArgumentList(ctx.argumentList(), parent) : List.of();
@@ -709,7 +910,7 @@ public class ASTReflectionBuilder implements ASTBuilder {
     private Node parseArrayType(SnailParser.ArrayTypeContext ctx, Scope currentScope) throws io.github.snaill.exception.FailedCheckException {
         Type elementType = (Type) parseType(ctx.type(), currentScope);
         NumberLiteral size = new NumberLiteral(Long.parseLong(ctx.numberLiteral().getText()));
-        // Set source info for NumberLiteral if it's an AbstractNode and needs it
+        // Устанавливаем информацию об источнике для NumberLiteral, если это AbstractNode и ему это нужно
         if (size instanceof AbstractNode sn) {
             sn.setSourceInfo(ctx.numberLiteral().start.getLine(), ctx.numberLiteral().start.getCharPositionInLine(), currentScope.getSource());
             sn.setEnclosingScope(currentScope);
@@ -721,10 +922,10 @@ public class ASTReflectionBuilder implements ASTBuilder {
     }
 
      private Node parsePrimitiveType(SnailParser.PrimitiveTypeContext ctx, Scope currentScope) {
-        // With the current grammar (primitiveType : 'i32' | 'usize' | 'void' | 'string' | 'bool'),
-        // IDENTIFIER is not an alternative, so ctx.IDENTIFIER() would not be available.
-        // This method will only create PrimitiveType nodes for the predefined keywords.
-        // For custom type support, the grammar rule 'primitiveType' or 'type' needs to include IDENTIFIER.
+        // С текущей грамматикой (primitiveType : 'i32' | 'usize' | 'void' | 'string' | 'bool'),
+        // IDENTIFIER не является альтернативой, поэтому ctx.IDENTIFIER() не будет доступен.
+        // Этот метод будет создавать узлы PrimitiveType только для предопределенных ключевых слов.
+        // Для поддержки пользовательских типов правило грамматики 'primitiveType' или 'type' должно включать IDENTIFIER.
         PrimitiveType pt = new PrimitiveType(ctx.getText());
         pt.setSourceInfo(ctx.start.getLine(), ctx.start.getCharPositionInLine(), currentScope.getSource());
         pt.setEnclosingScope(currentScope);

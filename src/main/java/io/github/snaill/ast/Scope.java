@@ -18,13 +18,14 @@ import io.github.snaill.result.Warning;
 import io.github.snaill.result.WarningType;
 
 /**
- * Представляет блок кода (scope) в AST.
- * Генерирует байткод для всех операторов в блоке.
+ * Represents a block of code (scope) in the AST.
+ * Generates bytecode for all statements in the block.
  */
 public class Scope extends AbstractNode implements Statement /*, BytecodeEmittable */ {
     private static final Logger logger = LoggerFactory.getLogger(Scope.class);
     private final Scope parent;
     private final FunctionDeclaration enclosingFunction;
+    private FunctionDeclaration enclosingFunctionContext; // Context for the function this scope might directly belong to (e.g. a function body)
     private final List<VariableDeclaration> localDeclarations = new ArrayList<>();
 
     public Scope(List<Statement> children) {
@@ -47,6 +48,14 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
 
     public FunctionDeclaration getEnclosingFunction() {
         return this.enclosingFunction;
+    }
+
+    public void setEnclosingFunctionContext(FunctionDeclaration funcDecl) {
+        this.enclosingFunctionContext = funcDecl;
+    }
+
+    public FunctionDeclaration getEnclosingFunctionContext() {
+        return this.enclosingFunctionContext;
     }
 
     /**
@@ -107,7 +116,7 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
 
     @Override
     public List<Node> getChildren() {
-        // Возвращаем как List<Node>, но реально это List<Statement>
+        // Return as List<Node>, but actually it's List<Statement>
         return new ArrayList<>(super.getChildren());
     }
 
@@ -198,7 +207,7 @@ public class Scope extends AbstractNode implements Statement /*, BytecodeEmittab
         // For function scopes, localDeclarations should also include parameters (to be fixed in ASTBuilder).
         Set<VariableDeclaration> potentiallyUnusedLocals = new java.util.HashSet<>(this.localDeclarations);
 
-        System.out.println("FORCED_DEBUG_UNUSED: Scope " + this.hashCode() + " (Parent: " + (this.parent != null ? this.parent.hashCode() : "ROOT") + ") processing. Initial potentiallyUnusedLocals for this scope: " + potentiallyUnusedLocals.stream().map(vd -> vd.getName() + "(" + vd.hashCode() + ")").collect(java.util.stream.Collectors.toList()));
+        // System.out.println("FORCED_DEBUG_UNUSED: Scope " + this.hashCode() + " (Parent: " + (this.parent != null ? this.parent.hashCode() : "ROOT") + ") processing. Initial potentiallyUnusedLocals for this scope: " + potentiallyUnusedLocals.stream().map(vd -> vd.getName() + "(" + vd.hashCode() + ")").collect(java.util.stream.Collectors.toList()));
 
         // Potentially unused global functions. This set is built by the root scope
         // and passed down so FunctionCalls anywhere can mark them as used.

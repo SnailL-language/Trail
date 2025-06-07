@@ -150,25 +150,75 @@ public interface SnailListener extends ParseTreeListener {
 	 */
 	void exitExpression(SnailParser.ExpressionContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link SnailParser#assigmentExpression}.
+	 * Enter a parse tree produced by {@link SnailParser#assignmentExpression}.
 	 * @param ctx the parse tree
 	 */
-	void enterAssigmentExpression(SnailParser.AssigmentExpressionContext ctx);
+	void enterAssignmentExpression(SnailParser.AssignmentExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link SnailParser#assigmentExpression}.
+	 * Exit a parse tree produced by {@link SnailParser#assignmentExpression}.
 	 * @param ctx the parse tree
 	 */
-	void exitAssigmentExpression(SnailParser.AssigmentExpressionContext ctx);
+	void exitAssignmentExpression(SnailParser.AssignmentExpressionContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link SnailParser#binaryExpression}.
+	 * Enter a parse tree produced by {@link SnailParser#logicalOrExpression}.
 	 * @param ctx the parse tree
 	 */
-	void enterBinaryExpression(SnailParser.BinaryExpressionContext ctx);
+	void enterLogicalOrExpression(SnailParser.LogicalOrExpressionContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link SnailParser#binaryExpression}.
+	 * Exit a parse tree produced by {@link SnailParser#logicalOrExpression}.
 	 * @param ctx the parse tree
 	 */
-	void exitBinaryExpression(SnailParser.BinaryExpressionContext ctx);
+	void exitLogicalOrExpression(SnailParser.LogicalOrExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#logicalAndExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterLogicalAndExpression(SnailParser.LogicalAndExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#logicalAndExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitLogicalAndExpression(SnailParser.LogicalAndExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#equalityExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterEqualityExpression(SnailParser.EqualityExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#equalityExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitEqualityExpression(SnailParser.EqualityExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#relationalExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterRelationalExpression(SnailParser.RelationalExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#relationalExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitRelationalExpression(SnailParser.RelationalExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#additiveExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterAdditiveExpression(SnailParser.AdditiveExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#additiveExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitAdditiveExpression(SnailParser.AdditiveExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SnailParser#multiplicativeExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterMultiplicativeExpression(SnailParser.MultiplicativeExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SnailParser#multiplicativeExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitMultiplicativeExpression(SnailParser.MultiplicativeExpressionContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SnailParser#unaryExpression}.
 	 * @param ctx the parse tree

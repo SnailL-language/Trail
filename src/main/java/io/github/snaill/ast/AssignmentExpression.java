@@ -9,9 +9,11 @@ import org.slf4j.LoggerFactory;
  * Represents an assignment expression in the AST.
  */
 public class AssignmentExpression extends Expression {
+    private final String operator;
     private static final Logger logger = LoggerFactory.getLogger(AssignmentExpression.class);
-    public AssignmentExpression(Expression left, Expression right) {
+    public AssignmentExpression(Expression left, String operator, Expression right) {
         super(List.of(left, right));
+        this.operator = operator;
     }
 
     @Override
@@ -25,6 +27,10 @@ public class AssignmentExpression extends Expression {
 
     public Expression getRight() {
         return (Expression) children.get(1);
+    }
+
+    public String getOperator() {
+        return operator;
     }
 
     @Override
@@ -88,10 +94,11 @@ public class AssignmentExpression extends Expression {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof AssignmentExpression other) {
-            return super.equals(other);
-        }
-        return false;
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        if (!super.equals(obj)) return false;
+        AssignmentExpression other = (AssignmentExpression) obj;
+        return java.util.Objects.equals(operator, other.operator);
     }
 
     @Override

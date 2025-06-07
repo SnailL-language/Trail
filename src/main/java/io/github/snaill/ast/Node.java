@@ -59,20 +59,21 @@ public interface Node {
     // void checkTypes();
 
     /**
-     * Единый метод для запуска всех доступных оптимизаций.
+     * Unified method to run all available optimizations.
       */
     default void optimize() {
 
     }
 
     /**
-     * Единый метод для запуска всех проверок корректности кода.
+     * Unified method to run all code correctness checks.
       */
     @SuppressWarnings("unused")
     default void check() throws FailedCheckException {
         List<Result> results = checkDeadCode();
-        // Сначала печатаем только ошибки
+        // First, print only errors
         results.stream().filter(r -> r instanceof io.github.snaill.result.CompilationError).forEach(System.err::println);
+        // Always find and print unused
         // Всегда ищем и печатаем неиспользуемые
         Set<FunctionDeclaration> unusedFns = new java.util.HashSet<>();
         checkUnusedFunctions(unusedFns);
@@ -107,7 +108,7 @@ public interface Node {
                 if (w.isCritical()) {
                     System.err.println(w);
                 } else {
-                    System.out.println(w);
+                    // System.out.println(w);
                 }
             });
     }
