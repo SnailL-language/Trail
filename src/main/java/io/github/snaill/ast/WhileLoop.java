@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -39,7 +38,7 @@ public class WhileLoop extends AbstractNode implements Statement {
 
     /**
      * Генерирует байткод для цикла while со следующей структурой:
-     * 
+     * <p>
      * start:
      *   <байткод условия>
      *   JMP_IF_FALSE end

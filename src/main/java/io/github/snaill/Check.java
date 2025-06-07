@@ -4,7 +4,6 @@ import io.github.snaill.ast.*;
 import io.github.snaill.exception.FailedCheckException;
 import io.github.snaill.result.CompilationError;
 import io.github.snaill.result.ErrorType;
-import io.github.snaill.ast.VariableDeclaration; // Added import
 
 import java.util.ArrayList;
 import java.util.List;
@@ -395,7 +394,7 @@ public class Check implements ASTVisitor<Void> {
             // Using UNKNOWN_VARIABLE instead of UNDECLARED_VARIABLE
             this.errors.add(new CompilationError(ErrorType.UNKNOWN_VARIABLE, SourceBuilder.toSourceLine(node.getSource(), node.getLine(), node.getCharPosition(), node.getName().length()), errorMsg, ""));
             // Simplified logging for scope details
-            logger.warn(errorMsg + " Scope: " + this.currentScope.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(this.currentScope)));
+            logger.warn("{} Scope: {}@{}", errorMsg, this.currentScope.getClass().getSimpleName(), Integer.toHexString(System.identityHashCode(this.currentScope)));
         } else {
             logger.debug("Identifier '{}' resolved to VariableDeclaration: {}", node.getName(), decl.getName());
             // Further type checks or usage checks can be added here if needed

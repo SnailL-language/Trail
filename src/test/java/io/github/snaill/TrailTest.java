@@ -1,7 +1,6 @@
 package io.github.snaill;
 
 import io.github.snaill.ast.*;
-import io.github.snaill.ast.NumberLiteral; // Changed from IntegerLiteral
 import io.github.snaill.exception.FailedCheckException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,7 +12,6 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -118,8 +116,7 @@ public class TrailTest {
         // Удаляем многострочные комментарии (/* ... */)
         String noBlockComments = code.replaceAll("/\\*.*?\\*/", "");
         // Удаляем однострочные комментарии (// ... до конца строки)
-        String noLineComments = noBlockComments.replaceAll("//.*", "");
-        return noLineComments;
+        return noBlockComments.replaceAll("//.*", "");
     }
 
     /**
@@ -192,9 +189,6 @@ public class TrailTest {
         // Для этого потребуется перенаправить System.err перед вызовом execute()
         // и восстановить после, а затем проверить содержимое.
         // Пример (потребует @BeforeEach/@AfterEach для управления потоками или локального перенаправления):
-        // String errContent = Files.readString(errFile);
-        // assertTrue(errContent.contains("Ошибка: Исходный файл должен быть указан"), "Error message not found in System.err");
-        // assertTrue(errContent.contains("Usage: trail"), "Usage help not found in System.err");
     }
 
     @Test

@@ -18,6 +18,8 @@
 \usepackage{tcolorbox}
 \usepackage{longtable}
 \tcbuselibrary{listings, skins}
+\usepackage{fancyvrb}
+\usepackage{spverbatim}
 
 \lstdefinestyle{snailstyle}{
   language=C,
@@ -46,14 +48,26 @@
   }
 
 \newtcolorbox{bytecodebox}[1][]{
+  breakable,
   colback=gray!5,
   colframe=black!50,
   boxrule=0.5mm,
   arc=3mm,
-  title=Bytecode Output,
+  title=Bytecode Output, % Default title for the box
   fonttitle=\bfseries,
-  #1
-  }
+  #1 % For additional tcolorbox options passed at usage
+}
+
+\lstdefinestyle{bytelistingstyle}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=flexible,
+  showstringspaces=false,
+  tabsize=2,
+  frame=none,
+  numbers=none
+}
 
 \captionsetup[table]{position=below}
 
@@ -415,167 +429,163 @@
 \end{snailcode}
 
 \subsection{Bytecode Output}
-\begin{longtable}{|c|l|p{6cm}|}
-\hline
-\textbf{Address} & \textbf{Byte(s)} & \textbf{Description} \\ \hline
-\endhead
-\multicolumn{3}{r}{\textit{Continuation on next page}} \\
-\endfoot
-\endlastfoot
-\multicolumn{3}{|l|}{\textbf{Header}} \\ \hline
-  - & \texttt{53 4E 41 31} & Magic Number: 0x534E4131 \\ \hline
-  - & \texttt{00 01} & Version: 0x0001 \\ \hline
-  - & \texttt{00 01} & Main Function Index: 0x0001 \\ \hline
-\multicolumn{3}{|l|}{\textbf{Constant Pool} (11 entries, \texttt{00 0B})} \\ \hline
-  0 & \texttt{01 00 00 00 00} & i32: 0 \\ \hline
-  1 & \texttt{01 00 00 00 05} & i32: 5 \\ \hline
-  2 & \texttt{01 00 00 00 0A} & i32: 10 \\ \hline
-  3 & \texttt{01 00 00 00 14} & i32: 20 \\ \hline
-  4 & \texttt{01 00 00 00 1E} & i32: 30 \\ \hline
-  5 & \texttt{01 00 00 00 28} & i32: 40 \\ \hline
-  6 & \texttt{01 00 00 00 32} & i32: 50 \\ \hline
-  7 & \texttt{01 00 00 00 19} & i32: 25 \\ \hline
-  8 & \texttt{01 00 00 00 02} & i32: 2 \\ \hline
-  9 & \texttt{01 00 00 00 01} & i32: 1 \\ \hline
-  10 & \texttt{01 00 00 00 64} & i32: 100 \\ \hline
-\multicolumn{3}{|l|}{\textbf{Function Table} (2 functions, \texttt{00 02})} \\ \hline
-  - & \texttt{0A} & Name length: 10 ("computeSum") \\ \hline
-  - & \texttt{63 6F 6D 70 75 74 65 53 75 6D} & Name: "computeSum" \\ \hline
-  - & \texttt{02} & Parameters: 2 \\ \hline
-  - & \texttt{01} & Return type: i32 \\ \hline
-  - & \texttt{00 04} & Local variables: 4 (a, b, sum, offset) \\ \hline
-  - & \texttt{00 00 00 18} & Bytecode length: 24 \\ \hline
-  0x00 & \texttt{02 00 00} & PUSH\_LOCAL\_$0$ (a) \\ \hline
-  0x03 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (b) \\ \hline
-  0x06 & \texttt{10} & ADD \\ \hline
-  0x07 & \texttt{03 00 02} & STORE\_LOCAL\_$2$ (sum) \\ \hline
-  0x0A & \texttt{01 00 01} & PUSH\_CONST 1 (5) \\ \hline
-  0x0D & \texttt{03 00 03} & STORE\_LOCAL\_$3$ (offset) \\ \hline
-  0x10 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (sum) \\ \hline
-  0x13 & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (offset) \\ \hline
-  0x16 & \texttt{10} & ADD \\ \hline
-  0x17 & \texttt{33} & RET \\ \hline
-  - & \texttt{04} & Name length: 4 ("main") \\ \hline
-  - & \texttt{6D 61 69 6E} & Name: "main" \\ \hline
-  - & \texttt{00} & Parameters: 0 \\ \hline
-  - & \texttt{00} & Return type: void \\ \hline
-  - & \texttt{00 06} & Local variables: 6 (counter, data, i, value, sum, flag) \\ \hline
-  - & \texttt{00 00 00 B3} & Bytecode length: 179 (updated due to println) \\ \hline
-  0x00 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
-  0x03 & \texttt{03 00 02} & STORE\_LOCAL\_$2$ (i) \\ \hline
-  0x06 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
-  0x09 & \texttt{01 00 01} & PUSH\_CONST 1 (5) \\ \hline
-  0x0C & \texttt{22} & LT \\ \hline
-  0x0D & \texttt{31 00 67} & JMP\_IF\_FALSE 103 (to 0x74) \\ \hline
-  0x10 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x13 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
-  0x16 & \texttt{41} & GET\_ARRAY \\ \hline
-  0x17 & \texttt{03 00 03} & STORE\_LOCAL\_$3$ (value) \\ \hline
-  0x1A & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (value) \\ \hline
-  0x1D & \texttt{01 00 07} & PUSH\_CONST 7 (25) \\ \hline
-  0x20 & \texttt{24} & GT \\ \hline
-  0x21 & \texttt{31 00 1A} & JMP\_IF\_FALSE 26 (to 0x3B) \\ \hline
-  0x24 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x27 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
-  0x2A & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (value) \\ \hline
-  0x2D & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
-  0x30 & \texttt{12} & MUL \\ \hline
-  0x31 & \texttt{42} & SET\_ARRAY \\ \hline
-  0x32 & \texttt{04} & POP \\ \hline
-  0x33 & \texttt{30 00 13} & JMP 19 (to 0x46) \\ \hline
-  0x36 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x39 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
-  0x3C & \texttt{02 00 03} & PUSH\_LOCAL\_$3$ (value) \\ \hline
-  0x3F & \texttt{01 00 01} & PUSH\_CONST 1 (5) \\ \hline
-  0x42 & \texttt{11} & SUB \\ \hline
-  0x43 & \texttt{42} & SET\_ARRAY \\ \hline
-  0x44 & \texttt{04} & POP \\ \hline
-  0x45 & \texttt{02 00 02} & PUSH\_LOCAL\_$2$ (i) \\ \hline
-  0x48 & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
-  0x4B & \texttt{10} & ADD \\ \hline
-  0x4C & \texttt{03 00 02} & STORE\_LOCAL\_$2$ (i) \\ \hline
-  0x4F & \texttt{04} & POP \\ \hline
-  0x50 & \texttt{30 FF B6} & JMP -74 (to 0x06) \\ \hline
-  0x53 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x56 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
-  0x59 & \texttt{41} & GET\_ARRAY \\ \hline
-  0x5A & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x5D & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
-  0x60 & \texttt{41} & GET\_ARRAY \\ \hline
-  0x61 & \texttt{32 00 00} & CALL 0 (computeSum) \\ \hline
-  0x64 & \texttt{03 00 04} & STORE\_LOCAL\_$4$ (sum) \\ \hline
-  0x67 & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
-  0x6A & \texttt{01 00 0A} & PUSH\_CONST 10 (100) \\ \hline
-  0x6D & \texttt{25} & GTE \\ \hline
-  0x6E & \texttt{31 00 10} & JMP\_IF\_FALSE 16 (to 0x7E) \\ \hline
-  0x71 & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
-  0x74 & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
-  0x77 & \texttt{13} & DIV \\ \hline
-  0x78 & \texttt{03 00 00} & STORE\_LOCAL\_$0$ (counter) \\ \hline
-  0x7B & \texttt{04} & POP \\ \hline
-  0x7C & \texttt{30 00 05} & JMP 5 (to 0x81) \\ \hline
-  0x7F & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
-  0x82 & \texttt{03 00 00} & STORE\_LOCAL\_$0$ (counter) \\ \hline
-  0x85 & \texttt{04} & POP \\ \hline
-  0x86 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
-  0x89 & \texttt{03 00 05} & STORE\_LOCAL\_$5$ (flag) \\ \hline
-  0x8C & \texttt{02 00 00} & PUSH\_LOCAL\_$0$ (counter) \\ \hline
-  0x8F & \texttt{01 00 01} & PUSH\_CONST 1 (50) \\ \hline
-  0x92 & \texttt{22} & LT \\ \hline
-  0x93 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x96 & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
-  0x99 & \texttt{41} & GET\_ARRAY \\ \hline
-  0x9A & \texttt{01 00 01} & PUSH\_CONST 1 (50) \\ \hline
-  0x9D & \texttt{24} & GT \\ \hline
-  0x9E & \texttt{26} & AND \\ \hline
-  0x9F & \texttt{31 00 07} & JMP\_IF\_FALSE 7 (to 0xA6) \\ \hline
-  0xA2 & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
-  0xA5 & \texttt{03 00 05} & STORE\_LOCAL\_$5$ (flag) \\ \hline
-  0xA8 & \texttt{04} & POP \\ \hline
-  0xA9 & \texttt{02 00 04} & PUSH\_LOCAL\_$4$ (sum) \\ \hline
-  0xAC & \texttt{50 00 00} & INTRINSIC\_CALL 0 (println) \\ \hline
-  0xAF & \texttt{04} & POP \\ \hline
-  0xB0 & \texttt{33} & RET \\ \hline
-\multicolumn{3}{|l|}{\textbf{Intrinsic Table} (1 entry, \texttt{00 01})} \\ \hline
-  - & \texttt{07} & Name length: 7 ("println") \\ \hline
-  - & \texttt{70 72 69 6E 74 6C 6E} & Name: "println" \\ \hline
-  - & \texttt{01} & Parameters: 1 \\ \hline
-  - & \texttt{00} & Return type: void \\ \hline
-\multicolumn{3}{|l|}{\textbf{Global Variables} (2 variables, \texttt{00 02})} \\ \hline
-  - & \texttt{07} & Name length: 7 ("counter") \\ \hline
-  - & \texttt{63 6F 75 6E 74 65 72} & Name: "counter" \\ \hline
-  - & \texttt{01} & Type: i32 \\ \hline
-  - & \texttt{04} & Name length: 4 ("data") \\ \hline
-  - & \texttt{64 61 74 61} & Name: "data" \\ \hline
-  - & \texttt{04 01 00 00 00 05} & Type: array of i32, size 5 \\ \hline
-\multicolumn{3}{|l|}{\textbf{Global Bytecode} (Length: \texttt{00 00 00 43}, 67 bytes)} \\ \hline
-  0x00 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
-  0x03 & \texttt{03 00 00} & STORE\_LOCAL\_$0$ (counter) \\ \hline
-  0x06 & \texttt{40 00 01 01} & NEW\_ARRAY 1, type i32 (size 5) \\ \hline
-  0x0A & \texttt{03 00 01} & STORE\_LOCAL\_$1$ (data) \\ \hline
-  0x0D & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x10 & \texttt{01 00 00} & PUSH\_CONST 0 (0) \\ \hline
-  0x13 & \texttt{01 00 02} & PUSH\_CONST 2 (10) \\ \hline
-  0x16 & \texttt{42} & SET\_ARRAY \\ \hline
-  0x17 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x1A & \texttt{01 00 09} & PUSH\_CONST 9 (1) \\ \hline
-  0x1D & \texttt{01 00 03} & PUSH\_CONST 3 (20) \\ \hline
-  0x20 & \texttt{42} & SET\_ARRAY \\ \hline
-  0x21 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x24 & \texttt{01 00 08} & PUSH\_CONST 8 (2) \\ \hline
-  0x27 & \texttt{01 00 04} & PUSH\_CONST 4 (30) \\ \hline
-  0x2A & \texttt{42} & SET\_ARRAY \\ \hline
-  0x2B & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x2E & \texttt{01 00 09} & PUSH\_CONST 9 (3) \\ \hline
-  0x31 & \texttt{01 00 05} & PUSH\_CONST 5 (40) \\ \hline
-  0x34 & \texttt{42} & SET\_ARRAY \\ \hline
-  0x35 & \texttt{02 00 01} & PUSH\_LOCAL\_$1$ (data) \\ \hline
-  0x38 & \texttt{01 00 09} & PUSH\_CONST 9 (4) \\ \hline
-  0x3B & \texttt{01 00 06} & PUSH\_CONST 6 (50) \\ \hline
-  0x3E & \texttt{42} & SET\_ARRAY \\ \hline
-  0x3F & \texttt{32 00 01} & CALL 1 (main) \\ \hline
-  0x42 & \texttt{34} & HALT \\ \hline
-\end{longtable}
+\begin{spverbatim}
+=== HEADER SECTION ===
+[HEADER] Magic: SNA1
+[HEADER] Version: 1
+[HEADER] Main function index: 1
+
+=== CONSTANTS SECTION ===
+[CONSTANTS] Count: 11
+  [CONST] i32: 0
+  [CONST] i32: 10
+  [CONST] i32: 20
+  [CONST] i32: 30
+  [CONST] i32: 40
+  [CONST] i32: 50
+  [CONST] i32: 5
+  [CONST] i32: 25
+  [CONST] i32: 2
+  [CONST] i32: 1
+  [CONST] i32: 100
+
+=== GLOBALS SECTION ===
+[GLOBALS] Count: 2
+  [GLOBAL] counter : i32
+  [GLOBAL] data : array (elemType: i32, size: 5)
+
+=== FUNCTIONS SECTION ===
+[FUNCTIONS] Count: 2
+  [FUNC] computeSum (params: 2, return: i32, locals: 4, code length: 30 bytes, offset: 0x0000006C)
+      0000: STORE_LOCAL 1 (параметр #1)
+      0003: STORE_LOCAL 0 (параметр #0)
+      0006: PUSH_LOCAL 0 (параметр #0)
+      0009: PUSH_LOCAL 1 (параметр #1)
+      000C: ADD
+      000D: STORE_LOCAL 2 (локальная переменная #0)
+      0010: PUSH_CONST 6 (i32: 5)
+      0013: STORE_LOCAL 3 (локальная переменная #1)
+      0016: PUSH_LOCAL 2 (локальная переменная #0)
+      0019: PUSH_LOCAL 3 (локальная переменная #1)
+      001C: ADD
+      001D: RET
+  [FUNC] main [main] (params: 0, return: void, locals: 4, code length: 181 bytes, offset: 0x00000097)
+      0000: PUSH_CONST 0 (i32: 0)
+      0003: STORE_LOCAL 0 (локальная переменная #0)
+      0006: PUSH_LOCAL 0 (локальная переменная #0)
+      0009: PUSH_CONST 6 (i32: 5)
+      000C: LT
+      000D: JMP_IF_FALSE 65 [to 0x0051]
+      0010: PUSH_GLOBAL 1 (data, array of i32[5])
+      0013: PUSH_LOCAL 0 (локальная переменная #0)
+      0016: GET_ARRAY
+      0017: STORE_LOCAL 1 (локальная переменная #1)
+      001A: PUSH_LOCAL 1 (локальная переменная #1)
+      001D: PUSH_CONST 7 (i32: 25)
+      0020: GT
+      0021: JMP_IF_FALSE 17 [to 0x0035]
+      0024: PUSH_LOCAL 1 (локальная переменная #1)
+      0027: PUSH_CONST 8 (i32: 2)
+      002A: MUL
+      002B: PUSH_GLOBAL 1 (data, array of i32[5])
+      002E: PUSH_LOCAL 0 (локальная переменная #0)
+      0031: SET_ARRAY
+      0032: JMP 14 [to 0x0043]
+      0035: PUSH_LOCAL 1 (локальная переменная #1)
+      0038: PUSH_CONST 6 (i32: 5)
+      003B: SUB
+      003C: PUSH_GLOBAL 1 (data, array of i32[5])
+      003F: PUSH_LOCAL 0 (локальная переменная #0)
+      0042: SET_ARRAY
+      0043: PUSH_LOCAL 0 (локальная переменная #0)
+      0046: PUSH_CONST 9 (i32: 1)
+      0049: ADD
+      004A: STORE_LOCAL 0 (локальная переменная #0)
+      004D: POP
+      004E: JMP -75 [to 0x0006]
+      0051: PUSH_GLOBAL 1 (data, array of i32[5])
+      0054: PUSH_CONST 0 (i32: 0)
+      0057: GET_ARRAY
+      0058: PUSH_GLOBAL 1 (data, array of i32[5])
+      005B: PUSH_CONST 9 (i32: 1)
+      005E: GET_ARRAY
+      005F: CALL 0 (computeSum, 2 параметра)
+      0062: STORE_LOCAL 2 (локальная переменная #2)
+      0065: PUSH_LOCAL 2 (локальная переменная #2)
+      0068: PUSH_CONST 10 (i32: 100)
+      006B: GTE
+      006C: JMP_IF_FALSE 14 [to 0x007D]
+      006F: PUSH_LOCAL 2 (локальная переменная #2)
+      0072: PUSH_CONST 8 (i32: 2)
+      0075: DIV
+      0076: STORE_GLOBAL 0 (counter, i32)
+      0079: POP
+      007A: JMP 7 [to 0x0084]
+      007D: PUSH_LOCAL 2 (локальная переменная #2)
+      0080: STORE_GLOBAL 0 (counter, i32)
+      0083: POP
+      0084: PUSH_CONST 0 (i32: 0)
+      0087: STORE_LOCAL 3 (локальная переменная #3)
+      008A: PUSH_GLOBAL 0 (counter, i32)
+      008D: PUSH_CONST 5 (i32: 50)
+      0090: LT
+      0091: JMP_IF_FALSE 12 [to 0x00A0]
+      0094: POP
+      0095: PUSH_GLOBAL 1 (data, array of i32[5])
+      0098: PUSH_CONST 8 (i32: 2)
+      009B: GET_ARRAY
+      009C: PUSH_CONST 5 (i32: 50)
+      009F: GT
+      00A0: JMP_IF_FALSE 7 [to 0x00AA]
+      00A3: PUSH_CONST 9 (i32: 1)
+      00A6: STORE_LOCAL 3 (локальная переменная #3)
+      00A9: POP
+      00AA: PUSH_LOCAL 3 (локальная переменная #3)
+      00AD: INTRINSIC_CALL 0
+      00B0: POP
+      00B1: PUSH_CONST 0 (i32: 0)
+      00B4: RET
+
+=== INTRINSICS SECTION ===
+[INTRINSICS] Count: 1
+  [INTRINSIC] println (params: 1, return: string)
+
+=== GLOBAL CODE SECTION ===
+[GLOBAL CODE] Length: 72
+  [Найден вызов main в глобальном коде на смещении 0x0045]
+  0000: PUSH_CONST 0 (i32: 0)
+  0003: STORE_GLOBAL 0 (counter, i32)
+  0006: NEW_ARRAY 5 i32
+  000A: STORE_GLOBAL 2
+  000D: PUSH_GLOBAL 2
+  0010: PUSH_CONST 0 (i32: 0)
+  0013: PUSH_CONST 1 (i32: 10)
+  0016: SET_ARRAY
+  0017: PUSH_GLOBAL 2
+  001A: PUSH_CONST 9 (i32: 1)
+  001D: PUSH_CONST 2 (i32: 20)
+  0020: SET_ARRAY
+  0021: PUSH_GLOBAL 2
+  0024: PUSH_CONST 8 (i32: 2)
+  0027: PUSH_CONST 3 (i32: 30)
+  002A: SET_ARRAY
+  002B: PUSH_GLOBAL 2
+  002E: PUSH_CONST 11
+  0031: PUSH_CONST 4 (i32: 40)
+  0034: SET_ARRAY
+  0035: PUSH_GLOBAL 2
+  0038: PUSH_CONST 12
+  003B: PUSH_CONST 5 (i32: 50)
+  003E: SET_ARRAY
+  003F: PUSH_GLOBAL 2
+  0042: STORE_GLOBAL 1 (data, array of i32[5])
+  0045: CALL 1 (main)
+
+=== BYTECODE STATISTICS ===
+  [Общий размер] 420 байт (0x1A4)
+  [Секции] Заголовок: 8 байт, Константы: 2 байт (11 записей), Функции: 211 байт кода (2 функций), Глобальный код: 199 байт
+  [Глобальные переменные] 2 переменных
+\end{spverbatim}
 
 \subsection{Execution Flow}
 \begin{itemize}

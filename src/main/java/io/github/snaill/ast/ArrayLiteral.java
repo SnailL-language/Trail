@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException; // For accept method
 import java.util.ArrayList;
 import java.util.List;
 
@@ -96,12 +95,11 @@ public class ArrayLiteral extends PrimaryExpression {
             else if (first instanceof StringLiteral) typeName = "string";
             else if (first instanceof BooleanLiteral) typeName = "i32";
         }
-        byte typeId = switch (typeName) {
+        return switch (typeName) {
             case "i32" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
             case "string" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
             default -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
         };
-        return typeId;
     }
 
     @Override

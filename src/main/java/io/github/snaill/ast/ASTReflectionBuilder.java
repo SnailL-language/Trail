@@ -27,33 +27,36 @@ public class ASTReflectionBuilder implements ASTBuilder {
 
         int i = 0;
         // Обрабатываем глобальные переменные (перед первой функцией)
+        label:
         while (i < ctx.getChildCount()) {
             ParseTree child = ctx.getChild(i);
-            if (child instanceof SnailParser.VariableDeclarationContext varCtx) {
-                VariableDeclaration globalVar = parseVariableDeclaration(varCtx, rootScope);
-                if (globalVar != null) {
-                    rootScope.addDeclaration(globalVar);
-                    statements.add(globalVar);
-                }
-                i++;
-            } else if (child instanceof SnailParser.FuncDeclarationContext) { // Если началась функция, прекращаем искать переменные
-                break;
-            } else if (child instanceof TerminalNode && ((TerminalNode) child).getSymbol().getType() == SnailParser.EOF) {
-                 break; // Достигли конца файла раньше, чем нашли функции
-            } else {
-                // Неожиданный элемент на верхнем уровне перед функциями
-                 String errorSource = child.getText();
-                 if (child instanceof org.antlr.v4.runtime.ParserRuleContext prc && prc.getStart() != null && prc.getStart().getInputStream() != null) {
-                     errorSource = SourceBuilder.toSourceLine(prc.getStart().getInputStream().toString(), prc.getStart().getLine(), prc.getStart().getCharPositionInLine(), prc.getText().length());
-                 }
-                throw new io.github.snaill.exception.FailedCheckException(
-                    new io.github.snaill.result.CompilationError(
-                        ErrorType.SYNTAX_ERROR,
-                        errorSource,
-                        "Unexpected token at global scope. Expected variable or function declaration.",
-                        "Ensure all global variable declarations are before any function declarations."
-                    ).toString()
-                );
+            switch (child) {
+                case SnailParser.VariableDeclarationContext varCtx:
+                    VariableDeclaration globalVar = parseVariableDeclaration(varCtx, rootScope);
+                    if (globalVar != null) {
+                        rootScope.addDeclaration(globalVar);
+                        statements.add(globalVar);
+                    }
+                    i++;
+                    break;
+                case SnailParser.FuncDeclarationContext funcDeclarationContext:  // Если началась функция, прекращаем искать переменные
+                    break label;
+                case TerminalNode terminalNode when terminalNode.getSymbol().getType() == SnailParser.EOF:
+                    break label; // Достигли конца файла раньше, чем нашли функции
+                default:
+                    // Неожиданный элемент на верхнем уровне перед функциями
+                    String errorSource = child.getText();
+                    if (child instanceof org.antlr.v4.runtime.ParserRuleContext prc && prc.getStart() != null && prc.getStart().getInputStream() != null) {
+                        errorSource = SourceBuilder.toSourceLine(prc.getStart().getInputStream().toString(), prc.getStart().getLine(), prc.getStart().getCharPositionInLine(), prc.getText().length());
+                    }
+                    throw new io.github.snaill.exception.FailedCheckException(
+                            new io.github.snaill.result.CompilationError(
+                                    ErrorType.SYNTAX_ERROR,
+                                    errorSource,
+                                    "Unexpected token at global scope. Expected variable or function declaration.",
+                                    "Ensure all global variable declarations are before any function declarations."
+                            ).toString()
+                    );
             }
         }
 
@@ -568,9 +571,8 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
             String op = ctx.getChild(i * 2 - 1).getText(); // Operator is between expressions: logicalAndExpression OP logicalAndExpression
             Expression right = (Expression) parseLogicalAndExpression(ctx.logicalAndExpression(i), parent);
             BinaryExpression binExpr = new BinaryExpression(left, op, right);
-            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
-                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
-                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode opNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
             }
             if (parent != null) {
                 binExpr.setEnclosingScope(parent);
@@ -588,9 +590,8 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
             String op = ctx.getChild(i * 2 - 1).getText(); 
             Expression right = (Expression) parseEqualityExpression(ctx.equalityExpression(i), parent);
             BinaryExpression binExpr = new BinaryExpression(left, op, right);
-            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
-                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
-                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode opNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
             }
             if (parent != null) {
                 binExpr.setEnclosingScope(parent);
@@ -608,9 +609,8 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
             String op = ctx.getChild(i * 2 - 1).getText(); 
             Expression right = (Expression) parseRelationalExpression(ctx.relationalExpression(i), parent);
             BinaryExpression binExpr = new BinaryExpression(left, op, right);
-            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
-                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
-                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode opNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
             }
             if (parent != null) {
                 binExpr.setEnclosingScope(parent);
@@ -628,9 +628,8 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
             String op = ctx.getChild(i * 2 - 1).getText(); 
             Expression right = (Expression) parseAdditiveExpression(ctx.additiveExpression(i), parent);
             BinaryExpression binExpr = new BinaryExpression(left, op, right);
-            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
-                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
-                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode opNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
             }
             if (parent != null) {
                 binExpr.setEnclosingScope(parent);
@@ -648,9 +647,8 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
             String op = ctx.getChild(i * 2 - 1).getText(); 
             Expression right = (Expression) parseMultiplicativeExpression(ctx.multiplicativeExpression(i), parent);
             BinaryExpression binExpr = new BinaryExpression(left, op, right);
-            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
-                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
-                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode opNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
             }
             if (parent != null) {
                 binExpr.setEnclosingScope(parent);
@@ -668,9 +666,8 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
             String op = ctx.getChild(i * 2 - 1).getText(); 
             Expression right = (Expression) parseUnaryExpression(ctx.unaryExpression(i), parent);
             BinaryExpression binExpr = new BinaryExpression(left, op, right);
-            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
-                TerminalNode opNode = (TerminalNode)ctx.getChild(i*2-1);
-                 binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
+            if (ctx.getChild(i * 2 - 1) instanceof TerminalNode opNode && ((TerminalNode)ctx.getChild(i*2-1)).getSymbol() != null) {
+                binExpr.setSourceInfo(opNode.getSymbol().getLine(), opNode.getSymbol().getCharPositionInLine(), opNode.getSymbol().getInputStream().toString());
             }
             if (parent != null) {
                 binExpr.setEnclosingScope(parent);
@@ -850,7 +847,7 @@ private Node parseParam(SnailParser.ParamContext ctx, Scope containingScope) {
         return arrayElementNode;
     }
 
-    private Node parseFunctionCall(SnailParser.FunctionCallContext ctx, Scope parent) throws io.github.snaill.exception.FailedCheckException {
+    private Node parseFunctionCall(SnailParser.FunctionCallContext ctx, Scope parent) {
         String name = ctx.IDENTIFIER().getText();
         List<Expression> args = ctx.argumentList() != null ?
                 parseArgumentList(ctx.argumentList(), parent) : List.of();

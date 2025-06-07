@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -259,9 +258,8 @@ public class BinaryExpression extends Expression {
         }
         
         // If types are equal and it's an arithmetic op not caught by usize/literal or i32/usize logic:
-        if (isArithmeticOperator()) {
-             return leftType; // e.g. string + string (if allowed), or other future types
-        }
+        // e.g. string + string (if allowed), or other future types
+        isArithmeticOperator();
 
         // Fallback, should ideally be covered by specific logic or error out.
         // This might be reached if operator is not comparison/logical and not arithmetic, or types are equal but not primitive.

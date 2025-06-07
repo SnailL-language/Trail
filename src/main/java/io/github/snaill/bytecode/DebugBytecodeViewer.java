@@ -113,22 +113,13 @@ public class DebugBytecodeViewer {
         }
     }
 
-    private static class IntrinsicInfo {
-        final String name;
-        final int paramCount;
-        final int returnType;
-
-        public IntrinsicInfo(String name, int paramCount, int returnType) {
-            this.name = name;
-            this.paramCount = paramCount;
-            this.returnType = returnType;
-        }
+    private record IntrinsicInfo(String name, int paramCount, int returnType) {
 
         @Override
-        public String toString() {
-            return String.format("%s (params: %d, return: %s)", name, paramCount, getTypeDescription(returnType));
+            public String toString() {
+                return String.format("%s (params: %d, return: %s)", name, paramCount, getTypeDescription(returnType));
+            }
         }
-    }
 
     public static String disassemble(byte[] code) {
         if (code == null || code.length < 8) {

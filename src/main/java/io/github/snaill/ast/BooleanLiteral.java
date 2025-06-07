@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException; // For accept method
 import java.util.List; // For super constructor
 
 public class BooleanLiteral extends PrimaryExpression {

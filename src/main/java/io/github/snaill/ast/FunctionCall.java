@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import io.github.snaill.exception.FailedCheckException;

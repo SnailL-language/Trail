@@ -11,22 +11,22 @@ public class SourceBuilder {
     // Operator Precedence: Higher value means higher precedence
     private static int getBinaryOperatorPrecedence(String op) {
         return switch (op) {
-            case "*", "/", "%": yield 6;
-            case "+", "-": yield 5; // Binary plus/minus
-            case "<", ">", "<=", ">=": yield 4;
-            case "==", "!=": yield 3;
-            case "&&": yield 2;
-            case "||": yield 1;
-            case "=": yield 0; // Assignment has very low precedence
-            default: yield 0; // For other non-binary ops or lowest precedence
+            case "*", "/", "%" -> 6;
+            case "+", "-" -> 5; // Binary plus/minus
+            case "<", ">", "<=", ">=" -> 4;
+            case "==", "!=" -> 3;
+            case "&&" -> 2;
+            case "||" -> 1;
+            case "=" -> 0; // Assignment has very low precedence
+            default -> 0; // For other non-binary ops or lowest precedence
         };
     }
 
     private static int getUnaryOperatorPrecedence(String op) {
         return switch (op) {
-            case "!", "-": // Logical NOT, Unary MINUS
-                yield 7; // Higher than multiplicative
-            default: yield 0;
+            case "!", "-" -> // Logical NOT, Unary MINUS
+                    7; // Higher than multiplicative
+            default -> 0;
         };
     }
 
@@ -36,17 +36,10 @@ public class SourceBuilder {
         // Logical OR (||) and Logical AND (&&) are left-associative.
         // Equality (==, !=) and Relational (<, >, <=, >=) are non-associative in some contexts but typically parse left-to-right.
         // Additive (+, -) and Multiplicative (*, /, %) are left-associative.
-        switch (op) {
-            case "=":
-            case "+=":
-            case "-=":
-            case "*=":
-            case "/=":
-            case "%=":
-                return false; // Right-associative
-            default:
-                return true; // Assume left-associative for others
-        }
+        return switch (op) {
+            case "=", "+=", "-=", "*=", "/=", "%=" -> false; // Right-associative
+            default -> true; // Assume left-associative for others
+        };
     }
 
     public static String toSourceCode(Node node) {
@@ -129,8 +122,7 @@ public class SourceBuilder {
                     // If right child's precedence is strictly lower, it will be parenthesized by its own rule.
                     // If right child's precedence is equal, we need to force parenthesizing it.
                     // So, pass a slightly higher precedence to its recursive call.
-                    if (binExpr.getRight() instanceof BinaryExpression) {
-                        BinaryExpression rightBinExpr = (BinaryExpression) binExpr.getRight();
+                    if (binExpr.getRight() instanceof BinaryExpression rightBinExpr) {
                         if (getBinaryOperatorPrecedence(rightBinExpr.getOperator()) == currentPrecedence) {
                             rightParentPrecedence = currentPrecedence + 1;
                         }
@@ -138,8 +130,7 @@ public class SourceBuilder {
                 } else { // Right-associative operator
                     // For right-associative operators, if the left operand has precedence
                     // equal to currentPrecedence, it needs to be parenthesized.
-                    if (binExpr.getLeft() instanceof BinaryExpression) {
-                        BinaryExpression leftBinExpr = (BinaryExpression) binExpr.getLeft();
+                    if (binExpr.getLeft() instanceof BinaryExpression leftBinExpr) {
                         if (getBinaryOperatorPrecedence(leftBinExpr.getOperator()) == currentPrecedence) {
                             // Re-generate leftStr with higher parent precedence to force parens
                             leftStr = toSourceCodeRecursive(binExpr.getLeft(), false, indentLevel, currentPrecedence + 1);
@@ -187,8 +178,7 @@ public class SourceBuilder {
                 // If the argument is a UnaryExpression with the same operator, its string form (argStr)
                 // needs to be explicitly parenthesized because the recursive call might not have done it
                 // (as its precedence wasn't strictly less than the parentPrecedence it received).
-                if (argument instanceof UnaryExpression) {
-                    UnaryExpression argUnaryExpr = (UnaryExpression) argument;
+                if (argument instanceof UnaryExpression argUnaryExpr) {
                     if (argUnaryExpr.getOperator().equals(operator)) {
                         // argStr is like "-a" or "!b". We need "(-a)" or "(!b)".
                         argStr = "(" + argStr + ")";

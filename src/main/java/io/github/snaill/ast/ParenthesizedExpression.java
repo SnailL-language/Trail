@@ -4,15 +4,27 @@ package io.github.snaill.ast;
 import io.github.snaill.exception.FailedCheckException; // Keep: Used by getType
 import java.util.List; // For List.of
 
+
 public class ParenthesizedExpression extends Expression {
-    private Expression innerExpression;
+
+    // --- Начало добавленного кода ---
+    @Override
+    public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
+        if (this.innerExpression != null) {
+            this.innerExpression.emitBytecode(out, context, currentFunction);
+        } else {
+            // Если innerExpression null, getType тоже вызовет исключение, так что это согласуется
+            throw new io.github.snaill.exception.FailedCheckException("Inner expression of ParenthesizedExpression is null during bytecode emission");
+        }
+    }
+    // --- Конец добавленного кода ---
+    private final Expression innerExpression;
 
     public ParenthesizedExpression(Expression innerExpression) {
         super(innerExpression != null ? List.of(innerExpression) : List.of());
         this.innerExpression = innerExpression;
         if (innerExpression instanceof AbstractNode) {
-            AbstractNode innerNode = (AbstractNode) innerExpression;
-            this.setSourceInfo(innerNode.getLine(), innerNode.getCharPosition(), innerNode.getSource());
+            this.setSourceInfo(((AbstractNode) innerExpression).getLine(), ((AbstractNode) innerExpression).getCharPosition(), ((AbstractNode) innerExpression).getSource());
         } else if (innerExpression != null) {
             // Если innerExpression не AbstractNode, но имеет свои методы для получения информации о позиции,
             // их можно было бы вызвать здесь. Пока оставляем так, или можно установить значения по умолчанию.

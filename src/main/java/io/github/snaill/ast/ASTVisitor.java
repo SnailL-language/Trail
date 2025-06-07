@@ -1,7 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException;
-
 /**
  * Интерфейс посетителя для AST Snail.
  * Определяет методы visit для каждого конкретного типа узла AST.

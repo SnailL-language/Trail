@@ -82,7 +82,7 @@ public class Trail implements Callable<Integer> {
             logger.info("Starting bytecode debug for file: {}", bytecodeFile);
             byte[] bytecode = Files.readAllBytes(Paths.get(bytecodeFile));
             String disassembly = DebugBytecodeViewer.disassemble(bytecode);
-            // System.out.println(disassembly); // Используем // System.out.println для вывода результатов дизассемблера
+            System.out.println(disassembly); // Используем System.out.println для вывода результатов дизассемблера
             return 0;
         } catch (Exception e) {
             logger.error("Error debugging bytecode: {}", e.getMessage());
@@ -229,7 +229,7 @@ public class Trail implements Callable<Integer> {
                 errorMessages.append("- ").append(error.toString()).append("\n");
             }
             logger.error(errorMessages.toString()); // Log the errors
-            logger.error("!!! Trail.build for {}: Preparing to throw FailedCheckException due to {} semantic errors. First error: {}", filename, semanticErrors.size(), semanticErrors.isEmpty() ? "N/A" : semanticErrors.get(0).toString());
+            logger.error("!!! Trail.build for {}: Preparing to throw FailedCheckException due to {} semantic errors. First error: {}", filename, semanticErrors.size(), semanticErrors.isEmpty() ? "N/A" : semanticErrors.getFirst().toString());
             throw new FailedCheckException(errorMessages.toString().trim()); // Throw if errors are present
         }
 
@@ -351,7 +351,7 @@ public class Trail implements Callable<Integer> {
                 outputFile = emitBytecodeFile;
             } else {
                 String baseName = sourceFile.replaceFirst("\\.[^.]+$", "");
-                outputFile = baseName + ".snb";
+                outputFile = baseName + ".snail";
             }
 
             // Генерируем байткод

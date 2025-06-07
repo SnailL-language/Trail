@@ -126,15 +126,15 @@ public class Identifier extends PrimaryExpression {
         }
 
         // System.out.println("[IDENTIFIER_GETTYPE] Before decl.getType() for decl: " + decl.getName());
-        Type resultType = decl.getType(); // This is VariableDeclaration.getType()
+        // This is VariableDeclaration.getType()
         // System.out.println("[IDENTIFIER_GETTYPE] After decl.getType(). Result: " + resultType);
-        return resultType;
+        return decl.getType();
 
     } catch (FailedCheckException fce) {
         System.err.println("[IDENTIFIER_GETTYPE] FailedCheckException in getType for '" + name + "': " + fce.getMessage());
         throw fce; // Re-throw known exceptions
     } catch (Exception e) {
-        System.err.println("[IDENTIFIER_GETTYPE] UNEXPECTED EXCEPTION in getType for '" + name + "': " + e.toString());
+        System.err.println("[IDENTIFIER_GETTYPE] UNEXPECTED EXCEPTION in getType for '" + name + "': " + e);
         e.printStackTrace(System.err);
         // Wrap in FailedCheckException to propagate as a compilation issue
         throw new FailedCheckException(new CompilationError(ErrorType.INTERNAL_ERROR, this.getSourceInfo(), "Internal error resolving type for identifier '" + name + "': " + e.getMessage(), "").toString());

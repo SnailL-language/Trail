@@ -6,7 +6,6 @@ import java.util.List;
 import io.github.snaill.result.CompilationError;
 import io.github.snaill.result.ErrorType;
 import io.github.snaill.result.Result;
-import java.io.IOException;
 
 /**
  * Представляет условный оператор if в AST.

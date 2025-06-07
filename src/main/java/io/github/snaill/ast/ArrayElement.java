@@ -1,6 +1,5 @@
 package io.github.snaill.ast;
 
-import java.io.IOException; // For accept method
 import java.util.ArrayList; // For casting List<Expression> to List<Node>
 import java.util.List;
 import java.util.Set;
