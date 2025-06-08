@@ -275,7 +275,7 @@ public class BytecodeEmitter {
         out.write(1);
         
         // Тип возвращаемого значения (void - 0x03)
-        out.write(0x03);
+        out.write(BytecodeConstants.TypeId.VOID);
     }
     
     /**
