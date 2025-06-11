@@ -219,7 +219,7 @@
     \label{tab:stack_memory_operations}
 
     \subsection{Arithmetic and Logic Operations}
-    \begin{tabular}{|l|l|p{3cm}|l|l|}
+    \begin{tabular}{|l|l|p{5cm}|l|l|}
         \hline
         \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
         \texttt{0x10} & \texttt{ADD} & Adds the top two integers on the stack. & None & [a, b] $\rightarrow$ [a+b] \\ \hline
@@ -234,6 +234,8 @@
         \texttt{0x24} & \texttt{GT} & Checks if the second-top integer is greater than the top integer. & None & [a, b] $\rightarrow$ [bool] \\ \hline
         \texttt{0x25} & \texttt{GTE} & Checks if the second-top integer is greater than or equal to the top integer. & None & [a, b] $\rightarrow$ [bool] \\ \hline
         \texttt{0x26} & \texttt{AND} & Performs a logical AND on the top two booleans. & None & [a, b] $\rightarrow$ [a \&\& b] \\ \hline
+
+
         \texttt{0x27} & \texttt{OR} & Performs a logical OR on the top two booleans. & None & [a, b] $\rightarrow$ [a || b] \\ \hline
         \texttt{0x28} & \texttt{NOT} & Negates the top boolean value. & None & [a] $\rightarrow$ [!a] \\ \hline
     \end{tabular}

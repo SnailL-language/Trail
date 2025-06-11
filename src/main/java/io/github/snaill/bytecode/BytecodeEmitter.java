@@ -273,8 +273,7 @@ public class BytecodeEmitter {
         
         // Количество параметров (1)
         out.write(1);
-        
-        // Тип возвращаемого значения (void - 0x03)
+
         out.write(BytecodeConstants.TypeId.VOID);
     }
     
@@ -338,10 +337,7 @@ public class BytecodeEmitter {
         // Отладочная информация о длине глобального кода
         
         // Корректно записываем длину как 4 байта (big-endian) для соответствия с форматом SnailVM
-        out.write((actualLength >> 24) & 0xFF);
-        out.write((actualLength >> 16) & 0xFF);
-        out.write((actualLength >> 8) & 0xFF);
-        out.write(actualLength & 0xFF);
+        BytecodeUtils.writeI32(out, actualLength);
         
         // Записываем сам глобальный код
         out.write(code);
