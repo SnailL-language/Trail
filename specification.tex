@@ -537,43 +537,28 @@
 
         === INTRINSICS SECTION ===
         [INTRINSICS] Count: 1
-        [INTRINSIC] println (params: 1, return: string)
+        [INTRINSIC] println (params: 1, return: void)
 
         === GLOBAL CODE SECTION ===
-        [GLOBAL CODE] Length: 72
-        [Найден вызов main в глобальном коде на смещении 0x0045]
+        [GLOBAL CODE] Length: 34
+        [Найден вызов main в глобальном коде на смещении 0x001F]
         0000: PUSH_CONST 0 (i32: 0)
         0003: STORE_GLOBAL 0 (counter, i32)
-        0006: NEW_ARRAY 5 i32
-        000A: STORE_GLOBAL 2
-        000D: PUSH_GLOBAL 2
-        0010: PUSH_CONST 0 (i32: 0)
-        0013: PUSH_CONST 1 (i32: 10)
-        0016: SET_ARRAY
-        0017: PUSH_GLOBAL 2
-        001A: PUSH_CONST 9 (i32: 1)
-        001D: PUSH_CONST 2 (i32: 20)
-        0020: SET_ARRAY
-        0021: PUSH_GLOBAL 2
-        0024: PUSH_CONST 8 (i32: 2)
-        0027: PUSH_CONST 3 (i32: 30)
-        002A: SET_ARRAY
-        002B: PUSH_GLOBAL 2
-        002E: PUSH_CONST 11
-        0031: PUSH_CONST 4 (i32: 40)
-        0034: SET_ARRAY
-        0035: PUSH_GLOBAL 2
-        0038: PUSH_CONST 12
-        003B: PUSH_CONST 5 (i32: 50)
-        003E: SET_ARRAY
-        003F: PUSH_GLOBAL 2
-        0042: STORE_GLOBAL 1 (data, array of i32[5])
-        0045: CALL 1 (main)
+        0006: PUSH_CONST 5 (i32: 50)
+        0009: PUSH_CONST 4 (i32: 40)
+        000C: PUSH_CONST 3 (i32: 30)
+        000F: PUSH_CONST 2 (i32: 20)
+        0012: PUSH_CONST 1 (i32: 10)
+        0015: NEW_ARRAY 5 i32
+        0019: INIT_ARRAY 5
+        001C: STORE_GLOBAL 1 (data, array of i32[5])
+        001F: CALL 1 (main)
 
         === BYTECODE STATISTICS ===
-        [Общий размер] 420 байт (0x1A4)
-        [Секции] Заголовок: 8 байт, Константы: 2 байт (11 записей), Функции: 211 байт кода (2 функций), Глобальный код: 199 байт
+        [Общий размер] 382 байт (0x17E)
+        [Секции] Заголовок: 8 байт, Константы: 2 байт (11 записей), Функции: 211 байт кода (2 функций), Глобальный код: 161 байт
         [Глобальные переменные] 2 переменных
+
     \end{spverbatim}
 
     \subsection{Execution Flow}
