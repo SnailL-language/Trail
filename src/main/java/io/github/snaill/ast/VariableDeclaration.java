@@ -111,7 +111,8 @@ public class VariableDeclaration extends AbstractNode implements Statement {
             } else {
                 int globalIndex = context.getGlobalVarIndex(getName());
                 if (globalIndex == -1) {
-                    globalIndex = context.addGlobalVariable(getName());
+                    // This should not happen if initializeContext in BytecodeEmitter works correctly.
+                    throw new FailedCheckException("Global variable '" + getName() + "' was not registered before bytecode emission.");
                 }
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_GLOBAL);
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
@@ -122,20 +123,5 @@ public class VariableDeclaration extends AbstractNode implements Statement {
     @Override
     public String toString() {
         return "let " + name + ": " + getType() + (getValue() != null ? (" = " + getValue()) : "") + ";";
-    }
-
-    private byte getElementTypeId(Type type) {
-        if (type instanceof PrimitiveType pt) {
-            return switch (pt.getName()) {
-                case "i32" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
-                case "usize" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.USIZE;
-                case "string" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
-                case "bool" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
-                default -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
-            };
-        } else if (type instanceof ArrayType) {
-            return io.github.snaill.bytecode.BytecodeConstants.TypeId.ARRAY;
-        }
-        return io.github.snaill.bytecode.BytecodeConstants.TypeId.I32; // Fallback
     }
 }

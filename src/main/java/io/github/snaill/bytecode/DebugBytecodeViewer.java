@@ -26,6 +26,7 @@ public class DebugBytecodeViewer {
             java.nio.file.Path path = java.nio.file.Path.of(args[0]);
             byte[] bytecode = java.nio.file.Files.readAllBytes(path);
             String disassembly = disassemble(bytecode);
+            System.out.println(disassembly);
         } catch (Exception e) {
             System.err.println("Error reading or disassembling bytecode: " + e.getMessage());
             e.printStackTrace();

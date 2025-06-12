@@ -43,6 +43,9 @@ public class BytecodeConstants {
          */
         public static final byte DUP = 0x07;
 
+
+
+
         // Арифметические и логические операции
         public static final byte ADD = 0x10;
         public static final byte SUB = 0x11;
