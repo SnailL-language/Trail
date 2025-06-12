@@ -40,15 +40,16 @@ public class ArrayLiteral extends PrimaryExpression {
         int size = elements.size();
         byte typeId = getTypeId(elements);
 
-        // 1. Push all element values onto the stack
+        // 1. Create the new array and push its reference onto the stack
+        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
+        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, size);
+        out.write(typeId);
+
+        // 2. Push all element values onto the stack
         for (Expression element : elements.reversed()) {
             element.emitBytecode(out, context, currentFunction);
         }
 
-        // 2. Create the new array and push its reference onto the stack
-        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
-        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, size);
-        out.write(typeId);
 
         // 3. Initialize the array with the elements from the stack
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.INIT_ARRAY);

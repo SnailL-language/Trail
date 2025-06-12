@@ -23,5 +23,5 @@
     </root>
     
     <!-- Настраиваем логирование пакета io.github.snaill на уровне INFO -->
-    <logger name="io.github.snaill" level="TRACE" />
+    <logger name="io.github.snaill" level="INFO" />
 </configuration>

@@ -27,8 +27,6 @@ public interface ASTVisitor<T> {
     T visit(ArrayLiteral arrayLitNode);
     T visit(ArrayElement arrayElNode);
     T visit(VariableReference variableReferenceNode);
-    T visit(ArrayAssignment arrayAssignmentNode);
-    T visit(ArrayAccess arrayAccessNode);
     T visit(PrimitiveType primitiveTypeNode);
     T visit(ArrayType arrayTypeNode);
     // Добавляйте другие методы visit по мере рефакторинга/обнаружения узлов AST

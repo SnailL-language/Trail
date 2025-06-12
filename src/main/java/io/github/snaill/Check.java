@@ -336,32 +336,6 @@ public class Check implements ASTVisitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visit(ArrayAccess node) {
-        // Check the array and index
-        if (node.getArray() != null) {
-            node.getArray().accept(this);
-        }
-        if (node.getIndex() != null) {
-            node.getIndex().accept(this);
-        }
-        return null;
-    }
-
-    @Override
-    public Void visit(ArrayAssignment node) {
-        // Check the array, index, and value
-        if (node.getArray() != null) {
-            node.getArray().accept(this);
-        }
-        if (node.getIndex() != null) {
-            node.getIndex().accept(this);
-        }
-        if (node.getValue() != null) {
-            node.getValue().accept(this);
-        }
-        return null;
-    }
 
     @Override
     public Void visit(ArrayLiteral node) {

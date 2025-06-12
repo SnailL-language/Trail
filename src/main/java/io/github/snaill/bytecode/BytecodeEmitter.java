@@ -2,13 +2,13 @@ package io.github.snaill.bytecode;
 
 import io.github.snaill.ast.*;
 import io.github.snaill.exception.FailedCheckException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Фасад для генерации байткода из AST.
@@ -42,10 +42,10 @@ public class BytecodeEmitter {
         this.functionSignatures = new HashMap<>();
         registerBuiltInFunctions();
     }
-    
+
     /**
      * Конструктор с параметром Scope
-     * 
+     *
      * @param program Глобальная область видимости программы
      */
     public BytecodeEmitter(Scope program) {
@@ -82,7 +82,7 @@ public class BytecodeEmitter {
 
             // 4. Записываем таблицу функций и их байткод
             writeFunctions(out);
-            
+
             // 5. Записываем таблицу встроенных функций (intrinsics)
             writeIntrinsics(out);
 
@@ -96,12 +96,12 @@ public class BytecodeEmitter {
             throw new BytecodeEmitterException("Unexpected error during bytecode generation: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Генерирует байткод из AST и записывает его в файл.
      * Этот метод используется в Trail.java для генерации байткода.
-     * 
-     * @param ast AST программы
+     *
+     * @param ast        AST программы
      * @param outputPath путь к выходному файлу
      * @throws BytecodeEmitterException если произошла ошибка при генерации байткода
      */
@@ -109,13 +109,13 @@ public class BytecodeEmitter {
         try {
             // Создаем новый экземпляр BytecodeEmitter с корневым скоупом из AST
             BytecodeEmitter emitter = new BytecodeEmitter(ast.root());
-            
+
             // Генерируем байткод
             byte[] bytecode = emitter.emit();
-            
+
             // Записываем байткод в файл
             java.nio.file.Files.write(java.nio.file.Paths.get(outputPath), bytecode);
-            
+
             logger.info("Байткод успешно сохранен в: {} ({} байт)", outputPath, bytecode.length);
         } catch (IOException e) {
             throw new BytecodeEmitterException("Ошибка записи байткода в файл: " + e.getMessage(), e);
@@ -138,7 +138,7 @@ public class BytecodeEmitter {
             context.addConstant(1L);  // Для инкремента/декремента
             return;
         }
-        
+
         // Сначала собираем все глобальные переменные
         for (Statement stmt : program.getStatements()) {
             if (stmt instanceof VariableDeclaration var) {
@@ -179,6 +179,18 @@ public class BytecodeEmitter {
             case BooleanLiteral bool ->
                 // В Snail булевы значения представлены как i32
                     context.addConstant(bool.getValue() ? 1L : 0L);
+            case AssignmentExpression assignExpr -> {
+                // Обрабатываем правую часть присваивания
+                addConstants(assignExpr.getRight());
+                // Обрабатываем левую часть, если это, например, ArrayAccess с литералом в индексе
+                addConstants(assignExpr.getLeft());
+            }
+
+            case ArrayElement ae -> {
+                for (Expression dim : ae.getDims()) {
+                    addConstants(dim);
+                }
+            }
             case BinaryExpression binary -> {
                 addConstants(binary.getLeft());
                 addConstants(binary.getRight());
@@ -194,19 +206,7 @@ public class BytecodeEmitter {
                     addConstants(arg);
                 }
             }
-            case AssignmentExpression assignExpr -> {
-                // Обрабатываем правую часть присваивания
-                addConstants(assignExpr.getRight());
-                // Обрабатываем левую часть, если это, например, ArrayAccess с литералом в индексе
-                addConstants(assignExpr.getLeft());
-            }
-            case ArrayAccess arrayAccess ->  // Новый блок
-                // Обрабатываем выражение индекса
-                    addConstants(arrayAccess.getIndex());
 
-            // Также можно обработать выражение самого массива, если оно может быть литералом,
-            // но обычно это идентификатор.
-            // addConstants(arrayAccess.getArrayExpression());
             default -> {
             }
         }
@@ -258,39 +258,41 @@ public class BytecodeEmitter {
 
     /**
      * Записывает таблицу встроенных функций (intrinsics)
+     *
      * @param out поток для записи байткода
      */
     private void writeIntrinsics(ByteArrayOutputStream out) throws IOException {
         // Записываем количество встроенных функций (всего 1 - println)
         BytecodeUtils.writeU16(out, 1);
-        
+
         // Записываем встроенную функцию println
         // Имя функции
         String name = "println";
         byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
         out.write(nameBytes.length); // Длина имени
         out.write(nameBytes);  // Имя
-        
+
         // Количество параметров (1)
         out.write(1);
 
         out.write(BytecodeConstants.TypeId.VOID);
     }
-    
+
     /**
      * Записывает секцию глобального байткода для инициализации переменных
+     *
      * @param out поток для записи байткода
      */
     private void writeGlobalBytecode(ByteArrayOutputStream out) throws IOException {
         ByteArrayOutputStream globalOut = new ByteArrayOutputStream();
-        
+
         // Проверяем, что программа не null
         if (program == null || program.getStatements() == null) {
             // Если программа пуста, записываем 0 как длину байткода
             BytecodeUtils.writeI32(out, 0);
             return;
         }
-        
+
         // Генерируем байткод для глобального скоупа (инициализация глобальных переменных)
         for (Statement stmt : program.getStatements()) {
             if (stmt instanceof VariableDeclaration varDecl && varDecl.getValue() != null) {
@@ -309,7 +311,7 @@ public class BytecodeEmitter {
                 }
             }
         }
-        
+
         // Добавляем вызов функции main в конец глобального кода
         int mainFuncIdx = context.getFunctionIndex("main");
         if (mainFuncIdx >= 0) {
@@ -318,27 +320,27 @@ public class BytecodeEmitter {
         } else {
             System.err.println("Предупреждение: функция main не найдена, вызов не будет добавлен в глобальный код");
         }
-        
+
         byte[] code = globalOut.toByteArray();
-        
+
         // Проверка размера глобального байткода
         if (code.length > 1000000) { // Ограничиваем размер глобального байткода до 1MB
             System.err.println("Предупреждение: очень большой размер глобального байткода: " + code.length + " байт");
         }
-        
+
         // Дополнительная защита от переполнения
         if (code.length > Integer.MAX_VALUE - 10) {
             throw new IOException("Слишком большой размер глобального байткода");
         }
-        
+
         // Записываем длину глобального кода как целое число (4 байта)
         int actualLength = code.length;
-        
+
         // Отладочная информация о длине глобального кода
-        
+
         // Корректно записываем длину как 4 байта (big-endian) для соответствия с форматом SnailVM
         BytecodeUtils.writeI32(out, actualLength);
-        
+
         // Записываем сам глобальный код
         out.write(code);
     }
@@ -442,7 +444,7 @@ public class BytecodeEmitter {
 
             // Записываем тип возвращаемого значения
             out.write(getTypeId(func.getReturnType()));
-            
+
             // Индексируем параметры как локальные переменные
             // Параметры занимают индексы 0..N-1, где N - количество параметров
             Map<String, Integer> localVarIndices = new HashMap<>();
@@ -450,7 +452,7 @@ public class BytecodeEmitter {
             for (Parameter p : func.getParameters()) {
                 localVarIndices.put(p.getName(), idx++);
             }
-            
+
             // Собираем все локальные переменные из тела функции
             // Они получают индексы после параметров
             Set<String> localVars = new LinkedHashSet<>();
@@ -460,18 +462,18 @@ public class BytecodeEmitter {
                     localVarIndices.put(var, idx++);
                 }
             }
-            
+
             // Устанавливаем индексы в контексте для дальнейшего использования в PUSH_LOCAL/STORE_LOCAL
             context.setLocalVarIndices(func, localVarIndices);
             BytecodeUtils.writeU16(out, localVarIndices.size());
-            
+
             // Теперь, когда индексы переменных зарегистрированы, генерируем байткод функции
             ByteArrayOutputStream funcOut = new ByteArrayOutputStream();
-            
+
             // Используем метод emitBytecode функции для генерации ее байткода
             // Это обеспечит правильную генерацию кода в соответствии с логикой самой функции
             func.emitBytecode(funcOut, context, func);
-            
+
             byte[] code = funcOut.toByteArray();
             BytecodeUtils.writeI32(out, code.length);
             out.write(code);
@@ -506,7 +508,7 @@ public class BytecodeEmitter {
 
     /**
      * Определяет идентификатор типа для байткода на основе типа из AST.
-     * 
+     *
      * @param type тип из AST
      * @return идентификатор типа для байткода
      */
@@ -514,7 +516,7 @@ public class BytecodeEmitter {
         if (type == null) {
             return BytecodeConstants.TypeId.VOID;
         }
-        
+
         // Используем toString() вместо getTypeName()
         String typeName = type.toString();
         if ("i32".equals(typeName)) {
@@ -531,7 +533,7 @@ public class BytecodeEmitter {
         } else if (type instanceof ArrayType) {
             return BytecodeConstants.TypeId.ARRAY;
         }
-        
+
         throw new IllegalArgumentException("Unknown type: " + typeName);
     }
 
@@ -546,6 +548,6 @@ public class BytecodeEmitter {
     }
 
     // Временное определение класса FunctionSignature, если его нет в проекте
-        public record FunctionSignature(String name, List<Parameter> parameters, Type returnType) {
+    public record FunctionSignature(String name, List<Parameter> parameters, Type returnType) {
     }
 }

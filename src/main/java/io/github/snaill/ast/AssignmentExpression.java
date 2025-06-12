@@ -40,6 +40,9 @@ public class AssignmentExpression extends Expression {
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
         Expression left = getLeft();
         Expression right = getRight();
+        if (left instanceof ArrayElement ae) {
+            ae.getIdentifier().emitBytecode(out, context, currentFunction);
+        }
         right.emitBytecode(out, context, currentFunction);
         if (left instanceof Identifier id) {
             logger.debug("Looking for variable: {}", id.getName());
@@ -71,7 +74,6 @@ public class AssignmentExpression extends Expression {
                 );
             }
         } else if (left instanceof ArrayElement ae) {
-            ae.getIdentifier().emitBytecode(out, context, currentFunction);
             for (Expression dim : ae.getDims()) {
                 dim.emitBytecode(out, context, currentFunction);
             }
