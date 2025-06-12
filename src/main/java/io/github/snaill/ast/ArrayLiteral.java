@@ -40,29 +40,19 @@ public class ArrayLiteral extends PrimaryExpression {
         int size = elements.size();
         byte typeId = getTypeId(elements);
 
-        // 1. Create the new array. Its reference is now on the stack.
+        // 1. Push all element values onto the stack
+        for (Expression element : elements) {
+            element.emitBytecode(out, context, currentFunction);
+        }
+
+        // 2. Create the new array and push its reference onto the stack
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, size);
         out.write(typeId);
 
-        // 2. Iterate through elements to populate the array.
-        for (int i = 0; i < size; i++) {
-            // a. Duplicate the array reference. Stack: [..., array_ref, array_ref]
-            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.DUP);
-
-            // b. Push the index. Stack: [..., array_ref, array_ref, index]
-            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
-            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, context.addConstant((long)i));
-
-            // c. Push the value. Stack: [..., array_ref, array_ref, index, value]
-            elements.get(i).emitBytecode(out, context, currentFunction);
-
-            // d. Set the array element. This consumes the top 3 stack values.
-            //    Stack is now back to: [..., array_ref]
-            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.SET_ARRAY);
-        }
-        // 3. After the loop, the original array reference is left on the stack,
-        //    ready to be consumed by the parent expression (e.g., a VariableDeclaration).
+        // 3. Initialize the array with the elements from the stack
+        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.INIT_ARRAY);
+        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, size);
     }
 
     private static byte getTypeId(List<Expression> elements) {

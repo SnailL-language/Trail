@@ -37,11 +37,6 @@ public class BytecodeConstants {
         public static final byte STORE_LOCAL = 0x04; // Was 0x03 in old spec, 0x04 is correct
         public static final byte STORE_GLOBAL = 0x05;
         public static final byte POP = 0x06;
-        /**
-         * Дублирует значение на вершине стека.
-         * Эффект на стек: [value] → [value, value]
-         */
-        public static final byte DUP = 0x07;
 
 
 
@@ -101,6 +96,13 @@ public class BytecodeConstants {
         public static final byte NEW_ARRAY = 0x40;
         public static final byte GET_ARRAY = 0x41;
         public static final byte SET_ARRAY = 0x42;
+
+        /**
+         * Инициализирует массив значениями со стека.
+         * Аргумент: u16 size - количество элементов для инициализации.
+         * Стек: [array_ref, elem_0, ..., elem_{size-1}] -> [array_ref]
+         */
+        public static final byte INIT_ARRAY = 0x43;
 
         // Встроенные функции
         public static final byte INTRINSIC_CALL = 0x50;

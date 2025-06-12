@@ -1,18 +1,14 @@
 package io.github.snaill.bytecode;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Дебаггер/дизассемблер для байткода SnailVM.
  * Выводит подробную расшифровку секций, опкодов и констант.
  */
 public class DebugBytecodeViewer {
-    
+
     /**
      * Метод main для прямого запуска отладчика байткода
      */
@@ -21,7 +17,7 @@ public class DebugBytecodeViewer {
             // System.out.println("Использование: java -cp target/classes io.github.snaill.bytecode.DebugBytecodeViewer <файл_байткода>");
             return;
         }
-        
+
         try {
             java.nio.file.Path path = java.nio.file.Path.of(args[0]);
             byte[] bytecode = java.nio.file.Files.readAllBytes(path);
@@ -34,39 +30,40 @@ public class DebugBytecodeViewer {
     }
 
     private static final Map<Integer, String> OPCODE_NAMES = new HashMap<>();
+
     static {
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.NOP & 0xFF, "NOP");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.PUSH_CONST & 0xFF, "PUSH_CONST");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.PUSH_LOCAL & 0xFF, "PUSH_LOCAL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.PUSH_GLOBAL & 0xFF, "PUSH_GLOBAL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.STORE_LOCAL & 0xFF, "STORE_LOCAL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.STORE_GLOBAL & 0xFF, "STORE_GLOBAL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.POP & 0xFF, "POP");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.DUP & 0xFF, "DUP");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.ADD & 0xFF, "ADD");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.SUB & 0xFF, "SUB");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.MUL & 0xFF, "MUL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.DIV & 0xFF, "DIV");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.MOD & 0xFF, "MOD");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.EQ & 0xFF, "EQ");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.NEQ & 0xFF, "NEQ");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.LT & 0xFF, "LT");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.LTE & 0xFF, "LTE");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.GT & 0xFF, "GT");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.GTE & 0xFF, "GTE");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.AND & 0xFF, "AND");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.OR & 0xFF, "OR");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.NOT & 0xFF, "NOT");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.JMP & 0xFF, "JMP");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.JMP_IF_FALSE & 0xFF, "JMP_IF_FALSE");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.JMP_IF_TRUE & 0xFF, "JMP_IF_TRUE");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.CALL & 0xFF, "CALL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.INTRINSIC_CALL & 0xFF, "INTRINSIC_CALL");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.RET & 0xFF, "RET");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.HALT & 0xFF, "HALT");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.NEW_ARRAY & 0xFF, "NEW_ARRAY");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.GET_ARRAY & 0xFF, "GET_ARRAY");
-        OPCODE_NAMES.put((int)BytecodeConstants.Opcode.SET_ARRAY & 0xFF, "SET_ARRAY");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.NOP & 0xFF, "NOP");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.PUSH_CONST & 0xFF, "PUSH_CONST");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.PUSH_LOCAL & 0xFF, "PUSH_LOCAL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.PUSH_GLOBAL & 0xFF, "PUSH_GLOBAL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.STORE_LOCAL & 0xFF, "STORE_LOCAL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.STORE_GLOBAL & 0xFF, "STORE_GLOBAL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.POP & 0xFF, "POP");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.ADD & 0xFF, "ADD");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.SUB & 0xFF, "SUB");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.MUL & 0xFF, "MUL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.DIV & 0xFF, "DIV");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.MOD & 0xFF, "MOD");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.EQ & 0xFF, "EQ");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.NEQ & 0xFF, "NEQ");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.LT & 0xFF, "LT");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.LTE & 0xFF, "LTE");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.GT & 0xFF, "GT");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.GTE & 0xFF, "GTE");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.AND & 0xFF, "AND");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.OR & 0xFF, "OR");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.NOT & 0xFF, "NOT");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.JMP & 0xFF, "JMP");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.JMP_IF_FALSE & 0xFF, "JMP_IF_FALSE");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.JMP_IF_TRUE & 0xFF, "JMP_IF_TRUE");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.CALL & 0xFF, "CALL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.INTRINSIC_CALL & 0xFF, "INTRINSIC_CALL");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.RET & 0xFF, "RET");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.HALT & 0xFF, "HALT");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.NEW_ARRAY & 0xFF, "NEW_ARRAY");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.GET_ARRAY & 0xFF, "GET_ARRAY");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.SET_ARRAY & 0xFF, "SET_ARRAY");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.INIT_ARRAY & 0xFF, "INIT_ARRAY");
     }
 
     private static class ConstantInfo {
@@ -117,10 +114,10 @@ public class DebugBytecodeViewer {
     private record IntrinsicInfo(String name, int paramCount, int returnType) {
 
         @Override
-            public String toString() {
-                return String.format("%s (params: %d, return: %s)", name, paramCount, getTypeDescription(returnType));
-            }
+        public String toString() {
+            return String.format("%s (params: %d, return: %s)", name, paramCount, getTypeDescription(returnType));
         }
+    }
 
     public static String disassemble(byte[] code) {
         if (code == null || code.length < 8) {
@@ -399,48 +396,48 @@ public class DebugBytecodeViewer {
     }
 
     private static int readGlobalCode(byte[] code, StringBuilder sb, int pos, List<ConstantInfo> constants,
-                                       List<GlobalVarInfo> globals, List<FunctionInfo> functions,
-                                       List<IntrinsicInfo> intrinsics, int mainFunctionIndex) {
+                                      List<GlobalVarInfo> globals, List<FunctionInfo> functions,
+                                      List<IntrinsicInfo> intrinsics, int mainFunctionIndex) {
         sb.append("\n=== GLOBAL CODE SECTION ===\n");
         sb.append("[GLOBAL CODE] Length: ");
         if (pos + 4 > code.length) {
             sb.append("<incomplete length>\n");
             return code.length;
         }
-        
+
         // Read global code length (4 bytes, big-endian)
-        long rawCodeLen = ((long)(code[pos] & 0xFF) << 24) | 
-                ((long)(code[pos + 1] & 0xFF) << 16) |
-                ((long)(code[pos + 2] & 0xFF) << 8) | 
-                (long)(code[pos + 3] & 0xFF);
+        long rawCodeLen = ((long) (code[pos] & 0xFF) << 24) |
+                ((long) (code[pos + 1] & 0xFF) << 16) |
+                ((long) (code[pos + 2] & 0xFF) << 8) |
+                (long) (code[pos + 3] & 0xFF);
 
         pos += 4;
-        
+
         // Convert to int for further use
-        int globalCodeLen = (int)(rawCodeLen & 0x7FFFFFFF);
-        
+        int globalCodeLen = (int) (rawCodeLen & 0x7FFFFFFF);
+
         // Check if global code length makes sense
         // Maximum reasonable size for global code is 1 MB
         if (globalCodeLen < 0 || globalCodeLen > 1_000_000) {
             sb.append(globalCodeLen).append(" (warning: suspiciously large size, limited to 100KB)\n");
-            
+
             // Try to find a more reasonable length:
             // Look for bytes that might be the length of the global code
             int estimatedLen = 0;
             // Check if the length is recorded in different positions nearby
             for (int offset = -8; offset <= 8; offset += 4) {
                 if (pos - 4 + offset >= 0 && pos - 4 + offset + 3 < code.length) {
-                    int testLen = ((code[pos - 4 + offset] & 0xFF) << 24) | 
-                                ((code[pos - 4 + offset + 1] & 0xFF) << 16) |
-                                ((code[pos - 4 + offset + 2] & 0xFF) << 8) | 
-                                (code[pos - 4 + offset + 3] & 0xFF);
+                    int testLen = ((code[pos - 4 + offset] & 0xFF) << 24) |
+                            ((code[pos - 4 + offset + 1] & 0xFF) << 16) |
+                            ((code[pos - 4 + offset + 2] & 0xFF) << 8) |
+                            (code[pos - 4 + offset + 3] & 0xFF);
                     if (testLen > 0 && testLen < 1000) {
                         // Assume this might be the length of the global code at offset " + offset + " from the current position: " + testLen);
                         estimatedLen = testLen;
                     }
                 }
             }
-            
+
             // If a suitable value is found, use it
             // Если нашли подходящее значение, используем его
             if (estimatedLen > 0) {
@@ -461,7 +458,7 @@ public class DebugBytecodeViewer {
                 sb.append("Скорректировано до: ").append(availableLen).append(" (предупреждение: выходит за границы файла)\n");
                 globalCodeLen = availableLen;
             }
-            
+
             // Ищем вызов функции main в глобальном коде
             boolean hasMainCall = false;
             int mainCallOffset = -1;
@@ -539,22 +536,23 @@ public class DebugBytecodeViewer {
             sb.append(indent).append(String.format("%04X: ", offset));
 
             String opcodeName = OPCODE_NAMES.getOrDefault((int) opcode & 0xFF, "UNKNOWN_" + String.format("%02X", opcode & 0xFF));
-            
+
             // Для опкодов, которые требуют дополнительных параметров, их нужно обрабатывать в switch
-            if (opcode == BytecodeConstants.Opcode.PUSH_CONST || 
-                opcode == BytecodeConstants.Opcode.PUSH_LOCAL || 
-                opcode == BytecodeConstants.Opcode.PUSH_GLOBAL || 
-                opcode == BytecodeConstants.Opcode.STORE_LOCAL || 
-                opcode == BytecodeConstants.Opcode.STORE_GLOBAL || 
-                opcode == BytecodeConstants.Opcode.JMP || 
-                opcode == BytecodeConstants.Opcode.JMP_IF_FALSE || 
-                opcode == BytecodeConstants.Opcode.JMP_IF_TRUE || 
-                opcode == BytecodeConstants.Opcode.CALL || 
-                opcode == BytecodeConstants.Opcode.INTRINSIC_CALL || 
-                opcode == BytecodeConstants.Opcode.NEW_ARRAY || 
-                opcode == BytecodeConstants.Opcode.GET_ARRAY || 
-                opcode == BytecodeConstants.Opcode.SET_ARRAY) {
-                // Продолжаем выполнение, чтобы обработать параметры в switch
+            if (opcode == BytecodeConstants.Opcode.PUSH_CONST ||
+                    opcode == BytecodeConstants.Opcode.PUSH_LOCAL ||
+                    opcode == BytecodeConstants.Opcode.PUSH_GLOBAL ||
+                    opcode == BytecodeConstants.Opcode.STORE_LOCAL ||
+                    opcode == BytecodeConstants.Opcode.STORE_GLOBAL ||
+                    opcode == BytecodeConstants.Opcode.JMP ||
+                    opcode == BytecodeConstants.Opcode.JMP_IF_FALSE ||
+                    opcode == BytecodeConstants.Opcode.JMP_IF_TRUE ||
+                    opcode == BytecodeConstants.Opcode.CALL ||
+                    opcode == BytecodeConstants.Opcode.INTRINSIC_CALL ||
+                    opcode == BytecodeConstants.Opcode.NEW_ARRAY ||
+                    opcode == BytecodeConstants.Opcode.GET_ARRAY ||
+                    opcode == BytecodeConstants.Opcode.SET_ARRAY ||
+                    opcode == BytecodeConstants.Opcode.INIT_ARRAY
+            ) {
             } else {
                 sb.append(opcodeName).append("\n");
                 continue;
@@ -570,13 +568,13 @@ public class DebugBytecodeViewer {
                             ConstantInfo constInfo = constants.get(constIdx);
                             // Улучшенное отображение значения константы
                             sb.append(" (").append(getTypeDescription(constInfo.typeId)).append(": ").append(constValue).append(")");
-                            
+
                             // Если это константа для индекса массива и следующая инструкция - SET_ARRAY
                             // добавляем понятный комментарий с индексом элемента
-                            if (constValue instanceof Long && 
-                                pos + 2 < end && 
-                                pos + 3 < code.length && 
-                                code[pos + 3] == BytecodeConstants.Opcode.SET_ARRAY) {
+                            if (constValue instanceof Long &&
+                                    pos + 2 < end &&
+                                    pos + 3 < code.length &&
+                                    code[pos + 3] == BytecodeConstants.Opcode.SET_ARRAY) {
                                 sb.append(" [индекс элемента: ").append(constValue).append("]");
                             }
                         }
@@ -590,16 +588,7 @@ public class DebugBytecodeViewer {
                     if (pos + 1 < end) {
                         int localIdx = getUnsignedShort(code, pos);
                         sb.append("PUSH_LOCAL ").append(localIdx);
-                        if (functions != null) {
-                            for (FunctionInfo func : functions) {
-                                if (pos >= func.codeOffset && pos < func.codeOffset + func.codeLength) {
-                                    sb.append(localIdx < func.paramCount ? " (параметр #" : " (локальная переменная #")
-                                            .append(localIdx < func.paramCount ? localIdx : localIdx - func.paramCount).append(")");
-                                    break;
-                                }
-                            }
-                        }
-                        pos += 2;
+                        pos = getPos(functions, sb, pos, localIdx);
                     } else {
                         sb.append("PUSH_LOCAL [truncated]");
                         pos = end;
@@ -609,18 +598,7 @@ public class DebugBytecodeViewer {
                     if (pos + 1 < end) {
                         int globalIdx = getUnsignedShort(code, pos);
                         sb.append("PUSH_GLOBAL ").append(globalIdx);
-                        if (globals != null && globalIdx >= 0 && globalIdx < globals.size()) {
-                            GlobalVarInfo varInfo = globals.get(globalIdx);
-                            sb.append(" (").append(varInfo.name);
-                            
-                            // Улучшенное отображение типа переменной
-                            String typeDesc = getTypeDescription(varInfo.typeId);
-                            if (varInfo.typeId == BytecodeConstants.TypeId.ARRAY && varInfo.elemTypeId > 0) {
-                                typeDesc = "array of " + getTypeDescription(varInfo.elemTypeId) + "[" + varInfo.size + "]";
-                            }
-                            sb.append(", ").append(typeDesc).append(")");
-                        }
-                        pos += 2;
+                        pos = getPosGlob(globals, sb, pos, globalIdx);
                     } else {
                         sb.append("PUSH_GLOBAL [truncated]");
                         pos = end;
@@ -630,16 +608,7 @@ public class DebugBytecodeViewer {
                     if (pos + 1 < end) {
                         int storeLocalIdx = getUnsignedShort(code, pos);
                         sb.append("STORE_LOCAL ").append(storeLocalIdx);
-                        if (functions != null) {
-                            for (FunctionInfo func : functions) {
-                                if (pos >= func.codeOffset && pos < func.codeOffset + func.codeLength) {
-                                    sb.append(storeLocalIdx < func.paramCount ? " (параметр #" : " (локальная переменная #")
-                                            .append(storeLocalIdx < func.paramCount ? storeLocalIdx : storeLocalIdx - func.paramCount).append(")");
-                                    break;
-                                }
-                            }
-                        }
-                        pos += 2;
+                        pos = getPos(functions, sb, pos, storeLocalIdx);
                     } else {
                         sb.append("STORE_LOCAL [truncated]");
                         pos = end;
@@ -649,18 +618,7 @@ public class DebugBytecodeViewer {
                     if (pos + 1 < end) {
                         int storeGlobalIdx = getUnsignedShort(code, pos);
                         sb.append("STORE_GLOBAL ").append(storeGlobalIdx);
-                        if (globals != null && storeGlobalIdx >= 0 && storeGlobalIdx < globals.size()) {
-                            GlobalVarInfo varInfo = globals.get(storeGlobalIdx);
-                            sb.append(" (").append(varInfo.name);
-                            
-                            // Улучшенное отображение типа переменной
-                            String typeDesc = getTypeDescription(varInfo.typeId);
-                            if (varInfo.typeId == BytecodeConstants.TypeId.ARRAY && varInfo.elemTypeId > 0) {
-                                typeDesc = "array of " + getTypeDescription(varInfo.elemTypeId) + "[" + varInfo.size + "]";
-                            }
-                            sb.append(", ").append(typeDesc).append(")");
-                        }
-                        pos += 2;
+                        pos = getPosGlob((List<GlobalVarInfo>) globals, sb, pos, storeGlobalIdx);
                     } else {
                         sb.append("STORE_GLOBAL [truncated]");
                         pos = end;
@@ -718,6 +676,16 @@ public class DebugBytecodeViewer {
                         pos = end;
                     }
                     break;
+                case BytecodeConstants.Opcode.INIT_ARRAY:
+                    if (pos + 1 < end) {
+                        int size = getUnsignedShort(code, pos);
+                        sb.append("INIT_ARRAY ").append(size);
+                        pos += 2;
+                    } else {
+                        sb.append("INIT_ARRAY [truncated]");
+                        pos = end;
+                    }
+                    break;
                 case BytecodeConstants.Opcode.NEW_ARRAY:
                     if (pos + 2 < end) {
                         int arraySize = getUnsignedShort(code, pos);
@@ -761,6 +729,36 @@ public class DebugBytecodeViewer {
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    private static int getPosGlob(List<GlobalVarInfo> globals, StringBuilder sb, int pos, int globalIdx) {
+        if (globals != null && globalIdx >= 0 && globalIdx < globals.size()) {
+            GlobalVarInfo varInfo = globals.get(globalIdx);
+            sb.append(" (").append(varInfo.name);
+
+            // Улучшенное отображение типа переменной
+            String typeDesc = getTypeDescription(varInfo.typeId);
+            if (varInfo.typeId == BytecodeConstants.TypeId.ARRAY && varInfo.elemTypeId > 0) {
+                typeDesc = "array of " + getTypeDescription(varInfo.elemTypeId) + "[" + varInfo.size + "]";
+            }
+            sb.append(", ").append(typeDesc).append(")");
+        }
+        pos += 2;
+        return pos;
+    }
+
+    private static int getPos(List<FunctionInfo> functions, StringBuilder sb, int pos, int localIdx) {
+        if (functions != null) {
+            for (FunctionInfo func : functions) {
+                if (pos >= func.codeOffset && pos < func.codeOffset + func.codeLength) {
+                    sb.append(localIdx < func.paramCount ? " (параметр #" : " (локальная переменная #")
+                            .append(localIdx < func.paramCount ? localIdx : localIdx - func.paramCount).append(")");
+                    break;
+                }
+            }
+        }
+        pos += 2;
+        return pos;
     }
 
     private static String getTypeDescription(int typeId) {
