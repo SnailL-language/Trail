@@ -41,7 +41,7 @@ public class ArrayLiteral extends PrimaryExpression {
         byte typeId = getTypeId(elements);
 
         // 1. Push all element values onto the stack
-        for (Expression element : elements) {
+        for (Expression element : elements.reversed()) {
             element.emitBytecode(out, context, currentFunction);
         }
 
