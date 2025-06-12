@@ -1,6 +1,7 @@
 package io.github.snaill;
 
 import io.github.snaill.ast.*;
+import io.github.snaill.bytecode.BytecodeEmitter;
 import io.github.snaill.exception.FailedCheckException;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -164,8 +165,14 @@ public class TrailTest {
 
     public void testProcessing(String filename) throws FailedCheckException {
         Path filepath = SAMPLES_DIR.resolve(filename);
-        assertDoesNotThrow(() -> Trail.build(filepath.toAbsolutePath().toString()),
-                "Trail.build should not throw an exception for valid file: " + filename);
+        assertDoesNotThrow(() -> {
+                    AST ast = Trail.build(filepath.toAbsolutePath().toString());
+                    BytecodeEmitter emitter = new BytecodeEmitter(ast.root());
+                    emitter.emit();
+                },
+                "Trail should not throw an exception for valid file: " + filename);
+
+
         String expectedContent = readFile(filepath);
         String actualContentRaw = SourceBuilder.toSourceCode(Trail.build(filepath.toAbsolutePath().toString()));
 
