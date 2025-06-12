@@ -261,7 +261,7 @@
         \hline
         \textbf{Opcode} & \textbf{Name} & \textbf{Description} & \textbf{Arguments} & \textbf{Stack Effect} \\ \hline
         \texttt{0x40} & \texttt{NEW\_ARRAY} & Creates a new uninitialized array of the specified size and type, pushing its reference onto the stack. & 2-byte size, 1-byte type ID & [] $\rightarrow$ [array] \\ \hline
-        \texttt{0x41} & \texttt{GET\_ARRAY} & Retrieves the element at the specified index from the array. & None & [array, index] $\rightarrow$ [value] \\ \hline
+        \texttt{0x41} & \texttt{GET\_ARRAY} & Retrieves the element at the specified index from the array. & None & [index, array] $\rightarrow$ [value] \\ \hline
         \texttt{0x42} & \texttt{SET\_ARRAY} & Sets the element at the specified index in the array. & None & [array, index, value] $\rightarrow$ [] \\ \hline
         \texttt{0x43} & \texttt{INIT\_ARRAY} & Initializes an array with a specified number of elements from the stack. The elements are popped from the stack and placed into the array. & 2-byte size (N) & [array, elem1, ..., elemN] $\rightarrow$ [array] \\ \hline
     \end{tabular}
