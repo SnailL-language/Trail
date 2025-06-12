@@ -45,49 +45,49 @@ public class ForLoop extends AbstractNode implements Statement {
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
         // Emit bytecode for initialization statement
         Statement initialization = getInitialization();
-        if (initialization instanceof VariableDeclaration) { // Or any other statement that needs emitting
-            initialization.emitBytecode(out, context);
-        } else if (initialization instanceof ExpressionStatement) {
-            initialization.emitBytecode(out, context);
-             // ExpressionStatements (like assignments) might leave a value on stack if they are expressions.
-             // However, typical for-loop initializers (e.g. i=0) as statements don't leave values.
-             // If the initializer expression itself has a non-void type and is used as a statement,
-             // its result should be popped if not used.
-             // This logic depends on how ExpressionStatement.emitBytecode handles its expression's result.
-             // For now, assuming ExpressionStatement handles its own stack effects correctly.
+        if (initialization instanceof VariableDeclaration vd) { // Or any other statement that needs emitting
+            vd.emitBytecode(out, context, currentFunction);
+        } else if (initialization instanceof ExpressionStatement exprS) {
+            exprS.emitBytecode(out, context, currentFunction);
+            // ExpressionStatements (like assignments) might leave a value on stack if they are expressions.
+            // However, typical for-loop initializers (e.g. i=0) as statements don't leave values.
+            // If the initializer expression itself has a non-void type and is used as a statement,
+            // its result should be popped if not used.
+            // This logic depends on how ExpressionStatement.emitBytecode handles its expression's result.
+            // For now, assuming ExpressionStatement handles its own stack effects correctly.
         }
 
         // Loop structure bytecode generation
         int conditionStart = out.size(); // Start of condition evaluation for looping back
-        getCondition().emitBytecode(out, context);
+        getCondition().emitBytecode(out, context, currentFunction);
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP_IF_FALSE);
         int jmpIfFalseAddr = out.size();
         io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Placeholder for jump to after loop
 
         // Body execution
-        getBody().emitBytecode(out, context);
+        getBody().emitBytecode(out, context, currentFunction);
 
         // Step execution
-        getStep().emitBytecode(out, context);
+        getStep().emitBytecode(out, context, currentFunction);
         // If step is an expression (not an assignment that's an ExpressionStatement), it might leave a value.
         // We need to pop it if its type is not void.
-        if (getStep() instanceof Expression) { 
-             Type stepType = ((Expression)getStep()).getType(getBody()); // Scope for type resolution
-             boolean isVoidStep = false;
-             if (stepType instanceof PrimitiveType primType) {
-                 isVoidStep = "void".equals(primType.getName());
-             }
-             // Only pop if it's a direct expression and not void. 
-             // Assignments like i+=1 are often ExpressionStatements, which should handle their stack.
-             if (!isVoidStep && !(getStep() instanceof AssignmentExpression)) { 
+        if (getStep() instanceof Expression) {
+            Type stepType = ((Expression) getStep()).getType(getBody()); // Scope for type resolution
+            boolean isVoidStep = false;
+            if (stepType instanceof PrimitiveType primType) {
+                isVoidStep = "void".equals(primType.getName());
+            }
+            // Only pop if it's a direct expression and not void.
+            // Assignments like i+=1 are often ExpressionStatements, which should handle their stack.
+            if (!isVoidStep && !(getStep() instanceof AssignmentExpression)) {
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP);
-             }
+            }
         }
 
         // Jump back to condition
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP);
         // Calculate relative jump: target (conditionStart) - (current_address + size_of_jmp_operand)
-        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, conditionStart - (out.size() + 2)); 
+        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, conditionStart - (out.size() + 2));
 
         // Patch the JMP_IF_FALSE to jump to here (after the loop)
         int afterLoopAddr = out.size();
@@ -129,15 +129,15 @@ public class ForLoop extends AbstractNode implements Statement {
         Type conditionType = getCondition().getType(loopInternalScope);
         if (!(conditionType instanceof PrimitiveType pt) || !pt.getName().equals("bool")) {
             String before = getCondition().getSource() != null ?
-                io.github.snaill.ast.SourceBuilder.toSourceLine(getCondition().getSource(), getCondition().getLine(), getCondition().getCharPosition(), getCondition().toString().length()) :
-                io.github.snaill.ast.SourceBuilder.toSourceCode(getCondition());
+                    io.github.snaill.ast.SourceBuilder.toSourceLine(getCondition().getSource(), getCondition().getLine(), getCondition().getCharPosition(), getCondition().toString().length()) :
+                    io.github.snaill.ast.SourceBuilder.toSourceCode(getCondition());
             throw new io.github.snaill.exception.FailedCheckException(
-                new io.github.snaill.result.CompilationError(
-                    io.github.snaill.result.ErrorType.TYPE_MISMATCH,
-                    before,
-                    "For loop condition must be of type bool, got " + conditionType,
-                    ""
-                ).toString()
+                    new io.github.snaill.result.CompilationError(
+                            io.github.snaill.result.ErrorType.TYPE_MISMATCH,
+                            before,
+                            "For loop condition must be of type bool, got " + conditionType,
+                            ""
+                    ).toString()
             );
         }
         // Check step and body within the loopInternalScope

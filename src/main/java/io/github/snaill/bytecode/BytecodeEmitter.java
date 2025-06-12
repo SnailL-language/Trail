@@ -492,10 +492,11 @@ public class BytecodeEmitter {
             if (varDecl.getValue() instanceof io.github.snaill.ast.ArrayLiteral) {
                 vars.add("__tmp_array_" + System.identityHashCode(varDecl.getValue()));
             }
-        } else if (node instanceof io.github.snaill.ast.ArrayLiteral arrLit) {
+        }
+        else if (node instanceof io.github.snaill.ast.ArrayLiteral arrLit) {
             vars.add("__tmp_array_" + System.identityHashCode(arrLit));
         } else if (node instanceof ForLoop forLoop) {
-            collectLocalVariables((VariableDeclaration) forLoop.getBody().getChildren().getFirst(), vars);
+            collectLocalVariables((VariableDeclaration) forLoop.getInitialization(), vars);
             collectLocalVariables(forLoop.getBody(), vars);
         } else if (node instanceof IfStatement ifStmt) {
             collectLocalVariables(ifStmt.getBody(), vars);
