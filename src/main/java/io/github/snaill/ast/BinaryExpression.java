@@ -63,8 +63,7 @@ public class BinaryExpression extends Expression {
                 int jumpPosIfFalse = out.size();
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Временный 0, обновим позже
                 
-                // 2. If the left operand is true, pop it and evaluate the right operand
-                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP); // Удаляем результат левого операнда
+                // 2. If the left operand is true and evaluate the right operand
                 getRight().emitBytecode(out, context, currentFunction); // Вычисляем правый операнд
                 
                 // 3. Target destination for JMP_IF_FALSE (when left operand is false)
@@ -98,8 +97,7 @@ public class BinaryExpression extends Expression {
                 int jumpPosIfTrue = out.size();
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Temporary 0, update later
 
-                // 2. If the left operand is false, remove it and evaluate the right operand
-                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP); // Remove the result of the left operand
+                // 2. If the left operand is false evaluate the right operand
                 getRight().emitBytecode(out, context, currentFunction); // Evaluate the right operand
 
                 // 3. After evaluating the right operand, we end up here
