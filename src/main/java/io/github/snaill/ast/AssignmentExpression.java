@@ -1,5 +1,7 @@
 package io.github.snaill.ast;
 
+import io.github.snaill.result.ErrorType;
+
 import java.util.List;
 
 /**
@@ -120,7 +122,7 @@ public class AssignmentExpression extends Expression {
             if (!"=".equals(operator)) {
                 throw new io.github.snaill.exception.FailedCheckException(
                     new io.github.snaill.result.CompilationError(
-                        io.github.snaill.result.ErrorType.UNSUPPORTED_OPERATION,
+                        ErrorType.UNKNOWN_OPERATOR,
                         io.github.snaill.ast.SourceBuilder.toSourceCode(this),
                         "Compound assignment for array elements is not yet supported.",
                         ""
