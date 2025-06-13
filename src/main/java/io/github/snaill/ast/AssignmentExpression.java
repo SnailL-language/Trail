@@ -1,15 +1,12 @@
 package io.github.snaill.ast;
 
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Represents an assignment expression in the AST.
  */
 public class AssignmentExpression extends Expression {
     private final String operator;
-    private static final Logger logger = LoggerFactory.getLogger(AssignmentExpression.class);
     public AssignmentExpression(Expression left, String operator, Expression right) {
         super(List.of(left, right));
         this.operator = operator;
@@ -40,43 +37,103 @@ public class AssignmentExpression extends Expression {
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
         Expression left = getLeft();
         Expression right = getRight();
-        if (left instanceof ArrayElement ae) {
-            ae.getIdentifier().emitBytecode(out, context, currentFunction);
-        }
-        right.emitBytecode(out, context, currentFunction);
+
         if (left instanceof Identifier id) {
-            logger.debug("Looking for variable: {}", id.getName());
-            if (currentFunction != null) {
-                int localIndex = context.getLocalVarIndex(currentFunction, id.getName());
-                logger.debug("Local index for {}: {}", id.getName(), localIndex);
+            // Если это составной оператор, сначала загружаем текущее значение переменной
+            if (!"=".equals(operator)) {
+                int localIndex = -1;
+                if (currentFunction != null) {
+                    localIndex = context.getLocalVarIndex(currentFunction, id.getName());
+                }
                 if (localIndex != -1) {
-                    out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
+                    out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_LOCAL);
                     io.github.snaill.bytecode.BytecodeUtils.writeU16(out, localIndex);
-                    return;
+                } else {
+                    int globalIndex = context.getGlobalVarIndex(id.getName());
+                    if (globalIndex != -1) {
+                        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_GLOBAL);
+                        io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
+                    } else {
+                        throw new io.github.snaill.exception.FailedCheckException(
+                            new io.github.snaill.result.CompilationError(
+                                io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
+                                io.github.snaill.ast.SourceBuilder.toSourceCode(this),
+                                "Variable not found: " + id.getName(),
+                                ""
+                            ).toString()
+                        );
+                    }
                 }
             }
-            int globalIndex = context.getGlobalVarIndex(id.getName());
-            logger.debug("Global index for {}: {}", id.getName(), globalIndex);
-            if (globalIndex != -1) {
-                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_GLOBAL);
-                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
+
+            // Генерируем байткод для правой части
+            right.emitBytecode(out, context, currentFunction);
+
+            // Если это составной оператор, выполняем соответствующую операцию
+            if (!"=".equals(operator)) {
+                switch (operator) {
+                    case "+=":
+                        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.ADD);
+                        break;
+                    case "-=":
+                        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.SUB);
+                        break;
+                    case "*=":
+                        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.MUL);
+                        break;
+                    case "/=":
+                        out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.DIV);
+                        break;
+                }
+            }
+
+            // Сохраняем результат
+            int localIndex = -1;
+            if (currentFunction != null) {
+                localIndex = context.getLocalVarIndex(currentFunction, id.getName());
+            }
+            if (localIndex != -1) {
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_LOCAL);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, localIndex);
             } else {
-                String before = getSource() != null ?
-                    io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), id.getName().length()) :
-                    io.github.snaill.ast.SourceBuilder.toSourceCode(this);
+                int globalIndex = context.getGlobalVarIndex(id.getName());
+                if (globalIndex != -1) {
+                    out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.STORE_GLOBAL);
+                    io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
+                } else {
+                     String before = getSource() != null ?
+                        io.github.snaill.ast.SourceBuilder.toSourceLine(getSource(), getLine(), getCharPosition(), id.getName().length()) :
+                        io.github.snaill.ast.SourceBuilder.toSourceCode(this);
+                    throw new io.github.snaill.exception.FailedCheckException(
+                        new io.github.snaill.result.CompilationError(
+                            io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
+                            before,
+                            "Variable not found: " + id.getName(),
+                            ""
+                        ).toString()
+                    );
+                }
+            }
+        } else if (left instanceof ArrayElement ae) {
+            // Для составных присваиваний элементам массива требуется более сложная логика (например, DUP), 
+            // которая на данный момент не поддерживается. Реализуем только для простого присваивания.
+            if (!"=".equals(operator)) {
                 throw new io.github.snaill.exception.FailedCheckException(
                     new io.github.snaill.result.CompilationError(
-                        io.github.snaill.result.ErrorType.UNKNOWN_VARIABLE,
-                        before,
-                        "Variable not found: " + id.getName(),
+                        io.github.snaill.result.ErrorType.UNSUPPORTED_OPERATION,
+                        io.github.snaill.ast.SourceBuilder.toSourceCode(this),
+                        "Compound assignment for array elements is not yet supported.",
                         ""
                     ).toString()
                 );
             }
-        } else if (left instanceof ArrayElement ae) {
+            
+            // Простое присваивание для массивов
+            ae.getIdentifier().emitBytecode(out, context, currentFunction); // Загружаем ссылку на массив
             for (Expression dim : ae.getDims()) {
-                dim.emitBytecode(out, context, currentFunction);
+                dim.emitBytecode(out, context, currentFunction); // Загружаем индекс
             }
+            right.emitBytecode(out, context, currentFunction); // Загружаем значение для сохранения
             out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.SET_ARRAY);
         } else {
             String before = getSource() != null ?

@@ -36,9 +36,6 @@ public class ReturnStatement extends AbstractNode implements Statement {
         Expression retExpr = getReturnable();
         if (retExpr != null) {
             retExpr.emitBytecode(out, context, currentFunction);
-        } else {
-            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
-            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Предполагается, что 0 - это индекс константы для null
         }
         out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.RET);
     }

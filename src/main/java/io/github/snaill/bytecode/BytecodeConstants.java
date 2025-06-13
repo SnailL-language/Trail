@@ -38,9 +38,6 @@ public class BytecodeConstants {
         public static final byte STORE_GLOBAL = 0x05;
         public static final byte POP = 0x06;
 
-
-
-
         // Арифметические и логические операции
         public static final byte ADD = 0x10;
         public static final byte SUB = 0x11;

@@ -98,8 +98,6 @@ public class FunctionDeclaration extends AbstractNode implements Statement /*, B
         
         // Add a return instruction if it's not present
         if (!hasReturnStatement(getBody())) {
-            out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.PUSH_CONST);
-            io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Assumes 0 is the constant index for null
             out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.RET);
         }
     }
