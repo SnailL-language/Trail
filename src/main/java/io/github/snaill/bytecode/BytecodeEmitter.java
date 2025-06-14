@@ -234,6 +234,12 @@ public class BytecodeEmitter {
                 addConstants(whileLoop.getCondition());
                 addConstantsFromScope(whileLoop.getBody());
             } else if (node instanceof ForLoop forLoop) {
+                // Добавляем константы из инициализации, если это VariableDeclaration с инициализатором
+                if (forLoop.getInitialization() instanceof VariableDeclaration initVar) {
+                    addConstants(initVar.getValue());
+                } else if (forLoop.getInitialization() instanceof ExpressionStatement exprInit) {
+                    addConstants(exprInit.getExpression());
+                }
                 addConstants(forLoop.getCondition());
                 addConstants(forLoop.getStep());
                 addConstantsFromScope(forLoop.getBody());
@@ -295,7 +301,7 @@ public class BytecodeEmitter {
 
         // Генерируем байткод для глобального скоупа (инициализация глобальных переменных)
         for (Statement stmt : program.getStatements()) {
-            if (stmt instanceof VariableDeclaration varDecl && varDecl.getValue() != null) {
+            if (stmt instanceof VariableDeclaration varDecl && (varDecl.getValue() != null || varDecl.getType() instanceof ArrayType)) {
                 try {
                     varDecl.emitBytecode(globalOut, context);
                 } catch (Exception e) {

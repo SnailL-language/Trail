@@ -46,7 +46,7 @@ scope
 
 // === Объявление переменных ===
 variableDeclaration
-    : 'let' IDENTIFIER ':' type '=' expression ';'
+    : 'let' IDENTIFIER ':' type ('=' expression)? ';'
     ;
 
 // === Циклы ===

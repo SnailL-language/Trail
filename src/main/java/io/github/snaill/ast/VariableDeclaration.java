@@ -99,8 +99,25 @@ public class VariableDeclaration extends AbstractNode implements Statement {
     }
 
     public void emitBytecode(java.io.ByteArrayOutputStream out, io.github.snaill.bytecode.BytecodeContext context, FunctionDeclaration currentFunction) throws java.io.IOException, io.github.snaill.exception.FailedCheckException {
-        if (getValue() != null) {
-            getValue().emitBytecode(out, context, currentFunction);
+        if (getValue() != null || (getValue() == null && getType() instanceof ArrayType)) {
+            if (getValue() != null) {
+                getValue().emitBytecode(out, context, currentFunction);
+            } else {
+                // Автоматическая инициализация массива нулями
+                ArrayType at = (ArrayType) getType();
+                int arrSize = (int) at.getSize().getValue();
+                Type elemType = at.getElementType();
+                byte elemTypeId;
+                String tn = elemType.toString();
+                if ("i32".equals(tn)) elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+                else if ("usize".equals(tn)) elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.USIZE;
+                else if ("string".equals(tn)) elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
+                else elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, arrSize);
+                out.write(elemTypeId);
+            }
             if (currentFunction != null) {
                 int localIndex = context.getLocalVarIndex(currentFunction, getName());
                 if (localIndex == -1) {
