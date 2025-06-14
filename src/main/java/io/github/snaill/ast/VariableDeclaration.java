@@ -106,16 +106,10 @@ public class VariableDeclaration extends AbstractNode implements Statement {
                 // Автоматическая инициализация массива нулями
                 ArrayType at = (ArrayType) getType();
                 int arrSize = (int) at.getSize().getValue();
-                Type elemType = at.getElementType();
-                byte elemTypeId;
-                String tn = elemType.toString();
-                if ("i32".equals(tn)) elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
-                else if ("usize".equals(tn)) elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.USIZE;
-                else if ("string".equals(tn)) elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
-                else elemTypeId = io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+                byte elemTypeId = getElemTypeId(at);
 
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.NEW_ARRAY);
-                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, arrSize);
+                io.github.snaill.bytecode.BytecodeUtils.writeI32(out, arrSize);
                 out.write(elemTypeId);
             }
             if (currentFunction != null) {
@@ -135,6 +129,19 @@ public class VariableDeclaration extends AbstractNode implements Statement {
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, globalIndex);
             }
         }
+    }
+
+    private static byte getElemTypeId(ArrayType at) {
+        Type elemType = at.getElementType();
+        byte elemTypeId;
+        String tn = elemType.toString();
+        elemTypeId = switch (tn) {
+            case "i32" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+            case "usize" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.USIZE;
+            case "string" -> io.github.snaill.bytecode.BytecodeConstants.TypeId.STRING;
+            case null, default -> io.github.snaill.bytecode.BytecodeConstants.TypeId.I32;
+        };
+        return elemTypeId;
     }
 
     @Override

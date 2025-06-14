@@ -677,20 +677,20 @@ public class DebugBytecodeViewer {
                     }
                     break;
                 case BytecodeConstants.Opcode.INIT_ARRAY:
-                    if (pos + 1 < end) {
-                        int size = getUnsignedShort(code, pos);
+                    if (pos + 3 < end) {
+                        int size = io.github.snaill.bytecode.BytecodeUtils.readI32(code, pos);
                         sb.append("INIT_ARRAY ").append(size);
-                        pos += 2;
+                        pos += 4;
                     } else {
                         sb.append("INIT_ARRAY [truncated]");
                         pos = end;
                     }
                     break;
                 case BytecodeConstants.Opcode.NEW_ARRAY:
-                    if (pos + 2 < end) {
-                        int arraySize = getUnsignedShort(code, pos);
+                    if (pos + 4 < end) {
+                        int arraySize = io.github.snaill.bytecode.BytecodeUtils.readI32(code, pos);
                         sb.append("NEW_ARRAY ").append(arraySize);
-                        pos += 2;
+                        pos += 4;
                         byte elemTypeId = code[pos++];
                         sb.append(" ").append(getTypeDescription(elemTypeId));
                     } else {
