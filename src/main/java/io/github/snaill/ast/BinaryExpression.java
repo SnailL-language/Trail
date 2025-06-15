@@ -235,6 +235,16 @@ public class BinaryExpression extends Expression {
                     return lt; // Result is of the same type
                 }
             }
+
+            // All primitives can be added like strings
+            if (operator.equals("+")) {
+                if (lName.equals("string")) {
+                    return lt;
+                }
+                if (rName.equals("string")) {
+                    return rt;
+                }
+            }
         }
 
         // 3. General type mismatch error if no specific rule applied or types are incompatible.

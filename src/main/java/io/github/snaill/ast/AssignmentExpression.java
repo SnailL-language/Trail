@@ -247,6 +247,14 @@ public class AssignmentExpression extends Expression {
         Type leftType = getLeft().getType(scope);
         Type rightType = getRight().getType(scope);
 
+        if (operator.equals("+=")) {
+            boolean isLeftArray = !(leftType instanceof PrimitiveType);
+            boolean isRightArray = !(rightType instanceof PrimitiveType);
+            if (!isLeftArray && !isRightArray) {
+                return;
+            }
+        }
+
         // For compound assignments, check if the operation is valid for the types.
         if (!operator.equals("=")) {
             boolean isLeftNumeric = leftType instanceof PrimitiveType pt && (pt.getName().equals("i32") || pt.getName().equals("usize"));
