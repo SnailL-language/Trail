@@ -55,15 +55,19 @@ public class BinaryExpression extends Expression {
         switch (operator) {
             case "&&" -> {
                 // Logical AND (&&) with short-circuit evaluation
-                // 1. Вычисляем левый операнд
+                // 1. Evaluate the left operand
                 getLeft().emitBytecode(out, context, currentFunction);
-                
-                // Save position for JMP_IF_FALSE insertion
+
+                // Duplicate it so that after JMP_IF_FALSE consumes one copy, another remains on the stack
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.DUP);
+
+                // Write JMP_IF_FALSE and remember position for jump offset
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP_IF_FALSE);
                 int jumpPosIfFalse = out.size();
-                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Временный 0, обновим позже
+                io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Temporary 0, update later
                 
-                // 2. If the left operand is true and evaluate the right operand
+                // 2. If the left operand is true, discard it and evaluate the right operand
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP); // удалить левый операнд со стека
                 getRight().emitBytecode(out, context, currentFunction); // Вычисляем правый операнд
                 
                 // 3. Target destination for JMP_IF_FALSE (when left operand is false)
@@ -92,12 +96,16 @@ public class BinaryExpression extends Expression {
                 // 1. Вычисляем левый операнд
                 getLeft().emitBytecode(out, context, currentFunction);
 
+                // Дублируем, чтобы значение осталось на стеке после того, как JMP_IF_TRUE его потребит
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.DUP);
+
                 // Сохраняем позицию для вставки JMP_IF_TRUE
                 out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.JMP_IF_TRUE);
                 int jumpPosIfTrue = out.size();
                 io.github.snaill.bytecode.BytecodeUtils.writeU16(out, 0); // Temporary 0, update later
 
-                // 2. If the left operand is false evaluate the right operand
+                // 2. If the left operand is false, discard it and evaluate the right operand
+                out.write(io.github.snaill.bytecode.BytecodeConstants.Opcode.POP); // удалить левый операнд со стека
                 getRight().emitBytecode(out, context, currentFunction); // Evaluate the right operand
 
                 // 3. After evaluating the right operand, we end up here

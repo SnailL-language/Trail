@@ -39,6 +39,7 @@ public class DebugBytecodeViewer {
         OPCODE_NAMES.put((int) BytecodeConstants.Opcode.STORE_LOCAL & 0xFF, "STORE_LOCAL");
         OPCODE_NAMES.put((int) BytecodeConstants.Opcode.STORE_GLOBAL & 0xFF, "STORE_GLOBAL");
         OPCODE_NAMES.put((int) BytecodeConstants.Opcode.POP & 0xFF, "POP");
+        OPCODE_NAMES.put((int) BytecodeConstants.Opcode.DUP & 0xFF, "DUP");
         OPCODE_NAMES.put((int) BytecodeConstants.Opcode.ADD & 0xFF, "ADD");
         OPCODE_NAMES.put((int) BytecodeConstants.Opcode.SUB & 0xFF, "SUB");
         OPCODE_NAMES.put((int) BytecodeConstants.Opcode.MUL & 0xFF, "MUL");
@@ -559,6 +560,9 @@ public class DebugBytecodeViewer {
             }
 
             switch (opcode) {
+                case BytecodeConstants.Opcode.DUP:
+                    sb.append("DUP");
+                    break;
                 case BytecodeConstants.Opcode.PUSH_CONST:
                     if (pos + 1 < end) {
                         int constIdx = getUnsignedShort(code, pos);

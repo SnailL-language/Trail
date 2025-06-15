@@ -37,6 +37,7 @@ public class BytecodeConstants {
         public static final byte STORE_LOCAL = 0x04; // Was 0x03 in old spec, 0x04 is correct
         public static final byte STORE_GLOBAL = 0x05;
         public static final byte POP = 0x06;
+        public static final byte DUP = 0x07;
 
         // Арифметические и логические операции
         public static final byte ADD = 0x10;
