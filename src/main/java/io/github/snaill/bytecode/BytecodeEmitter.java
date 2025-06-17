@@ -196,6 +196,7 @@ public class BytecodeEmitter {
                 addConstants(binary.getRight());
             }
             case UnaryExpression unary -> addConstants(unary.getArgument());
+            case ParenthesizedExpression paren -> addConstants(paren.getInnerExpression());
             case ArrayLiteral array -> {
                 for (Expression element : array.getElements()) {
                     addConstants(element);
